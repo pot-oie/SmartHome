@@ -1,5 +1,7 @@
 #include "loginwidget.h"
 #include "ui_loginwidget.h"
+#include "database/dao/UserDao.h"
+
 #include <QDebug>
 #include <QMessageBox>
 
@@ -18,38 +20,41 @@ LoginWidget::~LoginWidget()
 
 void LoginWidget::on_btnLogin_clicked()
 {
-    QString username = ui->lineEdit_username->text();
-    QString password = ui->lineEdit_password->text();
+    const QString username = ui->lineEdit_username->text().trimmed();
+    const QString password = ui->lineEdit_password->text();
 
-    qDebug() << "登录按钮被点击，用户名：" << username;
+    qInfo() << "[LoginWidget] 收到登录请求，username =" << username;
 
-    // 简单验证：用户名和密码不为空即可登录（演示用）
     if (username.isEmpty() || password.isEmpty())
     {
-        QMessageBox::warning(this, "登录失败", "请输入用户名和密码！");
+        QMessageBox::warning(this, "登录失败", "请输入用户名和密码。");
         return;
     }
 
-    // TODO: 后续可以调用 verifyUserInDatabase 进行真实验证
-    // if (verifyUserInDatabase(username, password)) {
-    //     emit loginSuccess();
-    // } else {
-    //     QMessageBox::warning(this, "登录失败", "用户名或密码错误！");
-    // }
+    if (!verifyUserInDatabase(username, password))
+    {
+        QMessageBox::warning(this, "登录失败", "用户名不存在、密码错误，或用户已被禁用。");
+        return;
+    }
 
-    // 演示：直接登录成功
-    QMessageBox::information(this, "登录成功", "欢迎使用智能家居系统！");
+    QMessageBox::information(this, "登录成功", "欢迎使用智能家居监控平台。");
     emit loginSuccess();
 }
 
 void LoginWidget::on_btnResetPwd_clicked()
 {
-    qDebug() << "重置密码按钮被点击";
-    QMessageBox::information(this, "提示", "重置密码功能尚未实现");
+    qInfo() << "[LoginWidget] 点击了重置密码按钮。";
+    QMessageBox::information(this, "提示", "重置密码功能当前阶段未实现。");
 }
 
 bool LoginWidget::verifyUserInDatabase(const QString &username, const QString &password)
 {
-    // 预留数据库验证逻辑
-    return false;
+    UserDao userDao;
+    const bool success = userDao.verifyLogin(username, password);
+    if (!success)
+    {
+        qWarning() << "[LoginWidget] 登录校验失败:" << userDao.lastErrorText();
+    }
+
+    return success;
 }
