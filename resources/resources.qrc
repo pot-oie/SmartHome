@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <RCC>
     <qresource prefix="/">
+        <!-- 样式表 -->
+        <file>style.qss</file>
+        
         <!-- 主导航图标 -->
         <file>icons/home.svg</file>
         <file>icons/devices.svg</file>
@@ -15,6 +18,13 @@
         <file>icons/curtains.svg</file>
         <file>icons/tv.svg</file>
         <file>icons/lock.svg</file>
+        
+        <!-- 场景模式图标 (Material Symbols) -->
+        <file>icons/bedtime.svg</file>
+        <file>icons/movie.svg</file>
+        <file>icons/celebration.svg</file>
+        <file>icons/wb_sunny.svg</file>
+        <file>icons/flight_takeoff.svg</file>
         
         <!-- 操作图标 -->
         <file>icons/add.svg</file>

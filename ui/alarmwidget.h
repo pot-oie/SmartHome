@@ -2,11 +2,13 @@
 #include <QWidget>
 #include <QJsonObject>
 
-namespace Ui {
-class AlarmWidget;
+namespace Ui
+{
+    class AlarmWidget;
 }
 
-class AlarmWidget : public QWidget {
+class AlarmWidget : public QWidget
+{
     Q_OBJECT
 
 public:
@@ -15,7 +17,7 @@ public:
 
 public slots:
     // 【接收后端】底层判定数据超标或设备故障时，调用此槽，触发声光报警
-    void triggerAlarm(const QJsonObject& alarmData);
+    void triggerAlarm(const QJsonObject &alarmData);
 
 private slots:
     // 【UI 交互】保存设定的温湿度报警阈值
@@ -25,5 +27,6 @@ private slots:
 
 private:
     Ui::AlarmWidget *ui;
-    void loadThresholds(); // 界面初始化时，从配置或数据库读取当前阈值
+    void loadThresholds();    // 界面初始化时，从配置或数据库读取当前阈值
+    void loadFakeAlarmLogs(); // 加载假报警记录
 };

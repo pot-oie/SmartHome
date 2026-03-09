@@ -2,11 +2,13 @@
 #include <QWidget>
 #include <QJsonObject> // 引入 JSON，用于和后端的 TCP 协议交互
 
-namespace Ui {
-class DeviceControlWidget;
+namespace Ui
+{
+    class DeviceControlWidget;
 }
 
-class DeviceControlWidget : public QWidget {
+class DeviceControlWidget : public QWidget
+{
     Q_OBJECT
 
 public:
@@ -15,11 +17,11 @@ public:
 
 signals:
     // 【向外发送】当用户操作了界面（如开灯、调节空调），发出此信号，由 NetworkManager 捕获并转为 TCP 发送
-    void requestControlDevice(const QJsonObject& controlCmd);
+    void requestControlDevice(const QJsonObject &controlCmd);
 
 public slots:
     // 【接收后端】当底层 TCP 收到设备状态变化（如设备离线、被其他终端打开）时，调用此槽更新 UI
-    void updateDeviceStatus(const QJsonObject& statusData);
+    void updateDeviceStatus(const QJsonObject &statusData);
 
 private slots:
     // 【UI 交互】左侧设备分类列表切换时触发
@@ -31,5 +33,7 @@ private slots:
 
 private:
     Ui::DeviceControlWidget *ui;
-    void initDeviceList(); // 初始化界面的辅助函数
+    void initDeviceList();                 // 初始化界面的辅助函数
+    void updateDeviceListUI(int category); // 更新设备列表显示
+    static QStringList categories;         // 设备分类列表
 };

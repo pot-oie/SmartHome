@@ -1,11 +1,13 @@
 #pragma once
 #include <QWidget>
 
-namespace Ui {
-class SettingsWidget;
+namespace Ui
+{
+    class SettingsWidget;
 }
 
-class SettingsWidget : public QWidget {
+class SettingsWidget : public QWidget
+{
     Q_OBJECT
 
 public:
@@ -14,7 +16,7 @@ public:
 
 signals:
     // 【向外发送】当用户切换暗黑/明亮主题时，通知 MainWindow 刷新全局 QSS 样式表
-    void themeChanged(const QString& themeName);
+    void themeChanged(const QString &themeName);
 
 private slots:
     // 【UI 交互】系统设置区
@@ -29,4 +31,5 @@ private slots:
 private:
     Ui::SettingsWidget *ui;
     void loadSystemSettings(); // 使用 QSettings 读取上次保存的配置
+    void loadFakeDevices();    // 加载假设备数据
 };

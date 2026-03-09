@@ -107,7 +107,7 @@
        <widget class="QTextEdit" name="textEdit_alarmLog">
         <property name="maximumSize"><size><width>16777215</width><height>100</height></size></property>
         <property name="readOnly"><bool>true</bool></property>
-        <property name="html"><string>&lt;!DOCTYPE HTML&gt;&lt;html&gt;&lt;body&gt;&lt;p style="color:green;"&gt;✅ 系统运行正常，暂无报警信息&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string></property>
+        <property name="html"><string>&lt;!DOCTYPE HTML&gt;&lt;html&gt;&lt;body&gt;&lt;p style="color:green;"&gt;系统运行正常，暂无报警信息&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string></property>
        </widget>
       </item>
      </layout>

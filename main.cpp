@@ -5,14 +5,10 @@
 #include <QLocale>
 #include <QtGlobal>
 #include <QTranslator>
+#include <QFile>
 
 static void messageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
 {
-    if (type == QtWarningMsg && msg.contains("libpng warning: iCCP: known incorrect sRGB profile"))
-    {
-        return;
-    }
-
     qt_message_output(type, context, msg);
 }
 
@@ -20,6 +16,15 @@ int main(int argc, char *argv[])
 {
     qInstallMessageHandler(messageHandler);
     QApplication a(argc, argv);
+
+    // 加载全局样式表
+    QFile styleFile(":/resources/style.qss");
+    if (styleFile.open(QFile::ReadOnly))
+    {
+        QString style = QLatin1String(styleFile.readAll());
+        a.setStyleSheet(style);
+        styleFile.close();
+    }
 
     QTranslator translator;
     const QStringList uiLanguages = QLocale::system().uiLanguages();

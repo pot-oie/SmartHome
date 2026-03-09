@@ -2,11 +2,13 @@
 #include <QWidget>
 #include <QJsonObject>
 
-namespace Ui {
-class SceneWidget;
+namespace Ui
+{
+    class SceneWidget;
 }
 
-class SceneWidget : public QWidget {
+class SceneWidget : public QWidget
+{
     Q_OBJECT
 
 public:
@@ -15,11 +17,11 @@ public:
 
 signals:
     // 【向外发送】用户点击“激活该场景”时，发射打包好的批量指令，交给 TCP 发送
-    void requestTriggerScene(const QJsonObject& sceneCmd);
+    void requestTriggerScene(const QJsonObject &sceneCmd);
 
 public slots:
     // 【接收后端】接收场景执行的部分成功或失败的结果
-    void updateSceneExecutionResult(const QJsonObject& resultData);
+    void updateSceneExecutionResult(const QJsonObject &resultData);
 
 private slots:
     // 【UI 交互】增删改查场景按钮
@@ -28,6 +30,8 @@ private slots:
     void on_btnActivateScene_clicked();
     // 【UI 交互】在当前场景下添加要联动的设备
     void on_btnAddDeviceToScene_clicked();
+    // 【UI 交互】场景选择变化
+    void updateSceneDetails(int row);
 
 private:
     Ui::SceneWidget *ui;
