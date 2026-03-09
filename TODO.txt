@@ -1,0 +1,4 @@
+TODO:
+1. 登录模块上线前，将 seed 用户密码从明文占位改为哈希值
+2. 后续联调网络协议时，视需要为 scene_actions 增加 param_name / param_value
+3. 后续如需报警定位设备，可为 alarm_records 增加 device_id

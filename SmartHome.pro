@@ -2,9 +2,11 @@ QT       += core gui network sql svg printsupport
 
 # 头文件搜索路径
 INCLUDEPATH += $$PWD \
+               $$PWD/models \
                $$PWD/ui \
                $$PWD/network \
-               $$PWD/database
+               $$PWD/database \
+               $$PWD/database/dao
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport
 
@@ -20,7 +22,10 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     loginwidget.cpp \
+    database/dao/AlarmDao.cpp \
     ui/alarmwidget.cpp \
+    database/dao/DeviceDao.cpp \
+    database/dao/EnvRecordDao.cpp \
     ui/devicecontrolwidget.cpp \
     ui/historywidget.cpp \
     ui/homewidget.cpp \
@@ -29,11 +34,18 @@ SOURCES += \
     network/networkmanager.cpp \
     database/databasemanager.cpp \
     qcustomplot.cpp
+    database/DatabaseManager.cpp \
+    database/dao/SystemConfigDao.cpp \
+    database/dao/UserDao.cpp
 
 HEADERS += \
     mainwindow.h \
     loginwidget.h \
+    models/User.h \
+    database/dao/AlarmDao.h \
     ui/alarmwidget.h \
+    database/dao/DeviceDao.h \
+    database/dao/EnvRecordDao.h \
     ui/devicecontrolwidget.h \
     ui/historywidget.h \
     ui/homewidget.h \
@@ -43,6 +55,10 @@ HEADERS += \
     network/protocol.h \
     database/databasemanager.h \
     qcustomplot.h
+    database/DatabaseConfig.h \
+    database/DatabaseManager.h \
+    database/dao/SystemConfigDao.h \
+    database/dao/UserDao.h
 
 FORMS += \
     mainwindow.ui \
