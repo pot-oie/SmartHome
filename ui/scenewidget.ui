@@ -2,11 +2,109 @@
 <ui version="4.0">
  <class>SceneWidget</class>
  <widget class="QWidget" name="SceneWidget">
-  <layout class="QVBoxLayout" name="verticalLayout">
-   <item><widget class="QPushButton" name="btnAddScene"><property name="text"><string>添加新场景</string></property></widget></item>
-   <item><widget class="QPushButton" name="btnDeleteScene"><property name="text"><string>删除选中场景</string></property></widget></item>
-   <item><widget class="QPushButton" name="btnAddDeviceToScene"><property name="text"><string>为当前场景绑定设备</string></property></widget></item>
-   <item><widget class="QPushButton" name="btnActivateScene"><property name="text"><string>一键执行激活场景</string></property></widget></item>
+  <layout class="QHBoxLayout" name="horizontalLayout_main">
+   <item>
+    <widget class="QGroupBox" name="groupBox_sceneList">
+     <property name="title"><string>场景列表</string></property>
+     <property name="maximumSize"><size><width>250</width><height>16777215</height></size></property>
+     <layout class="QVBoxLayout" name="verticalLayout_list">
+      <item>
+       <widget class="QListWidget" name="listWidget_scenes">
+        <item><property name="text"><string>回家模式</string></property></item>
+        <item><property name="text"><string>睡眠模式</string></property></item>
+        <item><property name="text"><string>观影模式</string></property></item>
+        <item><property name="text"><string>离家模式</string></property></item>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_btns">
+        <item>
+         <widget class="QPushButton" name="btnAddScene">
+          <property name="text"><string>添加</string></property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btnDeleteScene">
+          <property name="text"><string>删除</string></property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBox_sceneDetail">
+     <property name="title"><string>场景详情</string></property>
+     <layout class="QVBoxLayout" name="verticalLayout_detail">
+      <item>
+       <widget class="QLabel" name="label_sceneName">
+        <property name="text"><string>场景名称：回家模式</string></property>
+        <property name="font"><font><pointsize>11</pointsize><weight>75</weight><bold>true</bold></font></property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_sceneDesc">
+        <property name="text"><string>描述：打开客厅灯、空调、电视，窗帘半开</string></property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="groupBox_devices">
+        <property name="title"><string>绑定的设备和动作</string></property>
+        <layout class="QVBoxLayout" name="verticalLayout_devices">
+         <item>
+          <widget class="QTableWidget" name="tableWidget_devices">
+           <property name="columnCount"><number>3</number></property>
+           <column><property name="text"><string>设备名称</string></property></column>
+           <column><property name="text"><string>动作</string></property></column>
+           <column><property name="text"><string>参数</string></property></column>
+           <row>
+            <property name="text"><string>1</string></property>
+           </row>
+           <item row="0" column="0">
+            <property name="text"><string>客厅主灯</string></property>
+           </item>
+           <item row="0" column="1">
+            <property name="text"><string>开启</string></property>
+           </item>
+           <item row="0" column="2">
+            <property name="text"><string>亮度: 80%</string></property>
+           </item>
+          </widget>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_deviceBtn">
+           <item>
+            <widget class="QPushButton" name="btnAddDeviceToScene">
+             <property name="text"><string>添加设备</string></property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="btnRemoveDevice">
+             <property name="text"><string>移除设备</string></property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <spacer name="verticalSpacer">
+        <property name="orientation"><enum>Qt::Vertical</enum></property>
+        <property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btnActivateScene">
+        <property name="text"><string>一键激活场景</string></property>
+        <property name="minimumSize"><size><width>0</width><height>45</height></size></property>
+        <property name="font"><font><pointsize>11</pointsize><weight>75</weight><bold>true</bold></font></property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
   </layout>
  </widget>
  <resources/><connections/>

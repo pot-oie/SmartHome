@@ -2,12 +2,151 @@
 <ui version="4.0">
  <class>LoginWidget</class>
  <widget class="QWidget" name="LoginWidget">
-  <layout class="QVBoxLayout" name="verticalLayout">
-   <item><widget class="QLabel" name="label_title"><property name="text"><string>欢迎使用智能家居系统</string></property><property name="alignment"><set>Qt::AlignCenter</set></property></widget></item>
-   <item><widget class="QLineEdit" name="lineEdit_username"><property name="placeholderText"><string>请输入账号</string></property></widget></item>
-   <item><widget class="QLineEdit" name="lineEdit_password"><property name="echoMode"><enum>QLineEdit::Password</enum></property><property name="placeholderText"><string>请输入密码</string></property></widget></item>
-   <item><widget class="QPushButton" name="btnLogin"><property name="text"><string>登 录</string></property></widget></item>
-   <item><widget class="QPushButton" name="btnResetPwd"><property name="text"><string>重置密码</string></property></widget></item>
+  <property name="minimumSize"><size><width>450</width><height>400</height></size></property>
+  <layout class="QVBoxLayout" name="verticalLayout_main">
+   <item>
+    <spacer name="verticalSpacer_top">
+     <property name="orientation"><enum>Qt::Vertical</enum></property>
+     <property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property>
+    </spacer>
+   </item>
+   <item>
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <widget class="QLabel" name="label_logo">
+       <property name="text"><string></string></property>
+       <property name="alignment"><set>Qt::AlignCenter</set></property>
+       <property name="font"><font><pointsize>36</pointsize></font></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_title">
+       <property name="text"><string>智能家居监控平台</string></property>
+       <property name="alignment"><set>Qt::AlignCenter</set></property>
+       <property name="font"><font><pointsize>16</pointsize><weight>75</weight><bold>true</bold></font></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_subtitle">
+       <property name="text"><string>Welcome to SmartHome System</string></property>
+       <property name="alignment"><set>Qt::AlignCenter</set></property>
+       <property name="styleSheet"><string notr="true">color: gray;</string></property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="verticalSpacer_1">
+       <property name="orientation"><enum>Qt::Vertical</enum></property>
+       <property name="sizeHint" stdset="0"><size><width>20</width><height>30</height></size></property>
+      </spacer>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_username">
+       <item>
+        <spacer name="horizontalSpacer_left1">
+         <property name="orientation"><enum>Qt::Horizontal</enum></property>
+         <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_username">
+         <property name="text"><string></string></property>
+         <property name="font"><font><pointsize>12</pointsize></font></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="lineEdit_username">
+         <property name="minimumSize"><size><width>250</width><height>35</height></size></property>
+         <property name="placeholderText"><string>请输入账号</string></property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer_right1">
+         <property name="orientation"><enum>Qt::Horizontal</enum></property>
+         <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+        </spacer>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_password">
+       <item>
+        <spacer name="horizontalSpacer_left2">
+         <property name="orientation"><enum>Qt::Horizontal</enum></property>
+         <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_password">
+         <property name="text"><string></string></property>
+         <property name="font"><font><pointsize>12</pointsize></font></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="lineEdit_password">
+         <property name="minimumSize"><size><width>250</width><height>35</height></size></property>
+         <property name="echoMode"><enum>QLineEdit::Password</enum></property>
+         <property name="placeholderText"><string>请输入密码</string></property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer_right2">
+         <property name="orientation"><enum>Qt::Horizontal</enum></property>
+         <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+        </spacer>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <spacer name="verticalSpacer_2">
+       <property name="orientation"><enum>Qt::Vertical</enum></property>
+       <property name="sizeHint" stdset="0"><size><width>20</width><height>20</height></size></property>
+      </spacer>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_btns">
+       <item>
+        <spacer name="horizontalSpacer_left3">
+         <property name="orientation"><enum>Qt::Horizontal</enum></property>
+         <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnLogin">
+         <property name="text"><string>登 录</string></property>
+         <property name="minimumSize"><size><width>120</width><height>40</height></size></property>
+         <property name="font"><font><pointsize>11</pointsize></font></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnResetPwd">
+         <property name="text"><string>重置密码</string></property>
+         <property name="minimumSize"><size><width>120</width><height>40</height></size></property>
+         <property name="font"><font><pointsize>11</pointsize></font></property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer_right3">
+         <property name="orientation"><enum>Qt::Horizontal</enum></property>
+         <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+        </spacer>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <spacer name="verticalSpacer_bottom">
+     <property name="orientation"><enum>Qt::Vertical</enum></property>
+     <property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property>
+    </spacer>
+   </item>
+   <item>
+    <widget class="QLabel" name="label_footer">
+     <property name="text"><string>© 2026 SmartHome Team. All rights reserved.</string></property>
+     <property name="alignment"><set>Qt::AlignCenter</set></property>
+     <property name="styleSheet"><string notr="true">color: gray; font-size: 9pt;</string></property>
+    </widget>
+   </item>
   </layout>
  </widget>
  <resources/><connections/>

@@ -3,10 +3,22 @@
 
 #include <QApplication>
 #include <QLocale>
+#include <QtGlobal>
 #include <QTranslator>
+
+static void messageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
+{
+    if (type == QtWarningMsg && msg.contains("libpng warning: iCCP: known incorrect sRGB profile"))
+    {
+        return;
+    }
+
+    qt_message_output(type, context, msg);
+}
 
 int main(int argc, char *argv[])
 {
+    qInstallMessageHandler(messageHandler);
     QApplication a(argc, argv);
 
     QTranslator translator;

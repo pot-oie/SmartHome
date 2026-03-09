@@ -4,15 +4,105 @@
  <widget class="QWidget" name="HistoryWidget">
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <item><widget class="QPushButton" name="btnSearch"><property name="text"><string>查询记录</string></property></widget></item>
-     <item><widget class="QPushButton" name="btnExport"><property name="text"><string>导出Excel/CSV</string></property></widget></item>
-    </layout>
+    <widget class="QGroupBox" name="groupBox_filter">
+     <property name="title"><string>查询条件</string></property>
+     <property name="maximumSize"><size><width>16777215</width><height>100</height></size></property>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <widget class="QLabel" name="label_startTime">
+        <property name="text"><string>开始时间:</string></property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QDateTimeEdit" name="dateTimeEdit_start">
+        <property name="calendarPopup"><bool>true</bool></property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_endTime">
+        <property name="text"><string>结束时间:</string></property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QDateTimeEdit" name="dateTimeEdit_end">
+        <property name="calendarPopup"><bool>true</bool></property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_deviceType">
+        <property name="text"><string>设备类型:</string></property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="comboBox_deviceType">
+        <item><property name="text"><string>全部</string></property></item>
+        <item><property name="text"><string>灯光</string></property></item>
+        <item><property name="text"><string>空调</string></property></item>
+        <item><property name="text"><string>窗帘</string></property></item>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btnSearch">
+        <property name="text"><string>查询记录</string></property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btnExport">
+        <property name="text"><string>导出Excel</string></property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
    </item>
    <item>
     <widget class="QTabWidget" name="tabWidget">
-     <widget class="QWidget" name="tab_logs"><attribute name="title"><string>操作日志列表</string></attribute></widget>
-     <widget class="QWidget" name="tab_charts"><attribute name="title"><string>环境数据折线图</string></attribute></widget>
+     <property name="currentIndex"><number>0</number></property>
+     <widget class="QWidget" name="tab_logs">
+      <attribute name="title"><string>操作日志列表</string></attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_logs">
+       <item>
+        <widget class="QTableWidget" name="tableWidget_logs">
+         <property name="alternatingRowColors"><bool>true</bool></property>
+         <property name="columnCount"><number>5</number></property>
+         <column><property name="text"><string>时间</string></property></column>
+         <column><property name="text"><string>用户</string></property></column>
+         <column><property name="text"><string>设备名称</string></property></column>
+         <column><property name="text"><string>操作类型</string></property></column>
+         <column><property name="text"><string>操作结果</string></property></column>
+         <row>
+          <property name="text"><string>1</string></property>
+         </row>
+         <item row="0" column="0">
+          <property name="text"><string>2026-03-09 14:30:25</string></property>
+         </item>
+         <item row="0" column="1">
+          <property name="text"><string>管理员</string></property>
+         </item>
+         <item row="0" column="2">
+          <property name="text"><string>客厅主灯</string></property>
+         </item>
+         <item row="0" column="3">
+          <property name="text"><string>开启</string></property>
+         </item>
+         <item row="0" column="4">
+          <property name="text"><string>成功</string></property>
+         </item>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_charts">
+      <attribute name="title"><string>环境数据折线图</string></attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_charts">
+       <item>
+        <widget class="QLabel" name="label_chartPlaceholder">
+         <property name="text"><string>此处将显示温湿度变化趋势图\n\n需要集成 QtCharts 或 QCustomPlot 组件\n（当前为占位符）</string></property>
+         <property name="alignment"><set>Qt::AlignCenter</set></property>
+         <property name="font"><font><pointsize>12</pointsize></font></property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
     </widget>
    </item>
   </layout>

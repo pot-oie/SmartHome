@@ -25,13 +25,23 @@ void MainWindow::initUI()
     setWindowTitle("智能家居监控平台");
     resize(1024, 768);
 
-    // 初始化导航栏
-    ui->navBar->addItem("🏠 首页");
-    ui->navBar->addItem("🔧 设备控制");
-    ui->navBar->addItem("🎬 场景管理");
-    ui->navBar->addItem("📊 历史记录");
-    ui->navBar->addItem("🚨 报警设置");
-    ui->navBar->addItem("⚙️ 系统设置");
+    // 设置导航栏图标大小
+    ui->navBar->setIconSize(QSize(24, 24));
+
+    // 初始化导航栏（带图标）
+    auto addNavItem = [this](const QString &icon, const QString &text)
+    {
+        QIcon qicon(icon);
+        QListWidgetItem *item = new QListWidgetItem(qicon, text);
+        ui->navBar->addItem(item);
+    };
+
+    addNavItem(":/icons/home.svg", "首页");
+    addNavItem(":/icons/devices.svg", "设备控制");
+    addNavItem(":/icons/scene.svg", "场景管理");
+    addNavItem(":/icons/history.svg", "历史记录");
+    addNavItem(":/icons/alarm.svg", "报警设置");
+    addNavItem(":/icons/settings.svg", "系统设置");
 
     // 创建各个子页面并添加到堆栈窗口
     ui->stackWidget->addWidget(new HomeWidget(this));          // 索引 0

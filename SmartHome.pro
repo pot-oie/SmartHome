@@ -1,4 +1,4 @@
-QT       += core gui network sql
+QT       += core gui network sql svg
 
 # 头文件搜索路径
 INCLUDEPATH += $$PWD \
@@ -49,6 +49,9 @@ FORMS += \
     ui/homewidget.ui \
     ui/scenewidget.ui \
     ui/settingswidget.ui \
+
+RESOURCES += \
+    resources/resources.qrc
 
 TRANSLATIONS += \
     translations/SmartHome_en_US.ts

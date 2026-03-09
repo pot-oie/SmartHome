@@ -3,8 +3,129 @@
  <class>AlarmWidget</class>
  <widget class="QWidget" name="AlarmWidget">
   <layout class="QVBoxLayout" name="verticalLayout">
-   <item><widget class="QPushButton" name="btnSaveThresholds"><property name="text"><string>保存报警阈值设置</string></property></widget></item>
-   <item><widget class="QPushButton" name="btnClearLogs"><property name="text"><string>清空报警历史</string></property></widget></item>
+   <item>
+    <widget class="QGroupBox" name="groupBox_thresholds">
+     <property name="title"><string>报警阈值设置</string></property>
+     <layout class="QGridLayout" name="gridLayout_thresholds">
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_tempMin">
+        <property name="text"><string>温度下限 (°C):</string></property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QDoubleSpinBox" name="doubleSpinBox_tempMin">
+        <property name="minimum"><double>-20.000000000000000</double></property>
+        <property name="maximum"><double>50.000000000000000</double></property>
+        <property name="value"><double>15.000000000000000</double></property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <widget class="QLabel" name="label_tempMax">
+        <property name="text"><string>温度上限 (°C):</string></property>
+       </widget>
+      </item>
+      <item row="0" column="3">
+       <widget class="QDoubleSpinBox" name="doubleSpinBox_tempMax">
+        <property name="minimum"><double>-20.000000000000000</double></property>
+        <property name="maximum"><double>50.000000000000000</double></property>
+        <property name="value"><double>35.000000000000000</double></property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="label_humidityMin">
+        <property name="text"><string>湿度下限 (%):</string></property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QDoubleSpinBox" name="doubleSpinBox_humidityMin">
+        <property name="maximum"><double>100.000000000000000</double></property>
+        <property name="value"><double>30.000000000000000</double></property>
+       </widget>
+      </item>
+      <item row="1" column="2">
+       <widget class="QLabel" name="label_humidityMax">
+        <property name="text"><string>湿度上限 (%):</string></property>
+       </widget>
+      </item>
+      <item row="1" column="3">
+       <widget class="QDoubleSpinBox" name="doubleSpinBox_humidityMax">
+        <property name="maximum"><double>100.000000000000000</double></property>
+        <property name="value"><double>80.000000000000000</double></property>
+       </widget>
+      </item>
+      <item row="2" column="0" colspan="4">
+       <widget class="QPushButton" name="btnSaveThresholds">
+        <property name="text"><string>保存报警阈值设置</string></property>
+        <property name="minimumSize"><size><width>0</width><height>35</height></size></property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBox_alarmStatus">
+     <property name="title"><string>当前报警状态</string></property>
+     <property name="maximumSize"><size><width>16777215</width><height>80</height></size></property>
+     <layout class="QHBoxLayout" name="horizontalLayout_status">
+      <item>
+       <widget class="QLabel" name="label_alarmIndicator">
+        <property name="text"><string>●</string></property>
+        <property name="font"><font><pointsize>20</pointsize></font></property>
+        <property name="styleSheet"><string notr="true">color: green;</string></property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_alarmText">
+        <property name="text"><string>系统正常，无报警</string></property>
+        <property name="font"><font><pointsize>11</pointsize></font></property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation"><enum>Qt::Horizontal</enum></property>
+        <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+       </spacer>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBox_alarmHistory">
+     <property name="title"><string>报警历史记录</string></property>
+     <layout class="QVBoxLayout" name="verticalLayout_history">
+      <item>
+       <widget class="QTableWidget" name="tableWidget_alarmLogs">
+        <property name="alternatingRowColors"><bool>true</bool></property>
+        <property name="columnCount"><number>4</number></property>
+        <column><property name="text"><string>时间</string></property></column>
+        <column><property name="text"><string>类型</string></property></column>
+        <column><property name="text"><string>内容</string></property></column>
+        <column><property name="text"><string>处理状态</string></property></column>
+        <row>
+         <property name="text"><string>1</string></property>
+        </row>
+        <item row="0" column="0">
+         <property name="text"><string>2026-03-09 12:15:30</string></property>
+        </item>
+        <item row="0" column="1">
+         <property name="text"><string>温度过高</string></property>
+        </item>
+        <item row="0" column="2">
+         <property name="text"><string>当前温度: 36.5°C，超过阈值35.0°C</string></property>
+        </item>
+        <item row="0" column="3">
+         <property name="text"><string>已处理</string></property>
+        </item>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btnClearLogs">
+        <property name="text"><string>清空报警历史</string></property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
   </layout>
  </widget>
  <resources/><connections/>

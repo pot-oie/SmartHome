@@ -4,14 +4,128 @@
  <widget class="QWidget" name="DeviceControlWidget">
   <layout class="QHBoxLayout" name="horizontalLayout">
    <item>
-    <widget class="QListWidget" name="listCategory">
-     <property name="maximumSize"><size><width>150</width><height>16777215</height></size></property>
+    <widget class="QGroupBox" name="groupBox_category">
+     <property name="title"><string>设备分类</string></property>
+     <property name="maximumSize"><size><width>200</width><height>16777215</height></size></property>
+     <layout class="QVBoxLayout" name="verticalLayout_cat">
+      <item>
+       <widget class="QListWidget" name="listCategory">
+        <item><property name="text"><string>灯光设备</string></property></item>
+        <item><property name="text"><string>空调设备</string></property></item>
+        <item><property name="text"><string>窗帘设备</string></property></item>
+        <item><property name="text"><string>门锁设备</string></property></item>
+        <item><property name="text"><string>影音设备</string></property></item>
+        <item><property name="text"><string>其他设备</string></property></item>
+       </widget>
+      </item>
+     </layout>
     </widget>
    </item>
    <item>
-    <widget class="QScrollArea" name="scrollArea">
-     <property name="widgetResizable"><bool>true</bool></property>
-     <widget class="QWidget" name="scrollAreaWidgetContents"/>
+    <widget class="QGroupBox" name="groupBox_devices">
+     <property name="title"><string>设备控制面板</string></property>
+     <layout class="QVBoxLayout" name="verticalLayout_main">
+      <item>
+       <widget class="QLabel" name="label_categoryTitle">
+        <property name="text"><string>当前分类：灯光设备</string></property>
+        <property name="font"><font><pointsize>11</pointsize><weight>75</weight><bold>true</bold></font></property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QScrollArea" name="scrollArea">
+        <property name="widgetResizable"><bool>true</bool></property>
+        <widget class="QWidget" name="scrollAreaWidgetContents">
+         <layout class="QVBoxLayout" name="verticalLayout_scroll">
+          <item>
+           <widget class="QFrame" name="frame_device1">
+            <property name="frameShape"><enum>QFrame::StyledPanel</enum></property>
+            <property name="frameShadow"><enum>QFrame::Raised</enum></property>
+            <layout class="QHBoxLayout" name="horizontalLayout_device1">
+             <item>
+              <widget class="QLabel" name="label_device1Name">
+               <property name="text"><string>客厅主灯</string></property>
+               <property name="font"><font><pointsize>10</pointsize></font></property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_device1Status">
+               <property name="text"><string>状态: 开启</string></property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="btn_device1Switch">
+               <property name="text"><string>开/关</string></property>
+               <property name="checkable"><bool>true</bool></property>
+               <property name="checked"><bool>true</bool></property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QSlider" name="slider_device1">
+               <property name="minimum"><number>0</number></property>
+               <property name="maximum"><number>100</number></property>
+               <property name="value"><number>80</number></property>
+               <property name="orientation"><enum>Qt::Horizontal</enum></property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_device1Value">
+               <property name="text"><string>80%</string></property>
+               <property name="minimumSize"><size><width>40</width><height>0</height></size></property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QFrame" name="frame_device2">
+            <property name="frameShape"><enum>QFrame::StyledPanel</enum></property>
+            <property name="frameShadow"><enum>QFrame::Raised</enum></property>
+            <layout class="QHBoxLayout" name="horizontalLayout_device2">
+             <item>
+              <widget class="QLabel" name="label_device2Name">
+               <property name="text"><string>卧室吊灯</string></property>
+               <property name="font"><font><pointsize>10</pointsize></font></property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_device2Status">
+               <property name="text"><string>状态: 关闭</string></property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="btn_device2Switch">
+               <property name="text"><string>开/关</string></property>
+               <property name="checkable"><bool>true</bool></property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QSlider" name="slider_device2">
+               <property name="minimum"><number>0</number></property>
+               <property name="maximum"><number>100</number></property>
+               <property name="value"><number>50</number></property>
+               <property name="orientation"><enum>Qt::Horizontal</enum></property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_device2Value">
+               <property name="text"><string>50%</string></property>
+               <property name="minimumSize"><size><width>40</width><height>0</height></size></property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <spacer name="verticalSpacer">
+            <property name="orientation"><enum>Qt::Vertical</enum></property>
+            <property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property>
+           </spacer>
+          </item>
+         </layout>
+        </widget>
+       </widget>
+      </item>
+     </layout>
     </widget>
    </item>
   </layout>

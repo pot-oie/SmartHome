@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RCC>
+    <qresource prefix="/">
+        <!-- 主导航图标 -->
+        <file>icons/home.svg</file>
+        <file>icons/devices.svg</file>
+        <file>icons/scene.svg</file>
+        <file>icons/history.svg</file>
+        <file>icons/alarm.svg</file>
+        <file>icons/settings.svg</file>
+        
+        <!-- 设备类型图标 -->
+        <file>icons/light.svg</file>
+        <file>icons/ac.svg</file>
+        <file>icons/curtains.svg</file>
+        <file>icons/tv.svg</file>
+        <file>icons/lock.svg</file>
+        
+        <!-- 操作图标 -->
+        <file>icons/add.svg</file>
+        <file>icons/delete.svg</file>
+        <file>icons/search.svg</file>
+        <file>icons/save.svg</file>
+        
+        <!-- 状态图标 -->
+        <file>icons/person.svg</file>
+        <file>icons/check.svg</file>
+        <file>icons/warning.svg</file>
+    </qresource>
+</RCC>

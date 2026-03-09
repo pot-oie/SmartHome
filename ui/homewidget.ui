@@ -3,7 +3,116 @@
  <class>HomeWidget</class>
  <widget class="QWidget" name="HomeWidget">
   <layout class="QVBoxLayout" name="verticalLayout">
-   <item><widget class="QLabel" name="label"><property name="text"><string>首页大屏数据总览</string></property><property name="alignment"><set>Qt::AlignCenter</set></property></widget></item>
+   <item>
+    <widget class="QLabel" name="label_title">
+     <property name="text"><string>智能家居控制中心</string></property>
+     <property name="alignment"><set>Qt::AlignCenter</set></property>
+     <property name="font"><font><pointsize>16</pointsize><weight>75</weight><bold>true</bold></font></property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_env">
+     <item>
+      <widget class="QGroupBox" name="groupBox_temp">
+       <property name="title"><string>当前温度</string></property>
+       <layout class="QVBoxLayout" name="verticalLayout_temp">
+        <item>
+         <widget class="QLabel" name="label_temperature">
+          <property name="text"><string>25.5 °C</string></property>
+          <property name="alignment"><set>Qt::AlignCenter</set></property>
+          <property name="font"><font><pointsize>24</pointsize><weight>75</weight><bold>true</bold></font></property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="groupBox_humidity">
+       <property name="title"><string>当前湿度</string></property>
+       <layout class="QVBoxLayout" name="verticalLayout_humidity">
+        <item>
+         <widget class="QLabel" name="label_humidity">
+          <property name="text"><string>60.2 %</string></property>
+          <property name="alignment"><set>Qt::AlignCenter</set></property>
+          <property name="font"><font><pointsize>24</pointsize><weight>75</weight><bold>true</bold></font></property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="groupBox_devices">
+       <property name="title"><string>设备状态</string></property>
+       <layout class="QVBoxLayout" name="verticalLayout_devices">
+        <item>
+         <widget class="QLabel" name="label_deviceCount">
+          <property name="text"><string>在线: 8/10</string></property>
+          <property name="alignment"><set>Qt::AlignCenter</set></property>
+          <property name="font"><font><pointsize>14</pointsize></font></property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBox_quickControl">
+     <property name="title"><string>快捷控制</string></property>
+     <layout class="QGridLayout" name="gridLayout_quick">
+      <item row="0" column="0">
+       <widget class="QPushButton" name="btnQuickLight">
+        <property name="text"><string>客厅灯</string></property>
+        <property name="minimumSize"><size><width>0</width><height>50</height></size></property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QPushButton" name="btnQuickAC">
+        <property name="text"><string>空调</string></property>
+        <property name="minimumSize"><size><width>0</width><height>50</height></size></property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <widget class="QPushButton" name="btnQuickCurtain">
+        <property name="text"><string>窗帘</string></property>
+        <property name="minimumSize"><size><width>0</width><height>50</height></size></property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QPushButton" name="btnQuickTV">
+        <property name="text"><string>电视</string></property>
+        <property name="minimumSize"><size><width>0</width><height>50</height></size></property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QPushButton" name="btnQuickDoor">
+        <property name="text"><string>门锁</string></property>
+        <property name="minimumSize"><size><width>0</width><height>50</height></size></property>
+       </widget>
+      </item>
+      <item row="1" column="2">
+       <widget class="QPushButton" name="btnGoHome">
+        <property name="text"><string>回家模式</string></property>
+        <property name="minimumSize"><size><width>0</width><height>50</height></size></property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBox_alarm">
+     <property name="title"><string>最近报警</string></property>
+     <layout class="QVBoxLayout" name="verticalLayout_alarm">
+      <item>
+       <widget class="QTextEdit" name="textEdit_alarmLog">
+        <property name="maximumSize"><size><width>16777215</width><height>100</height></size></property>
+        <property name="readOnly"><bool>true</bool></property>
+        <property name="html"><string>&lt;!DOCTYPE HTML&gt;&lt;html&gt;&lt;body&gt;&lt;p style="color:green;"&gt;✅ 系统运行正常，暂无报警信息&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string></property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
   </layout>
  </widget>
  <resources/><connections/>
