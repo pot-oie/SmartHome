@@ -1,6 +1,8 @@
 #pragma once
 #include <QWidget>
 
+#include "services/settingsservice.h"
+
 namespace Ui
 {
     class SettingsWidget;
@@ -30,6 +32,10 @@ private slots:
 
 private:
     Ui::SettingsWidget *ui;
+    SettingsService m_settingsService;
+    SettingsDeviceList m_devices;
+
     void loadSystemSettings(); // 使用 QSettings 读取上次保存的配置
     void loadFakeDevices();    // 加载假设备数据
+    void addDeviceRow(const SettingsDeviceEntry &device);
 };

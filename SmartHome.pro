@@ -4,7 +4,8 @@ QT       += core gui network sql svg printsupport
 INCLUDEPATH += $$PWD \
                $$PWD/ui \
                $$PWD/network \
-               $$PWD/database
+               $$PWD/database \
+               $$PWD/services
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport
 
@@ -26,6 +27,13 @@ SOURCES += \
     ui/homewidget.cpp \
     ui/scenewidget.cpp \
     ui/settingswidget.cpp \
+    services/historyservice.cpp \
+    services/environmentservice.cpp \
+    services/sceneservice.cpp \
+    services/deviceservice.cpp \
+    services/alarmservice.cpp \
+    services/settingsservice.cpp \
+    services/loginservice.cpp \
     network/networkmanager.cpp \
     database/databasemanager.cpp \
     qcustomplot.cpp
@@ -39,6 +47,14 @@ HEADERS += \
     ui/homewidget.h \
     ui/scenewidget.h \
     ui/settingswidget.h \
+    services/historyservice.h \
+    services/environmentservice.h \
+    services/sceneservice.h \
+    services/deviceservice.h \
+    services/alarmservice.h \
+    services/settingsservice.h \
+    services/loginservice.h \
+    services/servicemodels.h \
     network/networkmanager.h \
     network/protocol.h \
     database/databasemanager.h \

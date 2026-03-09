@@ -55,22 +55,14 @@ void LoginWidget::on_btnLogin_clicked()
 
     qDebug() << "登录按钮被点击，用户名：" << username;
 
-    // 简单验证：用户名和密码不为空即可登录
-    if (username.isEmpty() || password.isEmpty())
+    const LoginCheckResult result = m_loginService.checkCredential(username, password);
+    if (result == LoginCheckResult::Success)
     {
-        QMessageBox::warning(this, "登录失败", "请输入用户名和密码！");
-        return;
-    }
-
-    // 演示：admin/123456 可以登录
-    if (username == "admin" && password == "123456")
-    {
-        // QMessageBox::information(this, "登录成功", "欢迎使用智能家居监控平台！");
         emit loginSuccess();
     }
     else
     {
-        QMessageBox::warning(this, "登录失败", "用户名或密码错误！\n\n提示：默认账号 admin / 123456");
+        QMessageBox::warning(this, "登录失败", m_loginService.errorMessage(result));
     }
 }
 
@@ -80,13 +72,4 @@ void LoginWidget::on_btnResetPwd_clicked()
     QMessageBox::information(this, "提示", "重置密码功能尚未实现\n\n"
                                            "在实际应用中，这里会发送验证码到\n"
                                            "注册的邮箱或手机号进行密码重置。");
-}
-
-bool LoginWidget::verifyUserInDatabase(const QString &username, const QString &password)
-{
-    Q_UNUSED(username);
-    Q_UNUSED(password);
-    // 预留数据库验证逻辑
-    // TODO: 实际应用中应该查询数据库验证用户信息
-    return false;
 }

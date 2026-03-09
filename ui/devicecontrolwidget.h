@@ -2,6 +2,8 @@
 #include <QWidget>
 #include <QJsonObject> // 引入 JSON，用于和后端的 TCP 协议交互
 
+#include "services/deviceservice.h"
+
 namespace Ui
 {
     class DeviceControlWidget;
@@ -33,7 +35,10 @@ private slots:
 
 private:
     Ui::DeviceControlWidget *ui;
+    DeviceService m_deviceService;
+    DeviceList m_allDevices;
+
     void initDeviceList();                 // 初始化界面的辅助函数
     void updateDeviceListUI(int category); // 更新设备列表显示
-    static QStringList categories;         // 设备分类列表
+    QStringList m_categories;              // 设备分类列表
 };

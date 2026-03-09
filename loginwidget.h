@@ -1,11 +1,15 @@
 #pragma once
 #include <QWidget>
 
-namespace Ui {
-class LoginWidget;
+#include "services/loginservice.h"
+
+namespace Ui
+{
+    class LoginWidget;
 }
 
-class LoginWidget : public QWidget {
+class LoginWidget : public QWidget
+{
     Q_OBJECT
 
 public:
@@ -24,6 +28,5 @@ private slots:
 
 private:
     Ui::LoginWidget *ui;
-    // 预留一个私有函数用于和本地 SQLite 数据库比对账号密码
-    bool verifyUserInDatabase(const QString& username, const QString& password);
+    LoginService m_loginService;
 };

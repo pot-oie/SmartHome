@@ -1,6 +1,8 @@
 #pragma once
 #include <QWidget>
 
+#include "services/historyservice.h"
+
 namespace Ui
 {
     class HistoryWidget;
@@ -29,5 +31,7 @@ private:
     void queryOperationLogs();               // 执行 SQL 查询日志
     void queryEnvironmentDataAndDrawChart(); // 执行 SQL 查询温湿度并绘制 QCustomPlot
 
+    HistoryService m_historyService;
+    OperationLogList m_currentLogs;
     QCustomPlot *customPlot = nullptr; // 图表指针
 };

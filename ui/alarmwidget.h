@@ -2,6 +2,8 @@
 #include <QWidget>
 #include <QJsonObject>
 
+#include "services/alarmservice.h"
+
 namespace Ui
 {
     class AlarmWidget;
@@ -27,6 +29,9 @@ private slots:
 
 private:
     Ui::AlarmWidget *ui;
+    AlarmService m_alarmService;
+
     void loadThresholds();    // 界面初始化时，从配置或数据库读取当前阈值
     void loadFakeAlarmLogs(); // 加载假报警记录
+    void appendAlarmLogRow(int row, const AlarmLogEntry &entry);
 };

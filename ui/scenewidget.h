@@ -2,6 +2,8 @@
 #include <QWidget>
 #include <QJsonObject>
 
+#include "services/sceneservice.h"
+
 namespace Ui
 {
     class SceneWidget;
@@ -35,5 +37,10 @@ private slots:
 
 private:
     Ui::SceneWidget *ui;
+    SceneService m_sceneService;
+    SceneList m_scenes;
+
     void loadScenesFromDatabase(); // 从 SQLite 加载已存的场景配置
+    void renderSceneList();
+    void renderSceneDetails(const SceneDefinition &scene);
 };

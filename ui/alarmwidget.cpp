@@ -1,8 +1,8 @@
 #include "alarmwidget.h"
 #include "ui_alarmwidget.h"
+
 #include <QDebug>
 #include <QMessageBox>
-#include <QDateTime>
 
 AlarmWidget::AlarmWidget(QWidget *parent) : QWidget(parent),
                                             ui(new Ui::AlarmWidget)
@@ -29,80 +29,51 @@ AlarmWidget::~AlarmWidget()
 
 void AlarmWidget::loadThresholds()
 {
-    // 加载阈值（假数据）
-    ui->doubleSpinBox_tempMax->setValue(30);
-    ui->doubleSpinBox_tempMin->setValue(18);
-    ui->doubleSpinBox_humidityMax->setValue(70);
-    ui->doubleSpinBox_humidityMin->setValue(30);
+    const AlarmThreshold threshold = m_alarmService.defaultThreshold();
+    ui->doubleSpinBox_tempMax->setValue(threshold.tempMax);
+    ui->doubleSpinBox_tempMin->setValue(threshold.tempMin);
+    ui->doubleSpinBox_humidityMax->setValue(threshold.humidityMax);
+    ui->doubleSpinBox_humidityMin->setValue(threshold.humidityMin);
 }
 
 void AlarmWidget::loadFakeAlarmLogs()
 {
-    // 加载假报警记录
     ui->tableWidget_alarmLogs->setRowCount(0);
 
-    QStringList alarmTypes = {"温度过高", "温度过低", "湿度过高", "PM2.5超标", "CO2浓度过高", "设备离线"};
-    QStringList details = {
-        "客厅温度达到32.5°C，超过设定上限",
-        "卧室温度降至16.2°C，低于设定下限",
-        "客厅湿度达到75%，超过设定上限",
-        "客厅PM2.5浓度达到85，空气质量较差",
-        "卧室CO2浓度达到1200ppm，建议开窗通风",
-        "客厅摄像头连接异常，已离线"};
-
-    for (int i = 0; i < 10; i++)
+    const AlarmLogList logs = m_alarmService.loadSampleLogs(10);
+    for (const AlarmLogEntry &entry : logs)
     {
-        int row = ui->tableWidget_alarmLogs->rowCount();
+        const int row = ui->tableWidget_alarmLogs->rowCount();
         ui->tableWidget_alarmLogs->insertRow(row);
-
-        QDateTime time = QDateTime::currentDateTime().addSecs(-i * 7200);
-        int typeIndex = rand() % alarmTypes.size();
-
-        ui->tableWidget_alarmLogs->setItem(row, 0,
-                                           new QTableWidgetItem(time.toString("MM-dd hh:mm")));
-        ui->tableWidget_alarmLogs->setItem(row, 1,
-                                           new QTableWidgetItem(alarmTypes[typeIndex]));
-
-        QTableWidgetItem *iconItem = new QTableWidgetItem();
-        iconItem->setIcon(QIcon(":/icons/warning.svg"));
-        ui->tableWidget_alarmLogs->setItem(row, 2, iconItem);
-
-        ui->tableWidget_alarmLogs->setItem(row, 3,
-                                           new QTableWidgetItem(details[typeIndex]));
-
-        // 设置报警类型的颜色
-        ui->tableWidget_alarmLogs->item(row, 1)->setForeground(QBrush(QColor("#f44336")));
+        appendAlarmLogRow(row, entry);
     }
+}
+
+void AlarmWidget::appendAlarmLogRow(int row, const AlarmLogEntry &entry)
+{
+    ui->tableWidget_alarmLogs->setItem(row, 0, new QTableWidgetItem(entry.timestamp.toString("MM-dd hh:mm")));
+    ui->tableWidget_alarmLogs->setItem(row, 1, new QTableWidgetItem(entry.type));
+
+    QTableWidgetItem *iconItem = new QTableWidgetItem();
+    iconItem->setIcon(QIcon(":/icons/warning.svg"));
+    ui->tableWidget_alarmLogs->setItem(row, 2, iconItem);
+
+    ui->tableWidget_alarmLogs->setItem(row, 3, new QTableWidgetItem(entry.detail));
+    ui->tableWidget_alarmLogs->item(row, 1)->setForeground(QBrush(QColor("#f44336")));
 }
 
 void AlarmWidget::triggerAlarm(const QJsonObject &alarmData)
 {
-    // 触发报警
     qDebug() << "收到报警：" << alarmData;
 
-    // 添加到报警记录
-    // int row = ui->tableWidget_alarmLogs->rowCount();
-    ui->tableWidget_alarmLogs->insertRow(0); // 插入到最前面
+    const AlarmLogEntry entry = m_alarmService.fromAlarmData(alarmData);
+    ui->tableWidget_alarmLogs->insertRow(0);
+    appendAlarmLogRow(0, entry);
 
-    ui->tableWidget_alarmLogs->setItem(0, 0,
-                                       new QTableWidgetItem(QDateTime::currentDateTime().toString("MM-dd hh:mm")));
-    ui->tableWidget_alarmLogs->setItem(0, 1,
-                                       new QTableWidgetItem(alarmData["type"].toString()));
-
-    QTableWidgetItem *iconItem = new QTableWidgetItem();
-    iconItem->setIcon(QIcon(":/icons/warning.svg"));
-    ui->tableWidget_alarmLogs->setItem(0, 2, iconItem);
-
-    ui->tableWidget_alarmLogs->setItem(0, 3,
-                                       new QTableWidgetItem(alarmData["message"].toString()));
-
-    ui->tableWidget_alarmLogs->item(0, 1)->setForeground(QBrush(QColor("#f44336")));
-
-    // 系统级警告弹窗 (声音搁置，先只用弹窗)
     QMessageBox::critical(this, "系统报警",
                           QString("检测到异常情况！\n\n报警类型: %1\n详细信息: %2")
-                              .arg(alarmData["type"].toString())
-                              .arg(alarmData["message"].toString()));
+                              .arg(entry.type)
+                              .arg(entry.detail));
 }
 
 void AlarmWidget::on_btnSaveThresholds_clicked()

@@ -2,6 +2,8 @@
 #include <QWidget>
 #include <QJsonObject>
 
+#include "services/environmentservice.h"
+
 namespace Ui
 {
     class HomeWidget;
@@ -31,5 +33,7 @@ private slots:
 
 private:
     Ui::HomeWidget *ui;
+    EnvironmentService m_environmentService;
     void initConnections();
+    void applyTemperatureColor(double temperature);
 };

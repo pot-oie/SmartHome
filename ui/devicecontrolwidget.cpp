@@ -1,7 +1,7 @@
 #include "devicecontrolwidget.h"
 #include "ui_devicecontrolwidget.h"
+
 #include <QDebug>
-#include <QListWidgetItem>
 #include <QLabel>
 #include <QPushButton>
 #include <QSlider>
@@ -9,12 +9,13 @@
 #include <QHBoxLayout>
 #include <QGroupBox>
 #include <QIcon>
-#include <QJsonObject>
 
 DeviceControlWidget::DeviceControlWidget(QWidget *parent) : QWidget(parent),
                                                             ui(new Ui::DeviceControlWidget)
 {
     ui->setupUi(this);
+    m_categories = m_deviceService.categories();
+    m_allDevices = m_deviceService.loadDefaultDevices();
     initDeviceList();
 }
 
@@ -25,66 +26,23 @@ DeviceControlWidget::~DeviceControlWidget()
 
 void DeviceControlWidget::initDeviceList()
 {
-    // 添加设备分类到左侧列表
-    QStringList categories = {"全部设备", "照明设备", "空调/温控", "窗帘/遮阳", "安防设备", "影音设备"};
     ui->listCategory->clear();
-    ui->listCategory->addItems(categories);
+    ui->listCategory->addItems(m_categories);
     ui->listCategory->setCurrentRow(0);
 
-    // 模拟设备数据并显示在右侧
-    updateDeviceListUI(0); // 默认显示全部设备
+    updateDeviceListUI(0);
 }
 
 void DeviceControlWidget::updateDeviceListUI(int category)
 {
-    // 清空当前设备显示区
     QWidget *contentWidget = new QWidget();
     QVBoxLayout *mainLayout = new QVBoxLayout(contentWidget);
     mainLayout->setSpacing(15);
     mainLayout->setContentsMargins(10, 10, 10, 10);
 
-    // 假数据：不同类型的设备
-    struct DeviceInfo
-    {
-        QString id;
-        QString name;
-        QString type;
-        QString icon;
-        bool isOnline;
-        bool isOn;
-        int value; // 温度/亮度/开合度等
-    };
+    const DeviceList filteredDevices = m_deviceService.filterDevices(m_allDevices, category, m_categories);
 
-    QVector<DeviceInfo> allDevices = {
-        {"light_living", "客厅主灯", "照明设备", ":/icons/light.svg", true, true, 80},
-        {"light_bedroom", "卧室灯", "照明设备", ":/icons/light.svg", true, false, 60},
-        {"light_kitchen", "厨房灯", "照明设备", ":/icons/light.svg", true, true, 100},
-
-        {"ac_living", "客厅空调", "空调/温控", ":/icons/ac.svg", true, true, 24},
-        {"ac_bedroom", "卧室空调", "空调/温控", ":/icons/ac.svg", true, false, 26},
-
-        {"curtain_living", "客厅窗帘", "窗帘/遮阳", ":/icons/curtains.svg", true, true, 50},
-        {"curtain_bedroom", "卧室窗帘", "窗帘/遮阳", ":/icons/curtains.svg", false, false, 0},
-
-        {"lock_door", "前门智能锁", "安防设备", ":/icons/lock.svg", true, true, 0},
-        {"camera_01", "客厅摄像头", "安防设备", ":/icons/check.svg", true, true, 0},
-
-        {"tv_living", "客厅电视", "影音设备", ":/icons/tv.svg", true, false, 50}};
-
-    // 根据分类过滤设备
-    QVector<DeviceInfo> filteredDevices;
-    QString filterType = categories[category];
-
-    for (const auto &device : allDevices)
-    {
-        if (category == 0 || device.type == filterType)
-        {
-            filteredDevices.append(device);
-        }
-    }
-
-    // 为每个设备创建控制卡片
-    for (const auto &device : filteredDevices)
+    for (const DeviceDefinition &device : filteredDevices)
     {
         QGroupBox *deviceCard = new QGroupBox();
         deviceCard->setTitle(device.name);
@@ -123,7 +81,6 @@ void DeviceControlWidget::updateDeviceListUI(int category)
         cardLayout->addLayout(infoLayout);
         cardLayout->addStretch();
 
-        // 右侧：控制按钮
         if (device.isOnline)
         {
             QPushButton *switchBtn = new QPushButton(device.isOn ? "关闭" : "开启");
@@ -133,90 +90,38 @@ void DeviceControlWidget::updateDeviceListUI(int category)
                 "; color: white; border: none; border-radius: 4px; padding: 8px; }"
                 "QPushButton:hover { opacity: 0.8; }");
 
-            // 【优化】处理开关逻辑并发射信号
             connect(switchBtn, &QPushButton::clicked, this, [this, device, switchBtn]()
                     {
-                bool newState = switchBtn->text() == "开启";
+                const bool newState = (switchBtn->text() == "开启");
                 switchBtn->setText(newState ? "关闭" : "开启");
                 switchBtn->setStyleSheet(
                     "QPushButton { background-color: " + QString(newState ? "#4CAF50" : "#2196F3") + 
                     "; color: white; border: none; border-radius: 4px; padding: 8px; }"
                     "QPushButton:hover { opacity: 0.8; }"
                 ); 
-                
-                QJsonObject controlCmd;
-                controlCmd["action"] = "control_single_device";
-                
-                QJsonObject dataObj;
-                dataObj["device_id"] = device.id;
-                dataObj["command"] = newState ? "turn_on" : "turn_off";
-                
-                controlCmd["data"] = dataObj;
+                const QJsonObject controlCmd = m_deviceService.buildSwitchCommand(device.id, newState);
                 emit requestControlDevice(controlCmd); });
             cardLayout->addWidget(switchBtn);
 
-            // 对于有调节功能的设备，添加滑块
-            if (device.type == "照明设备" || device.type == "空调/温控" || device.type == "窗帘/遮阳")
+            if (m_deviceService.supportsAdjust(device.type))
             {
                 QVBoxLayout *sliderLayout = new QVBoxLayout();
                 QLabel *valueLabel = new QLabel();
-                if (device.type == "空调/温控")
-                {
-                    valueLabel->setText(QString::number(device.value) + "°C");
-                }
-                else if (device.type == "照明设备")
-                {
-                    valueLabel->setText("亮度: " + QString::number(device.value) + "%");
-                }
-                else
-                {
-                    valueLabel->setText("开合: " + QString::number(device.value) + "%");
-                }
+                valueLabel->setText(m_deviceService.valueText(device, device.value));
                 sliderLayout->addWidget(valueLabel);
 
                 QSlider *slider = new QSlider(Qt::Horizontal);
                 slider->setFixedWidth(120);
-                if (device.type == "空调/温控")
-                {
-                    slider->setRange(16, 30);
-                }
-                else
-                {
-                    slider->setRange(0, 100);
-                }
+                const QPair<int, int> range = m_deviceService.sliderRange(device.type);
+                slider->setRange(range.first, range.second);
                 slider->setValue(device.value);
 
-                // 拖动时仅改变文本，不发送网络请求，防止阻塞
-                connect(slider, &QSlider::valueChanged, this, [valueLabel, device](int val)
-                        {
-                    if(device.type == "空调/温控") {
-                        valueLabel->setText(QString::number(val) + "°C");
-                    } else if(device.type == "照明设备") {
-                        valueLabel->setText("亮度: " + QString::number(val) + "%");
-                    } else {
-                        valueLabel->setText("开合: " + QString::number(val) + "%");
-                    } });
+                connect(slider, &QSlider::valueChanged, this, [this, valueLabel, device](int val)
+                        { valueLabel->setText(m_deviceService.valueText(device, val)); });
 
-                // 【优化】松开滑块时才发射最终的网络请求指令
                 connect(slider, &QSlider::sliderReleased, this, [this, slider, device]()
                         {
-                    QJsonObject controlCmd;
-                    controlCmd["action"] = "control_single_device";
-                    
-                    QJsonObject dataObj;
-                    dataObj["device_id"] = device.id;
-                    dataObj["command"] = "set_param";
-                    
-                    if (device.type == "空调/温控") {
-                        dataObj["param_name"] = "temperature";
-                    } else if (device.type == "照明设备") {
-                        dataObj["param_name"] = "brightness";
-                    } else {
-                        dataObj["param_name"] = "open_level";
-                    }
-                    dataObj["param_value"] = slider->value();
-                    
-                    controlCmd["data"] = dataObj;
+                    const QJsonObject controlCmd = m_deviceService.buildSetParamCommand(device, slider->value());
                     emit requestControlDevice(controlCmd); });
 
                 sliderLayout->addWidget(slider);
@@ -229,15 +134,12 @@ void DeviceControlWidget::updateDeviceListUI(int category)
 
     mainLayout->addStretch();
 
-    // 将内容设置到滚动区域
     if (ui->scrollArea->widget())
     {
         delete ui->scrollArea->widget();
     }
     ui->scrollArea->setWidget(contentWidget);
 }
-
-QStringList DeviceControlWidget::categories = {"全部设备", "照明设备", "空调/温控", "窗帘/遮阳", "安防设备", "影音设备"};
 
 void DeviceControlWidget::updateDeviceStatus(const QJsonObject &statusData)
 {

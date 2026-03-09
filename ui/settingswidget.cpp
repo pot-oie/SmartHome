@@ -1,5 +1,6 @@
 #include "settingswidget.h"
 #include "ui_settingswidget.h"
+
 #include <QDebug>
 #include <QMessageBox>
 #include <QInputDialog>
@@ -31,11 +32,9 @@ SettingsWidget::~SettingsWidget()
 
 void SettingsWidget::loadSystemSettings()
 {
-    // 加载系统配置
-    // 阻止信号以避免在初始化时触发 currentIndexChanged
     ui->cmbTheme->blockSignals(true);
     ui->cmbTheme->clear();
-    ui->cmbTheme->addItems({"浅色主题", "深色主题", "自动"});
+    ui->cmbTheme->addItems(m_settingsService.themeOptions());
     ui->cmbTheme->setCurrentIndex(0);
     ui->cmbTheme->blockSignals(false);
 }
@@ -43,63 +42,33 @@ void SettingsWidget::loadSystemSettings()
 void SettingsWidget::loadFakeDevices()
 {
     ui->tableWidget_devices->setRowCount(0);
-
-    // 假设备数据
-    QVector<QStringList> devices = {
-        {"light_living", "客厅主灯", "照明设备", "192.168.1.101", "在线"},
-        {"light_bedroom", "卧室灯", "照明设备", "192.168.1.102", "在线"},
-        {"ac_living", "客厅空调", "空调设备", "192.168.1.103", "在线"},
-        {"curtain_living", "客厅窗帘", "窗帘设备", "192.168.1.104", "在线"},
-        {"lock_door", "前门智能锁", "安防设备", "192.168.1.105", "在线"},
-        {"camera_01", "客厅摄像头", "安防设备", "192.168.1.106", "离线"},
-        {"tv_living", "客厅电视", "影音设备", "192.168.1.107", "在线"}};
-
-    for (const auto &device : devices)
+    m_devices = m_settingsService.loadDefaultDevices();
+    for (const SettingsDeviceEntry &device : m_devices)
     {
-        int row = ui->tableWidget_devices->rowCount();
-        ui->tableWidget_devices->insertRow(row);
-
-        for (int col = 0; col < device.size(); col++)
-        {
-            QTableWidgetItem *item = new QTableWidgetItem(device[col]);
-            ui->tableWidget_devices->setItem(row, col, item);
-
-            // 状态列设置颜色
-            if (col == 4)
-            {
-                if (device[col] == "在线")
-                {
-                    item->setForeground(QBrush(QColor("#4CAF50")));
-                }
-                else
-                {
-                    item->setForeground(QBrush(QColor("#f44336")));
-                }
-            }
-        }
+        addDeviceRow(device);
     }
+}
+
+void SettingsWidget::addDeviceRow(const SettingsDeviceEntry &device)
+{
+    const int row = ui->tableWidget_devices->rowCount();
+    ui->tableWidget_devices->insertRow(row);
+
+    ui->tableWidget_devices->setItem(row, 0, new QTableWidgetItem(device.id));
+    ui->tableWidget_devices->setItem(row, 1, new QTableWidgetItem(device.name));
+    ui->tableWidget_devices->setItem(row, 2, new QTableWidgetItem(device.type));
+    ui->tableWidget_devices->setItem(row, 3, new QTableWidgetItem(device.ip));
+
+    QTableWidgetItem *statusItem = new QTableWidgetItem(device.online ? "在线" : "离线");
+    statusItem->setForeground(QBrush(QColor(device.online ? "#4CAF50" : "#f44336")));
+    ui->tableWidget_devices->setItem(row, 4, statusItem);
 }
 
 void SettingsWidget::on_cmbTheme_currentIndexChanged(int index)
 {
     qDebug() << "切换主题：" << index;
-
-    QString themeName;
-    switch (index)
-    {
-    case 0:
-        themeName = "light";
-        break;
-    case 1:
-        themeName = "dark";
-        break;
-    case 2:
-        themeName = "auto";
-        break;
-    }
-
+    const QString themeName = m_settingsService.themeKeyByIndex(index);
     emit themeChanged(themeName);
-    // 移除弹窗提示，主题切换在设置中静默进行
 }
 
 void SettingsWidget::on_btnBackupDatabase_clicked()
@@ -129,18 +98,9 @@ void SettingsWidget::on_btnAddDevice_clicked()
                                                QLineEdit::Normal, "", &ok);
     if (ok && !deviceName.isEmpty())
     {
-        int row = ui->tableWidget_devices->rowCount();
-        ui->tableWidget_devices->insertRow(row);
-
-        QString deviceId = "device_" + QString::number(row + 100);
-        ui->tableWidget_devices->setItem(row, 0, new QTableWidgetItem(deviceId));
-        ui->tableWidget_devices->setItem(row, 1, new QTableWidgetItem(deviceName));
-        ui->tableWidget_devices->setItem(row, 2, new QTableWidgetItem("新设备"));
-        ui->tableWidget_devices->setItem(row, 3, new QTableWidgetItem("192.168.1." + QString::number(108 + row)));
-
-        QTableWidgetItem *statusItem = new QTableWidgetItem("在线");
-        statusItem->setForeground(QBrush(QColor("#4CAF50")));
-        ui->tableWidget_devices->setItem(row, 4, statusItem);
+        const SettingsDeviceEntry newDevice = m_settingsService.createNewDevice(deviceName, m_devices.size());
+        m_devices.push_back(newDevice);
+        addDeviceRow(newDevice);
 
         QMessageBox::information(this, "成功", "设备 \"" + deviceName + "\" 已添加！");
     }
@@ -160,6 +120,10 @@ void SettingsWidget::on_btnDeleteDevice_clicked()
                                       QMessageBox::Yes | QMessageBox::No);
         if (reply == QMessageBox::Yes)
         {
+            if (currentRow < m_devices.size())
+            {
+                m_devices.removeAt(currentRow);
+            }
             ui->tableWidget_devices->removeRow(currentRow);
             QMessageBox::information(this, "成功", "设备已删除！");
         }
@@ -180,8 +144,7 @@ void SettingsWidget::on_btnTestConnection_clicked()
         QString deviceName = ui->tableWidget_devices->item(currentRow, 1)->text();
         QString deviceIP = ui->tableWidget_devices->item(currentRow, 3)->text();
 
-        // 模拟ping测试
-        int latency = 10 + rand() % 40; // 10-50ms
+        const int latency = m_settingsService.mockLatencyMs();
 
         QMessageBox::information(this, "连接测试",
                                  "设备：" + deviceName + "\n" +
