@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>HomeWidget</class>
+ <widget class="QWidget" name="HomeWidget">
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item><widget class="QLabel" name="label"><property name="text"><string>首页大屏数据总览</string></property><property name="alignment"><set>Qt::AlignCenter</set></property></widget></item>
+  </layout>
+ </widget>
+ <resources/><connections/>
+</ui>

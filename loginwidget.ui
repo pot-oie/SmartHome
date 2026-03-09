@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>LoginWidget</class>
+ <widget class="QWidget" name="LoginWidget">
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item><widget class="QLabel" name="label_title"><property name="text"><string>欢迎使用智能家居系统</string></property><property name="alignment"><set>Qt::AlignCenter</set></property></widget></item>
+   <item><widget class="QLineEdit" name="lineEdit_username"><property name="placeholderText"><string>请输入账号</string></property></widget></item>
+   <item><widget class="QLineEdit" name="lineEdit_password"><property name="echoMode"><enum>QLineEdit::Password</enum></property><property name="placeholderText"><string>请输入密码</string></property></widget></item>
+   <item><widget class="QPushButton" name="btnLogin"><property name="text"><string>登 录</string></property></widget></item>
+   <item><widget class="QPushButton" name="btnResetPwd"><property name="text"><string>重置密码</string></property></widget></item>
+  </layout>
+ </widget>
+ <resources/><connections/>
+</ui>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>SettingsWidget</class>
+ <widget class="QWidget" name="SettingsWidget">
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item><widget class="QComboBox" name="cmbTheme"/></item>
+   <item><widget class="QPushButton" name="btnTestConnection"><property name="text"><string>测试设备连通性 (Ping)</string></property></widget></item>
+   <item><widget class="QPushButton" name="btnAddDevice"><property name="text"><string>录入新设备</string></property></widget></item>
+   <item><widget class="QPushButton" name="btnDeleteDevice"><property name="text"><string>注销设备</string></property></widget></item>
+   <item><widget class="QPushButton" name="btnBackupDatabase"><property name="text"><string>一键备份 SQLite 数据库</string></property></widget></item>
+  </layout>
+ </widget>
+ <resources/><connections/>
+</ui>

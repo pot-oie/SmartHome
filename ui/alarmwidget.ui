@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>AlarmWidget</class>
+ <widget class="QWidget" name="AlarmWidget">
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item><widget class="QPushButton" name="btnSaveThresholds"><property name="text"><string>保存报警阈值设置</string></property></widget></item>
+   <item><widget class="QPushButton" name="btnClearLogs"><property name="text"><string>清空报警历史</string></property></widget></item>
+  </layout>
+ </widget>
+ <resources/><connections/>
+</ui>

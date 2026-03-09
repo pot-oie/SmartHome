@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>SceneWidget</class>
+ <widget class="QWidget" name="SceneWidget">
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item><widget class="QPushButton" name="btnAddScene"><property name="text"><string>添加新场景</string></property></widget></item>
+   <item><widget class="QPushButton" name="btnDeleteScene"><property name="text"><string>删除选中场景</string></property></widget></item>
+   <item><widget class="QPushButton" name="btnAddDeviceToScene"><property name="text"><string>为当前场景绑定设备</string></property></widget></item>
+   <item><widget class="QPushButton" name="btnActivateScene"><property name="text"><string>一键执行激活场景</string></property></widget></item>
+  </layout>
+ </widget>
+ <resources/><connections/>
+</ui>
