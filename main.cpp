@@ -1,8 +1,10 @@
 #include "mainwindow.h"
 #include "loginwidget.h"
+#include "database/DatabaseManager.h"
 
 #include <QApplication>
 #include <QLocale>
+#include <QSqlQuery>
 #include <QtGlobal>
 #include <QTranslator>
 #include <QFile>
@@ -38,6 +40,28 @@ int main(int argc, char *argv[])
         }
     }
 
+    // 创建主窗口和登录窗口
+    DatabaseManager &databaseManager = DatabaseManager::instance();
+    if (databaseManager.open())
+    {
+        databaseManager.testConnection();
+
+        QSqlQuery versionQuery = databaseManager.query("SELECT VERSION()", {});
+        if (versionQuery.isActive() && versionQuery.next())
+        {
+            qInfo() << "[main] MySQL version:" << versionQuery.value(0).toString();
+        }
+        else
+        {
+            qWarning() << "[main] 查询 MySQL 版本失败:" << databaseManager.lastErrorText();
+        }
+    }
+    else
+    {
+        qWarning() << "[main] 数据库连接失败:" << databaseManager.lastErrorText();
+    }
+
+    MainWindow *mainWindow = new MainWindow();
     // 创建主窗口（栈分配，自动管理生命周期）和登录窗口
     MainWindow mainWindow;
     LoginWidget *loginWidget = new LoginWidget();
