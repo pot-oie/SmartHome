@@ -9,6 +9,7 @@
 #include <QHBoxLayout>
 #include <QGroupBox>
 #include <QIcon>
+#include <QJsonObject>
 
 DeviceControlWidget::DeviceControlWidget(QWidget *parent) : QWidget(parent),
                                                             ui(new Ui::DeviceControlWidget)
@@ -131,16 +132,27 @@ void DeviceControlWidget::updateDeviceListUI(int category)
                 "QPushButton { background-color: " + QString(device.isOn ? "#4CAF50" : "#2196F3") +
                 "; color: white; border: none; border-radius: 4px; padding: 8px; }"
                 "QPushButton:hover { opacity: 0.8; }");
+
+            // 【优化】处理开关逻辑并发射信号
             connect(switchBtn, &QPushButton::clicked, this, [this, device, switchBtn]()
                     {
-                qDebug() << "切换设备：" << device.name;
                 bool newState = switchBtn->text() == "开启";
                 switchBtn->setText(newState ? "关闭" : "开启");
                 switchBtn->setStyleSheet(
                     "QPushButton { background-color: " + QString(newState ? "#4CAF50" : "#2196F3") + 
                     "; color: white; border: none; border-radius: 4px; padding: 8px; }"
                     "QPushButton:hover { opacity: 0.8; }"
-                ); });
+                ); 
+                
+                QJsonObject controlCmd;
+                controlCmd["action"] = "control_single_device";
+                
+                QJsonObject dataObj;
+                dataObj["device_id"] = device.id;
+                dataObj["command"] = newState ? "turn_on" : "turn_off";
+                
+                controlCmd["data"] = dataObj;
+                emit requestControlDevice(controlCmd); });
             cardLayout->addWidget(switchBtn);
 
             // 对于有调节功能的设备，添加滑块
@@ -173,6 +185,8 @@ void DeviceControlWidget::updateDeviceListUI(int category)
                     slider->setRange(0, 100);
                 }
                 slider->setValue(device.value);
+
+                // 拖动时仅改变文本，不发送网络请求，防止阻塞
                 connect(slider, &QSlider::valueChanged, this, [valueLabel, device](int val)
                         {
                     if(device.type == "空调/温控") {
@@ -182,6 +196,29 @@ void DeviceControlWidget::updateDeviceListUI(int category)
                     } else {
                         valueLabel->setText("开合: " + QString::number(val) + "%");
                     } });
+
+                // 【优化】松开滑块时才发射最终的网络请求指令
+                connect(slider, &QSlider::sliderReleased, this, [this, slider, device]()
+                        {
+                    QJsonObject controlCmd;
+                    controlCmd["action"] = "control_single_device";
+                    
+                    QJsonObject dataObj;
+                    dataObj["device_id"] = device.id;
+                    dataObj["command"] = "set_param";
+                    
+                    if (device.type == "空调/温控") {
+                        dataObj["param_name"] = "temperature";
+                    } else if (device.type == "照明设备") {
+                        dataObj["param_name"] = "brightness";
+                    } else {
+                        dataObj["param_name"] = "open_level";
+                    }
+                    dataObj["param_value"] = slider->value();
+                    
+                    controlCmd["data"] = dataObj;
+                    emit requestControlDevice(controlCmd); });
+
                 sliderLayout->addWidget(slider);
                 cardLayout->addLayout(sliderLayout);
             }

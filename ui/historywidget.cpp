@@ -1,5 +1,6 @@
 #include "historywidget.h"
 #include "ui_historywidget.h"
+#include "qcustomplot.h"
 #include <QDebug>
 #include <QDateTime>
 #include <QMessageBox>
@@ -75,9 +76,63 @@ void HistoryWidget::queryOperationLogs()
 
 void HistoryWidget::queryEnvironmentDataAndDrawChart()
 {
-    // 查询数据绘图逻辑
-    // TODO: 使用 QCustomPlot 绘制温湿度折线图
     qDebug() << "绘制环境数据图表";
+
+    // 1. 隐藏原来的占位提示文本
+    ui->label_chartPlaceholder->hide();
+
+    // 2. 如果图表尚未创建，则在代码中动态初始化
+    if (!customPlot)
+    {
+        customPlot = new QCustomPlot(this);
+        // 将 QCustomPlot 添加到由 Designer 生成的垂直布局中
+        ui->verticalLayout_charts->addWidget(customPlot);
+
+        // 初始化温度曲线 (红色)
+        customPlot->addGraph();
+        customPlot->graph(0)->setPen(QPen(Qt::red, 2));
+        customPlot->graph(0)->setName("温度 (°C)");
+
+        // 初始化湿度曲线 (蓝色)
+        customPlot->addGraph();
+        customPlot->graph(1)->setPen(QPen(Qt::blue, 2));
+        customPlot->graph(1)->setName("湿度 (%)");
+
+        // 设置时间轴(X轴)
+        QSharedPointer<QCPAxisTickerDateTime> dateTicker(new QCPAxisTickerDateTime);
+        dateTicker->setDateTimeFormat("hh:mm:ss");
+        customPlot->xAxis->setTicker(dateTicker);
+        customPlot->xAxis->setLabel("时间");
+
+        // 设置数值轴(Y轴)
+        customPlot->yAxis->setLabel("环境数值");
+        customPlot->legend->setVisible(true); // 显示图例
+    }
+
+    // 3. 模拟最近 24 个时间点的温湿度数据
+    QVector<double> timeData, tempData, humData;
+    double now = QDateTime::currentDateTime().toSecsSinceEpoch();
+
+    for (int i = 0; i < 24; ++i)
+    {
+        // 模拟每小时一个数据点（倒推过去 24 小时）
+        timeData.prepend(now - i * 3600);
+        // 生成模拟波动数据
+        tempData.prepend(22.0 + (rand() % 100) / 10.0 * qSin(i / 3.0));
+        humData.prepend(45.0 + (rand() % 200) / 10.0 * qCos(i / 3.0));
+    }
+
+    // 4. 将数据赋予图表
+    customPlot->graph(0)->setData(timeData, tempData);
+    customPlot->graph(1)->setData(timeData, humData);
+
+    // 5. 自动缩放坐标轴范围以适应数据
+    customPlot->xAxis->setRange(timeData.first(), timeData.last());
+    // 假设温度一般10~40，湿度30~80，给Y轴一个固定的舒适范围
+    customPlot->yAxis->setRange(10, 85);
+
+    // 6. 重绘刷新显示
+    customPlot->replot();
 }
 
 void HistoryWidget::on_btnSearch_clicked()

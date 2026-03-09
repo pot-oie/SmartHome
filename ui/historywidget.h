@@ -1,11 +1,15 @@
 #pragma once
 #include <QWidget>
 
-namespace Ui {
-class HistoryWidget;
+namespace Ui
+{
+    class HistoryWidget;
 }
 
-class HistoryWidget : public QWidget {
+class QCustomPlot;
+
+class HistoryWidget : public QWidget
+{
     Q_OBJECT
 
 public:
@@ -22,6 +26,8 @@ private slots:
 
 private:
     Ui::HistoryWidget *ui;
-    void queryOperationLogs(); // 执行 SQL 查询日志
+    void queryOperationLogs();               // 执行 SQL 查询日志
     void queryEnvironmentDataAndDrawChart(); // 执行 SQL 查询温湿度并绘制 QCustomPlot
+
+    QCustomPlot *customPlot = nullptr; // 图表指针
 };

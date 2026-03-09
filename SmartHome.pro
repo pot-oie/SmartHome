@@ -1,4 +1,4 @@
-QT       += core gui network sql svg
+QT       += core gui network sql svg printsupport
 
 # 头文件搜索路径
 INCLUDEPATH += $$PWD \
@@ -6,9 +6,11 @@ INCLUDEPATH += $$PWD \
                $$PWD/network \
                $$PWD/database
 
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport
 
 CONFIG += c++17
+
+win32-g++:QMAKE_CXXFLAGS += -Wa,-mbig-obj
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -25,7 +27,8 @@ SOURCES += \
     ui/scenewidget.cpp \
     ui/settingswidget.cpp \
     network/networkmanager.cpp \
-    database/databasemanager.cpp
+    database/databasemanager.cpp \
+    qcustomplot.cpp
 
 HEADERS += \
     mainwindow.h \
@@ -38,7 +41,8 @@ HEADERS += \
     ui/settingswidget.h \
     network/networkmanager.h \
     network/protocol.h \
-    database/databasemanager.h
+    database/databasemanager.h \
+    qcustomplot.h
 
 FORMS += \
     mainwindow.ui \

@@ -41,7 +41,19 @@ HomeWidget::~HomeWidget()
 
 void HomeWidget::initConnections()
 {
-    // 在这里绑定额外的信号与槽
+    // 【优化】将界面上的快捷按钮与发射指令的信号连接起来
+    connect(ui->btnQuickLight, &QPushButton::clicked, this, [this]()
+            { emit requestQuickControl("light_living", "turn_on"); });
+
+    connect(ui->btnQuickAC, &QPushButton::clicked, this, [this]()
+            { emit requestQuickControl("ac_living", "turn_on"); });
+
+    connect(ui->btnQuickCurtain, &QPushButton::clicked, this, [this]()
+            { emit requestQuickControl("curtain_living", "turn_on"); });
+
+    // 点击“回家模式”按钮时，交由后端或 MainWindow 路由到场景模块
+    connect(ui->btnGoHome, &QPushButton::clicked, this, [this]()
+            { emit requestQuickControl("scene_go_home", "trigger_scene"); });
 }
 
 void HomeWidget::onQuickControlClicked()

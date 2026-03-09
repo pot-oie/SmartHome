@@ -63,7 +63,6 @@ void AlarmWidget::loadFakeAlarmLogs()
         ui->tableWidget_alarmLogs->setItem(row, 1,
                                            new QTableWidgetItem(alarmTypes[typeIndex]));
 
-        // 使用图标替代emoji
         QTableWidgetItem *iconItem = new QTableWidgetItem();
         iconItem->setIcon(QIcon(":/icons/warning.svg"));
         ui->tableWidget_alarmLogs->setItem(row, 2, iconItem);
@@ -82,7 +81,7 @@ void AlarmWidget::triggerAlarm(const QJsonObject &alarmData)
     qDebug() << "收到报警：" << alarmData;
 
     // 添加到报警记录
-    int row = ui->tableWidget_alarmLogs->rowCount();
+    // int row = ui->tableWidget_alarmLogs->rowCount();
     ui->tableWidget_alarmLogs->insertRow(0); // 插入到最前面
 
     ui->tableWidget_alarmLogs->setItem(0, 0,
@@ -90,7 +89,6 @@ void AlarmWidget::triggerAlarm(const QJsonObject &alarmData)
     ui->tableWidget_alarmLogs->setItem(0, 1,
                                        new QTableWidgetItem(alarmData["type"].toString()));
 
-    // 使用图标替代emoji
     QTableWidgetItem *iconItem = new QTableWidgetItem();
     iconItem->setIcon(QIcon(":/icons/warning.svg"));
     ui->tableWidget_alarmLogs->setItem(0, 2, iconItem);
@@ -99,6 +97,12 @@ void AlarmWidget::triggerAlarm(const QJsonObject &alarmData)
                                        new QTableWidgetItem(alarmData["message"].toString()));
 
     ui->tableWidget_alarmLogs->item(0, 1)->setForeground(QBrush(QColor("#f44336")));
+
+    // 系统级警告弹窗 (声音搁置，先只用弹窗)
+    QMessageBox::critical(this, "系统报警",
+                          QString("检测到异常情况！\n\n报警类型: %1\n详细信息: %2")
+                              .arg(alarmData["type"].toString())
+                              .arg(alarmData["message"].toString()));
 }
 
 void AlarmWidget::on_btnSaveThresholds_clicked()

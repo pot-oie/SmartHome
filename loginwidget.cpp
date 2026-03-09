@@ -15,10 +15,8 @@ LoginWidget::LoginWidget(QWidget *parent) : QWidget(parent),
     // 设置固定大小（对话框样式）
     setFixedSize(420, 520);
 
-    // 设置窗口标志：无边框对话框
-    setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
-    // 移除透明背景属性以修复背景透明问题
-    // setAttribute(Qt::WA_TranslucentBackground);
+    // 【优化】设置窗口标志：标准独立窗口，保留标题栏和关闭按钮，禁止调整大小
+    setWindowFlags(Qt::Window | Qt::WindowCloseButtonHint);
 
     // 居中显示窗口
     QScreen *screen = QGuiApplication::primaryScreen();
@@ -42,74 +40,7 @@ LoginWidget::LoginWidget(QWidget *parent) : QWidget(parent),
     ui->lineEdit_username->setText("admin");
     ui->lineEdit_password->setText("123456");
 
-    // 添加样式
-    QString styleSheet = R"(
-        QWidget#LoginWidget {
-            background-color: white;
-            border-radius: 20px;
-        }
-        
-        QLabel#lblTitle {
-            font-size: 24pt;
-            font-weight: bold;
-            color: #2196F3;
-        }
-        
-        QLabel#lblSubtitle {
-            font-size: 11pt;
-            color: #666;
-        }
-        
-        QLineEdit {
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 11pt;
-            background-color: #f5f5f5;
-        }
-        
-        QLineEdit:focus {
-            border: 2px solid #2196F3;
-            background-color: white;
-        }
-        
-        QPushButton#btnLogin {
-            background-color: #2196F3;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 12px;
-            font-size: 12pt;
-            font-weight: bold;
-        }
-        
-        QPushButton#btnLogin:hover {
-            background-color: #1976D2;
-        }
-        
-        QPushButton#btnLogin:pressed {
-            background-color: #0D47A1;
-        }
-        
-        QPushButton#btnResetPwd {
-            background-color: transparent;
-            color: #2196F3;
-            border: none;
-            font-size: 10pt;
-            text-decoration: underline;
-        }
-        
-        QPushButton#btnResetPwd:hover {
-            color: #1976D2;
-        }
-        
-        QCheckBox {
-            font-size: 10pt;
-            color: #666;
-        }
-    )";
-
-    setStyleSheet(styleSheet);
+    // 原有的巨长 styleSheet 已被移除，请统一写进 resources/style.qss 文件中
 }
 
 LoginWidget::~LoginWidget()
@@ -134,7 +65,7 @@ void LoginWidget::on_btnLogin_clicked()
     // 演示：admin/123456 可以登录
     if (username == "admin" && password == "123456")
     {
-        QMessageBox::information(this, "登录成功", "欢迎使用智能家居监控平台！");
+        // QMessageBox::information(this, "登录成功", "欢迎使用智能家居监控平台！");
         emit loginSuccess();
     }
     else
