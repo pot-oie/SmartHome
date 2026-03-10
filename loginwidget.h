@@ -23,9 +23,8 @@ signals:
 
 private slots:
     void on_btnLogin_clicked();
-    void on_btnResetPwd_clicked();
-
     void on_btnRegister_clicked();
+    void on_btnSkipLogin_clicked();
 
 private:
     bool verifyUserInDatabase(const QString &username, const QString &password);

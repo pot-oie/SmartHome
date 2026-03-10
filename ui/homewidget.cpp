@@ -34,28 +34,10 @@ HomeWidget::HomeWidget(QWidget *parent) : QWidget(parent),
                                           ui(new Ui::HomeWidget)
 {
     ui->setupUi(this);
-    initConnections();
     refreshDeviceStatus();
 
     const EnvironmentSnapshot initial = m_environmentService.generateInitialSnapshot();
     updateEnvironmentData(initial.temperature, initial.humidity);
-
-    // 注入管理按钮
-    QPushButton *btnEditQuick = new QPushButton("管理快捷项", this);
-    btnEditQuick->setCursor(Qt::PointingHandCursor);
-    btnEditQuick->setStyleSheet("QPushButton { border: none; color: #1976D2; font-weight: bold; text-align: right; margin-bottom: 5px; } QPushButton:hover { color: #0D47A1; text-decoration: underline; }");
-
-    // 将按钮动态插入到 group box 布局的最上面（靠右对齐）
-    ui->verticalLayout_quick->insertWidget(0, btnEditQuick, 0, Qt::AlignRight);
-
-    // 绑定点击事件，呼出管理弹窗
-    connect(btnEditQuick, &QPushButton::clicked, this, [this]()
-            {
-        QuickControlManageDialog dlg(this);
-        if (dlg.exec() == QDialog::Accepted) {
-            // 对话框点击保存后，重新加载首页的快捷栏按钮
-            this->loadQuickControls(); 
-        } });
 
     // 初始化时加载快捷控制面板
     loadQuickControls();
@@ -77,17 +59,7 @@ HomeWidget::~HomeWidget()
 
 void HomeWidget::initConnections()
 {
-    connect(ui->btnQuickLight, &QPushButton::clicked, this, [this]()
-            { emit requestQuickControl("light_living", "turn_on"); });
-
-    connect(ui->btnQuickAC, &QPushButton::clicked, this, [this]()
-            { emit requestQuickControl("ac_living", "turn_on"); });
-
-    connect(ui->btnQuickCurtain, &QPushButton::clicked, this, [this]()
-            { emit requestQuickControl("curtain_living", "turn_on"); });
-
-    connect(ui->btnGoHome, &QPushButton::clicked, this, [this]()
-            { emit requestQuickControl("scene_go_home", "trigger_scene"); });
+    // 连接已经在 cpp 对应的位置建立
 }
 
 void HomeWidget::onQuickControlClicked()
@@ -251,6 +223,12 @@ void HomeWidget::applyTemperatureColor(double temperature)
 {
     const QString color = m_environmentService.temperatureColor(temperature);
     ui->label_temperature->setStyleSheet(QString("color: %1; font-weight: bold;").arg(color));
+}
+
+void HomeWidget::refreshDeviceStatus()
+{
+    const DeviceStatusSummary summary = m_settingsService.loadDeviceStatusSummary();
+    updateDeviceStatusLabel(summary);
 }
 
 void HomeWidget::updateDeviceStatusLabel(const DeviceStatusSummary &summary)

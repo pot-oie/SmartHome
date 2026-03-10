@@ -53,17 +53,15 @@ void LoginWidget::on_btnLogin_clicked()
     QMessageBox::warning(this, QStringLiteral("登录失败"), m_loginService.errorMessage(result));
 }
 
-void LoginWidget::on_btnResetPwd_clicked()
-{
-    qDebug() << "重置密码按钮被点击";
-    QMessageBox::information(this,
-                             QStringLiteral("提示"),
-                             QStringLiteral("重置密码功能暂未实现。"));
-}
-
 void LoginWidget::on_btnRegister_clicked()
 {
     qDebug() << "注册按钮被点击";
 
     QMessageBox::information(this, "提示", "这是注册逻辑的入口，对接你已写好的实现代码");
+}
+
+void LoginWidget::on_btnSkipLogin_clicked()
+{
+    qDebug() << "跳过登录(测试)按钮被点击";
+    emit loginSuccess();
 }

@@ -2,7 +2,7 @@
 <ui version="4.0">
  <class>LoginWidget</class>
  <widget class="QWidget" name="LoginWidget">
-  <property name="minimumSize"><size><width>450</width><height>400</height></size></property>
+    <property name="minimumSize"><size><width>420</width><height>400</height></size></property>
   <layout class="QVBoxLayout" name="verticalLayout_main">
    <item>
     <spacer name="verticalSpacer_top">
@@ -113,24 +113,24 @@
        <item>
         <widget class="QPushButton" name="btnLogin">
          <property name="text"><string>登 录</string></property>
-         <property name="minimumSize"><size><width>120</width><height>40</height></size></property>
+         <property name="minimumSize"><size><width>100</width><height>40</height></size></property>
          <property name="font"><font><pointsize>11</pointsize></font></property>
         </widget>
        </item>
        <item>
         <widget class="QPushButton" name="btnRegister">
          <property name="text"><string>注 册</string></property>
-         <property name="minimumSize"><size><width>120</width><height>40</height></size></property>
+         <property name="minimumSize"><size><width>100</width><height>40</height></size></property>
          <property name="font"><font><pointsize>11</pointsize></font></property>
         </widget>
        </item>
-       <item>
-        <widget class="QPushButton" name="btnResetPwd">
-         <property name="text"><string>重置密码</string></property>
-         <property name="minimumSize"><size><width>120</width><height>40</height></size></property>
-         <property name="font"><font><pointsize>11</pointsize></font></property>
-        </widget>
-       </item>
+    <item>
+     <widget class="QPushButton" name="btnSkipLogin">
+      <property name="text"><string>跳过登录(测试)</string></property>
+      <property name="minimumSize"><size><width>100</width><height>40</height></size></property>
+      <property name="font"><font><pointsize>11</pointsize></font></property>
+     </widget>
+    </item>
        <item>
         <spacer name="horizontalSpacer_right3">
          <property name="orientation"><enum>Qt::Horizontal</enum></property>
@@ -142,18 +142,18 @@
     </layout>
    </item>
    <item>
-    <spacer name="verticalSpacer_bottom">
-     <property name="orientation"><enum>Qt::Vertical</enum></property>
-     <property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property>
-    </spacer>
-   </item>
-   <item>
     <widget class="QLabel" name="label_footer">
      <property name="text"><string>© 2026 SmartHome Team. All rights reserved.</string></property>
      <property name="alignment"><set>Qt::AlignCenter</set></property>
      <property name="styleSheet"><string notr="true">color: gray; font-size: 9pt;</string></property>
     </widget>
    </item>
+    <item>
+     <spacer name="verticalSpacer_bottom">
+      <property name="orientation"><enum>Qt::Vertical</enum></property>
+      <property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property>
+     </spacer>
+    </item>
   </layout>
  </widget>
  <resources/><connections/>
