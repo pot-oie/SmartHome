@@ -32,6 +32,8 @@ private slots:
     void on_btnActivateScene_clicked();
     // 【UI 交互】在当前场景下添加要联动的设备
     void on_btnAddDeviceToScene_clicked();
+    // 【UI 交互】在当前场景下移除联动设备
+    void on_btnRemoveDevice_clicked();
     // 【UI 交互】场景选择变化
     void updateSceneDetails(int row);
 

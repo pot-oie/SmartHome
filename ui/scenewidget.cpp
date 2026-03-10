@@ -2,11 +2,11 @@
 #include "ui_scenewidget.h"
 #include <QDebug>
 #include <QMessageBox>
-#include <QInputDialog>
 #include <QListWidgetItem>
 #include <QDialog>
 #include <QFormLayout>
 #include <QComboBox>
+#include <QLabel>
 #include <QLineEdit>
 #include <QDialogButtonBox>
 
@@ -14,6 +14,9 @@ SceneWidget::SceneWidget(QWidget *parent) : QWidget(parent),
                                             ui(new Ui::SceneWidget)
 {
     ui->setupUi(this);
+    ui->tableWidget_devices->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    ui->tableWidget_devices->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->tableWidget_devices->setSelectionMode(QAbstractItemView::SingleSelection);
     loadScenesFromDatabase();
 }
 
@@ -82,11 +85,62 @@ void SceneWidget::updateSceneExecutionResult(const QJsonObject &resultData)
 
 void SceneWidget::on_btnAddScene_clicked()
 {
-    bool ok;
-    QString sceneName = QInputDialog::getText(this, "添加场景", "请输入场景名称：", QLineEdit::Normal, "", &ok);
-    if (ok && !sceneName.isEmpty())
+    QDialog dialog(this);
+    dialog.setWindowTitle("添加场景");
+    dialog.resize(360, 240);
+
+    QFormLayout *form = new QFormLayout(&dialog);
+
+    QLineEdit *editName = new QLineEdit(&dialog);
+    editName->setPlaceholderText("例如：晚餐模式");
+    form->addRow("场景名称:", editName);
+
+    QLineEdit *editDesc = new QLineEdit(&dialog);
+    editDesc->setPlaceholderText("例如：开启餐厅灯并关闭客厅电视");
+    form->addRow("场景描述:", editDesc);
+
+    QComboBox *cmbIcon = new QComboBox(&dialog);
+    cmbIcon->addItem(QIcon(":/icons/home.svg"), "回家", ":/icons/home.svg");
+    cmbIcon->addItem(QIcon(":/icons/bedtime.svg"), "睡眠", ":/icons/bedtime.svg");
+    cmbIcon->addItem(QIcon(":/icons/movie.svg"), "观影", ":/icons/movie.svg");
+    cmbIcon->addItem(QIcon(":/icons/flight_takeoff.svg"), "离家", ":/icons/flight_takeoff.svg");
+    cmbIcon->addItem(QIcon(":/icons/celebration.svg"), "派对", ":/icons/celebration.svg");
+    cmbIcon->addItem(QIcon(":/icons/wb_sunny.svg"), "起床", ":/icons/wb_sunny.svg");
+    cmbIcon->addItem(QIcon(":/icons/restaurant.svg"), "用餐", ":/icons/restaurant.svg");
+    cmbIcon->addItem(QIcon(":/icons/self_improvement.svg"), "冥想", ":/icons/self_improvement.svg");
+    cmbIcon->addItem(QIcon(":/icons/sports_esports.svg"), "游戏", ":/icons/sports_esports.svg");
+    cmbIcon->addItem(QIcon(":/icons/cleaning_services.svg"), "清洁", ":/icons/cleaning_services.svg");
+    cmbIcon->addItem(QIcon(":/icons/pets.svg"), "宠物", ":/icons/pets.svg");
+    cmbIcon->addItem(QIcon(":/icons/music.svg"), "音乐", ":/icons/music.svg");
+    cmbIcon->addItem(QIcon(":/icons/scene.svg"), "通用", ":/icons/scene.svg");
+    form->addRow("场景图标:", cmbIcon);
+
+    QDialogButtonBox *btnBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+    form->addRow(btnBox);
+
+    connect(btnBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    connect(btnBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+
+    if (dialog.exec() == QDialog::Accepted)
     {
-        m_scenes.push_back(m_sceneService.createCustomScene(sceneName));
+        const QString sceneName = editName->text().trimmed();
+        const QString sceneDesc = editDesc->text().trimmed();
+        const QString sceneIcon = cmbIcon->currentData().toString();
+
+        if (sceneName.isEmpty() || sceneDesc.isEmpty())
+        {
+            QMessageBox::warning(this, "提示", "场景名称、场景描述均为必填项。");
+            return;
+        }
+
+        const SceneDefinition createdScene = m_sceneService.createScene(sceneName, sceneDesc, sceneIcon);
+        if (createdScene.id.isEmpty())
+        {
+            QMessageBox::critical(this, "失败", "场景保存失败，请检查数据库连接状态。");
+            return;
+        }
+
+        m_scenes.push_back(createdScene);
         renderSceneList();
         ui->listWidget_scenes->setCurrentRow(m_scenes.size() - 1);
         QMessageBox::information(this, "成功", "场景 \"" + sceneName + "\" 已添加！");
@@ -102,8 +156,15 @@ void SceneWidget::on_btnDeleteScene_clicked()
     }
 
     const QString sceneName = m_scenes.at(currentRow).name;
+    const SceneDefinition selectedScene = m_scenes.at(currentRow);
     if (QMessageBox::question(this, "确认删除", "确定要删除场景 \"" + sceneName + "\" 吗？") == QMessageBox::Yes)
     {
+        if (!m_sceneService.deleteScene(selectedScene))
+        {
+            QMessageBox::critical(this, "失败", "场景删除失败，请检查数据库连接状态。");
+            return;
+        }
+
         m_scenes.removeAt(currentRow);
         renderSceneList();
         if (!m_scenes.isEmpty())
@@ -176,8 +237,48 @@ void SceneWidget::on_btnAddDeviceToScene_clicked()
         action.deviceId = action.deviceName;
         action.actionText = cmbAction->currentText();
         action.paramText = editParam->text();
+
+        if (!m_sceneService.addDeviceAction(scene, action))
+        {
+            QMessageBox::critical(this, "失败", "添加设备动作失败，请检查数据库连接或设备映射。");
+            return;
+        }
+
         scene.actions.push_back(action);
 
         renderSceneDetails(scene);
     }
+}
+
+void SceneWidget::on_btnRemoveDevice_clicked()
+{
+    const int sceneRow = ui->listWidget_scenes->currentRow();
+    if (sceneRow < 0 || sceneRow >= m_scenes.size())
+    {
+        QMessageBox::warning(this, "提示", "请先选择场景。");
+        return;
+    }
+
+    const int actionRow = ui->tableWidget_devices->currentRow();
+    if (actionRow < 0 || actionRow >= m_scenes[sceneRow].actions.size())
+    {
+        QMessageBox::warning(this, "提示", "请先在表格中选择要移除的设备动作。");
+        return;
+    }
+
+    SceneDefinition &scene = m_scenes[sceneRow];
+    const SceneDeviceAction action = scene.actions.at(actionRow);
+    if (QMessageBox::question(this, "确认移除", "确定移除该设备动作吗？") != QMessageBox::Yes)
+    {
+        return;
+    }
+
+    if (!m_sceneService.removeDeviceAction(scene, action))
+    {
+        QMessageBox::critical(this, "失败", "移除设备动作失败，请检查数据库连接状态。");
+        return;
+    }
+
+    scene.actions.removeAt(actionRow);
+    renderSceneDetails(scene);
 }

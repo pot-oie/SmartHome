@@ -1,13 +1,13 @@
 #include "SystemConfigDao.h"
 
-#include "../DatabaseManager.h"
+#include "../databasemanager.h"
 
 #include <QDebug>
 #include <QSqlQuery>
 
 namespace
 {
-const char *LOG_PREFIX = "[SystemConfigDao]";
+    const char *LOG_PREFIX = "[SystemConfigDao]";
 }
 
 QString SystemConfigDao::getSystemStatusText()

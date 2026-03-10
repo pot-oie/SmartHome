@@ -31,8 +31,8 @@ void MainWindow::initUI()
     // 初始化导航栏（带图标）
     auto addNavItem = [this](const QString &icon, const QString &text)
     {
-        QIcon qicon(icon);
-        QListWidgetItem *item = new QListWidgetItem(qicon, text);
+        QIcon navIcon(icon);
+        QListWidgetItem *item = new QListWidgetItem(navIcon, text);
         ui->navBar->addItem(item);
     };
 

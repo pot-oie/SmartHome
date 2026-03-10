@@ -1,26 +1,48 @@
 #include "deviceservice.h"
 
+#include "database/dao/DeviceDao.h"
+
 QStringList DeviceService::categories() const
 {
-    return {"全部设备", "照明设备", "空调/温控", "窗帘/遮阳", "安防设备", "影音设备"};
+    QStringList result = {"全部设备"};
+
+    DeviceDao dao;
+    const QList<DeviceDao::DeviceCategoryRow> categoriesFromDb = dao.listEnabledCategories();
+    for (const DeviceDao::DeviceCategoryRow &row : categoriesFromDb)
+    {
+        if (!row.name.trimmed().isEmpty())
+        {
+            result.push_back(row.name.trimmed());
+        }
+    }
+
+    if (result.size() == 1)
+    {
+        return {"全部设备", "照明设备", "空调/温控", "窗帘/遮阳", "安防设备", "影音设备"};
+    }
+
+    return result;
 }
 
 DeviceList DeviceService::loadDefaultDevices() const
 {
+    DeviceDao dao;
+    const DeviceList devicesFromDb = dao.listDeviceDefinitions();
+    if (!devicesFromDb.isEmpty())
+    {
+        return devicesFromDb;
+    }
+
     return {
         {"light_living", "客厅主灯", "照明设备", ":/icons/light.svg", true, true, 80},
         {"light_bedroom", "卧室灯", "照明设备", ":/icons/light.svg", true, false, 60},
         {"light_kitchen", "厨房灯", "照明设备", ":/icons/light.svg", true, true, 100},
-
         {"ac_living", "客厅空调", "空调/温控", ":/icons/ac.svg", true, true, 24},
         {"ac_bedroom", "卧室空调", "空调/温控", ":/icons/ac.svg", true, false, 26},
-
         {"curtain_living", "客厅窗帘", "窗帘/遮阳", ":/icons/curtains.svg", true, true, 50},
         {"curtain_bedroom", "卧室窗帘", "窗帘/遮阳", ":/icons/curtains.svg", false, false, 0},
-
         {"lock_door", "前门智能锁", "安防设备", ":/icons/lock.svg", true, true, 0},
         {"camera_01", "客厅摄像头", "安防设备", ":/icons/check.svg", true, true, 0},
-
         {"tv_living", "客厅电视", "影音设备", ":/icons/tv.svg", true, false, 50}};
 }
 

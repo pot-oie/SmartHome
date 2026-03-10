@@ -1,6 +1,6 @@
 #include "UserDao.h"
 
-#include "../DatabaseManager.h"
+#include "../databasemanager.h"
 
 #include <QDebug>
 #include <QSqlQuery>
@@ -8,7 +8,7 @@
 
 namespace
 {
-const char *LOG_PREFIX = "[UserDao]";
+    const char *LOG_PREFIX = "[UserDao]";
 }
 
 std::optional<User> UserDao::findByUsername(const QString &username)

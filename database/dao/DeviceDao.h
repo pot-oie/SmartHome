@@ -1,13 +1,28 @@
 #pragma once
 
+#include "../../services/servicemodels.h"
+
+#include <QList>
 #include <QString>
 #include <QVariantList>
 
 class DeviceDao
 {
 public:
+    struct DeviceCategoryRow
+    {
+        QString code;
+        QString name;
+        int order = 0;
+    };
+
     int countAllDevices();
     int countOnlineDevices();
+    QList<DeviceCategoryRow> listEnabledCategories();
+    DeviceList listDeviceDefinitions();
+    SettingsDeviceList listSettingsDevices();
+    bool insertDevice(const SettingsDeviceEntry &device);
+    bool deleteDeviceById(const QString &deviceId);
     QString lastErrorText() const;
 
 private:

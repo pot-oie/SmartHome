@@ -1,5 +1,7 @@
 #include "sceneservice.h"
 
+#include "database/dao/SceneDao.h"
+
 #include <QJsonArray>
 
 namespace
@@ -19,6 +21,13 @@ namespace
 
 SceneList SceneService::loadDefaultScenes() const
 {
+    SceneDao dao;
+    const SceneList scenesFromDb = dao.listScenesWithActions();
+    if (!scenesFromDb.isEmpty())
+    {
+        return scenesFromDb;
+    }
+
     return {
         {"scene_go_home", "回家模式", ":/icons/home.svg", "欢迎回家！自动开启照明、空调并打开窗帘", {makeAction("light_living", "客厅主灯", "开启", "80%"), makeAction("curtain_living", "客厅窗帘", "开启", "100%"), makeAction("ac_living", "客厅空调", "开启", "24°C"), makeAction("lock_door", "前门智能锁", "解锁")}},
 
@@ -35,12 +44,63 @@ SceneList SceneService::loadDefaultScenes() const
 
 SceneDefinition SceneService::createCustomScene(const QString &sceneName) const
 {
+    return createScene(sceneName, "自定义场景", ":/icons/scene.svg");
+}
+
+SceneDefinition SceneService::createScene(const QString &sceneName, const QString &sceneDescription, const QString &iconPath) const
+{
     SceneDefinition scene;
-    scene.id = QString("scene_custom_%1").arg(sceneName);
-    scene.name = sceneName;
-    scene.icon = ":/icons/scene.svg";
-    scene.description = "自定义场景";
+    scene.id.clear();
+    scene.name = sceneName.trimmed();
+    scene.icon = iconPath.trimmed().isEmpty() ? QString(":/icons/scene.svg") : iconPath.trimmed();
+    scene.description = sceneDescription.trimmed();
+
+    if (scene.name.isEmpty() || scene.description.isEmpty())
+    {
+        scene.id.clear();
+        return scene;
+    }
+
+    SceneDao dao;
+    if (!dao.insertScene(scene) || scene.id.isEmpty())
+    {
+        scene.id.clear();
+    }
+
     return scene;
+}
+
+bool SceneService::addDeviceAction(const SceneDefinition &scene, const SceneDeviceAction &action) const
+{
+    if (scene.id.trimmed().isEmpty())
+    {
+        return false;
+    }
+
+    SceneDao dao;
+    return dao.insertSceneAction(scene.id.trimmed(), action);
+}
+
+bool SceneService::removeDeviceAction(const SceneDefinition &scene, const SceneDeviceAction &action) const
+{
+    if (scene.id.trimmed().isEmpty())
+    {
+        return false;
+    }
+
+    SceneDao dao;
+    return dao.deleteSceneAction(scene.id.trimmed(), action);
+}
+
+bool SceneService::deleteScene(const SceneDefinition &scene) const
+{
+    if (scene.id.trimmed().isEmpty())
+    {
+        return false;
+    }
+
+    SceneDao dao;
+    return dao.deleteSceneByCode(scene.id.trimmed());
 }
 
 QJsonObject SceneService::buildTriggerSceneCommand(const SceneDefinition &scene) const

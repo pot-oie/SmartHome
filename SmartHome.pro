@@ -24,8 +24,6 @@ SOURCES += \
     loginwidget.cpp \
     database/dao/AlarmDao.cpp \
     ui/alarmwidget.cpp \
-    database/dao/DeviceDao.cpp \
-    database/dao/EnvRecordDao.cpp \
     ui/devicecontrolwidget.cpp \
     ui/historywidget.cpp \
     ui/homewidget.cpp \
@@ -40,10 +38,12 @@ SOURCES += \
     services/loginservice.cpp \
     network/networkmanager.cpp \
     database/databasemanager.cpp \
-    qcustomplot.cpp
-    database/DatabaseManager.cpp \
     database/dao/SystemConfigDao.cpp \
-    database/dao/UserDao.cpp
+    database/dao/UserDao.cpp \
+    database/dao/DeviceDao.cpp \
+    database/dao/SceneDao.cpp \
+    database/dao/EnvRecordDao.cpp \
+    qcustomplot.cpp
 
 HEADERS += \
     mainwindow.h \
@@ -51,8 +51,6 @@ HEADERS += \
     models/User.h \
     database/dao/AlarmDao.h \
     ui/alarmwidget.h \
-    database/dao/DeviceDao.h \
-    database/dao/EnvRecordDao.h \
     ui/devicecontrolwidget.h \
     ui/historywidget.h \
     ui/homewidget.h \
@@ -69,11 +67,13 @@ HEADERS += \
     network/networkmanager.h \
     network/protocol.h \
     database/databasemanager.h \
-    qcustomplot.h
     database/DatabaseConfig.h \
-    database/DatabaseManager.h \
     database/dao/SystemConfigDao.h \
-    database/dao/UserDao.h
+    database/dao/UserDao.h \
+    database/dao/DeviceDao.h \
+    database/dao/SceneDao.h \
+    database/dao/EnvRecordDao.h \
+    qcustomplot.h
 
 FORMS += \
     mainwindow.ui \

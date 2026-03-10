@@ -90,17 +90,22 @@ void DeviceControlWidget::updateDeviceListUI(int category)
                 "; color: white; border: none; border-radius: 4px; padding: 8px; }"
                 "QPushButton:hover { opacity: 0.8; }");
 
-            connect(switchBtn, &QPushButton::clicked, this, [this, device, switchBtn]()
+            connect(switchBtn, &QPushButton::clicked, this, [this, device]()
                     {
-                const bool newState = (switchBtn->text() == "开启");
-                switchBtn->setText(newState ? "关闭" : "开启");
-                switchBtn->setStyleSheet(
-                    "QPushButton { background-color: " + QString(newState ? "#4CAF50" : "#2196F3") + 
-                    "; color: white; border: none; border-radius: 4px; padding: 8px; }"
-                    "QPushButton:hover { opacity: 0.8; }"
-                ); 
+                const bool newState = !device.isOn;
+
+                for (DeviceDefinition &item : m_allDevices)
+                {
+                    if (item.id == device.id)
+                    {
+                        item.isOn = newState;
+                        break;
+                    }
+                }
+
                 const QJsonObject controlCmd = m_deviceService.buildSwitchCommand(device.id, newState);
-                emit requestControlDevice(controlCmd); });
+                emit requestControlDevice(controlCmd);
+                updateDeviceListUI(ui->listCategory->currentRow()); });
             cardLayout->addWidget(switchBtn);
 
             if (m_deviceService.supportsAdjust(device.type))
@@ -143,8 +148,52 @@ void DeviceControlWidget::updateDeviceListUI(int category)
 
 void DeviceControlWidget::updateDeviceStatus(const QJsonObject &statusData)
 {
-    // 接收后端状态更新
+    const QString deviceId = statusData.value("device_id").toString().trimmed();
+    const QString status = statusData.value("status").toString().trimmed();
+    const QString switchState = statusData.value("current_state").toString().trimmed();
+    const int currentValue = statusData.value("current_value").toInt();
+
+    if (deviceId.isEmpty())
+    {
+        qDebug() << "收到无效设备状态更新：" << statusData;
+        return;
+    }
+
+    for (DeviceDefinition &device : m_allDevices)
+    {
+        if (device.id != deviceId)
+        {
+            continue;
+        }
+
+        if (status == "online")
+        {
+            device.isOnline = true;
+        }
+        else if (status == "offline" || status == "error")
+        {
+            device.isOnline = false;
+        }
+
+        if (switchState == "on")
+        {
+            device.isOn = true;
+        }
+        else if (switchState == "off")
+        {
+            device.isOn = false;
+        }
+
+        if (statusData.contains("current_value"))
+        {
+            device.value = currentValue;
+        }
+
+        break;
+    }
+
     qDebug() << "收到设备状态更新：" << statusData;
+    updateDeviceListUI(ui->listCategory->currentRow());
 }
 
 void DeviceControlWidget::on_listCategory_currentRowChanged(int currentRow)

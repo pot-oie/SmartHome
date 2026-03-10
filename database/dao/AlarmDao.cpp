@@ -1,6 +1,6 @@
 #include "AlarmDao.h"
 
-#include "../DatabaseManager.h"
+#include "../databasemanager.h"
 
 #include <QDateTime>
 #include <QDebug>
@@ -8,7 +8,7 @@
 
 namespace
 {
-const char *LOG_PREFIX = "[AlarmDao]";
+    const char *LOG_PREFIX = "[AlarmDao]";
 }
 
 QList<QString> AlarmDao::getRecentAlarmTexts(int limit)

@@ -98,7 +98,14 @@ void SettingsWidget::on_btnAddDevice_clicked()
                                                QLineEdit::Normal, "", &ok);
     if (ok && !deviceName.isEmpty())
     {
-        const SettingsDeviceEntry newDevice = m_settingsService.createNewDevice(deviceName, m_devices.size());
+        SettingsDeviceEntry newDevice;
+        QString errorText;
+        if (!m_settingsService.addDevice(deviceName, m_devices.size(), &newDevice, &errorText))
+        {
+            QMessageBox::critical(this, "失败", "添加设备失败：\n" + (errorText.isEmpty() ? "未知错误" : errorText));
+            return;
+        }
+
         m_devices.push_back(newDevice);
         addDeviceRow(newDevice);
 
@@ -120,6 +127,14 @@ void SettingsWidget::on_btnDeleteDevice_clicked()
                                       QMessageBox::Yes | QMessageBox::No);
         if (reply == QMessageBox::Yes)
         {
+            const QString deviceId = ui->tableWidget_devices->item(currentRow, 0)->text();
+            QString errorText;
+            if (!m_settingsService.deleteDeviceById(deviceId, &errorText))
+            {
+                QMessageBox::critical(this, "失败", "删除设备失败：\n" + (errorText.isEmpty() ? "未知错误" : errorText));
+                return;
+            }
+
             if (currentRow < m_devices.size())
             {
                 m_devices.removeAt(currentRow);

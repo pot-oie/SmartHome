@@ -1,5 +1,7 @@
 #include "settingsservice.h"
 
+#include "database/dao/DeviceDao.h"
+
 #include <QRandomGenerator>
 
 QStringList SettingsService::themeOptions() const
@@ -24,6 +26,13 @@ QString SettingsService::themeKeyByIndex(int index) const
 
 SettingsDeviceList SettingsService::loadDefaultDevices() const
 {
+    DeviceDao dao;
+    const SettingsDeviceList devicesFromDb = dao.listSettingsDevices();
+    if (!devicesFromDb.isEmpty())
+    {
+        return devicesFromDb;
+    }
+
     return {
         {"light_living", "客厅主灯", "照明设备", "192.168.1.101", true},
         {"light_bedroom", "卧室灯", "照明设备", "192.168.1.102", true},
@@ -43,6 +52,41 @@ SettingsDeviceEntry SettingsService::createNewDevice(const QString &deviceName, 
     device.ip = "192.168.1." + QString::number(108 + currentCount);
     device.online = true;
     return device;
+}
+
+bool SettingsService::addDevice(const QString &deviceName, int currentCount, SettingsDeviceEntry *createdDevice, QString *errorText) const
+{
+    SettingsDeviceEntry newDevice = createNewDevice(deviceName, currentCount);
+
+    DeviceDao dao;
+    if (!dao.insertDevice(newDevice))
+    {
+        if (errorText)
+        {
+            *errorText = dao.lastErrorText();
+        }
+        return false;
+    }
+
+    if (createdDevice)
+    {
+        *createdDevice = newDevice;
+    }
+    return true;
+}
+
+bool SettingsService::deleteDeviceById(const QString &deviceId, QString *errorText) const
+{
+    DeviceDao dao;
+    if (!dao.deleteDeviceById(deviceId))
+    {
+        if (errorText)
+        {
+            *errorText = dao.lastErrorText();
+        }
+        return false;
+    }
+    return true;
 }
 
 int SettingsService::mockLatencyMs() const

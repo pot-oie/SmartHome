@@ -1,4 +1,4 @@
-#include "DatabaseManager.h"
+#include "databasemanager.h"
 
 #include <QDebug>
 #include <QSqlError>
@@ -6,7 +6,7 @@
 
 namespace
 {
-const char *LOG_PREFIX = "[DatabaseManager]";
+    const char *LOG_PREFIX = "[DatabaseManager]";
 }
 
 DatabaseManager &DatabaseManager::instance()

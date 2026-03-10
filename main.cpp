@@ -1,6 +1,6 @@
 #include "mainwindow.h"
 #include "loginwidget.h"
-#include "database/DatabaseManager.h"
+#include "database/databasemanager.h"
 
 #include <QApplication>
 #include <QLocale>
@@ -61,17 +61,16 @@ int main(int argc, char *argv[])
         qWarning() << "[main] 数据库连接失败:" << databaseManager.lastErrorText();
     }
 
-    MainWindow *mainWindow = new MainWindow();
     // 创建主窗口（栈分配，自动管理生命周期）和登录窗口
-    MainWindow mainWindow;
+    MainWindow appMainWindow;
     LoginWidget *loginWidget = new LoginWidget();
 
     // 连接登录成功信号：登录成功后关闭登录窗口，显示主窗口
-    QObject::connect(loginWidget, &LoginWidget::loginSuccess, [&mainWindow, loginWidget]()
+    QObject::connect(loginWidget, &LoginWidget::loginSuccess, [&appMainWindow, loginWidget]()
                      {
         loginWidget->close();
         loginWidget->deleteLater();
-        mainWindow.show(); });
+        appMainWindow.show(); });
 
     // 先显示登录窗口
     loginWidget->show();

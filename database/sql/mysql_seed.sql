@@ -143,15 +143,16 @@ ON DUPLICATE KEY UPDATE
     updated_at = VALUES(updated_at);
 
 -- 默认场景：直接匹配场景管理页左侧列表
-INSERT INTO scenes (id, scene_code, scene_name, scene_description, is_default, display_order, created_at, updated_at)
+INSERT INTO scenes (id, scene_code, scene_name, scene_description, scene_icon, is_default, display_order, created_at, updated_at)
 VALUES
-    (1, 'go_home', @scene_home, @scene_desc_home, 1, 1, '2026-03-09 09:45:00', '2026-03-09 09:45:00'),
-    (2, 'sleep', @scene_sleep, @scene_desc_sleep, 1, 2, '2026-03-09 09:46:00', '2026-03-09 09:46:00'),
-    (3, 'movie', @scene_movie, @scene_desc_movie, 1, 3, '2026-03-09 09:47:00', '2026-03-09 09:47:00'),
-    (4, 'away', @scene_away, @scene_desc_away, 1, 4, '2026-03-09 09:48:00', '2026-03-09 09:48:00')
+    (1, 'go_home', @scene_home, @scene_desc_home, ':/icons/home.svg', 1, 1, '2026-03-09 09:45:00', '2026-03-09 09:45:00'),
+    (2, 'sleep', @scene_sleep, @scene_desc_sleep, ':/icons/bedtime.svg', 1, 2, '2026-03-09 09:46:00', '2026-03-09 09:46:00'),
+    (3, 'movie', @scene_movie, @scene_desc_movie, ':/icons/movie.svg', 1, 3, '2026-03-09 09:47:00', '2026-03-09 09:47:00'),
+    (4, 'away', @scene_away, @scene_desc_away, ':/icons/flight_takeoff.svg', 1, 4, '2026-03-09 09:48:00', '2026-03-09 09:48:00')
 ON DUPLICATE KEY UPDATE
     scene_name = VALUES(scene_name),
     scene_description = VALUES(scene_description),
+    scene_icon = VALUES(scene_icon),
     is_default = VALUES(is_default),
     display_order = VALUES(display_order),
     updated_at = VALUES(updated_at);

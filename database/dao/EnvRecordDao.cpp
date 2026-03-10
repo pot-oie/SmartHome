@@ -1,13 +1,13 @@
 #include "EnvRecordDao.h"
 
-#include "../DatabaseManager.h"
+#include "../databasemanager.h"
 
 #include <QDebug>
 #include <QSqlQuery>
 
 namespace
 {
-const char *LOG_PREFIX = "[EnvRecordDao]";
+    const char *LOG_PREFIX = "[EnvRecordDao]";
 }
 
 std::optional<QPair<double, double>> EnvRecordDao::getLatestTemperatureAndHumidity()

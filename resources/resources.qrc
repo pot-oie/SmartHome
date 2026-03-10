@@ -25,6 +25,12 @@
         <file>icons/celebration.svg</file>
         <file>icons/wb_sunny.svg</file>
         <file>icons/flight_takeoff.svg</file>
+        <file>icons/restaurant.svg</file>
+        <file>icons/self_improvement.svg</file>
+        <file>icons/sports_esports.svg</file>
+        <file>icons/cleaning_services.svg</file>
+        <file>icons/pets.svg</file>
+        <file>icons/music.svg</file>
         
         <!-- 操作图标 -->
         <file>icons/add.svg</file>

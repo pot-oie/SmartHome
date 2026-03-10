@@ -82,6 +82,7 @@ CREATE TABLE IF NOT EXISTS scenes (
     scene_code VARCHAR(50) NOT NULL,
     scene_name VARCHAR(100) NOT NULL,
     scene_description VARCHAR(255) NOT NULL,
+    scene_icon VARCHAR(120) NOT NULL DEFAULT ':/icons/scene.svg',
     is_default TINYINT(1) NOT NULL DEFAULT 0,
     display_order INT NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
