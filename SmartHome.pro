@@ -41,6 +41,7 @@ SOURCES += \
     database/dao/SystemConfigDao.cpp \
     database/dao/UserDao.cpp \
     database/dao/DeviceDao.cpp \
+    database/dao/HistoryDao.cpp \
     database/dao/SceneDao.cpp \
     database/dao/EnvRecordDao.cpp \
     qcustomplot.cpp
@@ -71,6 +72,7 @@ HEADERS += \
     database/dao/SystemConfigDao.h \
     database/dao/UserDao.h \
     database/dao/DeviceDao.h \
+    database/dao/HistoryDao.h \
     database/dao/SceneDao.h \
     database/dao/EnvRecordDao.h \
     qcustomplot.h

@@ -21,7 +21,14 @@ public:
     QList<DeviceCategoryRow> listEnabledCategories();
     DeviceList listDeviceDefinitions();
     SettingsDeviceList listSettingsDevices();
+    bool ensureDefaultDeviceData();
     bool insertDevice(const SettingsDeviceEntry &device);
+    bool updateDeviceState(const QString &deviceId,
+                           const QString &onlineStatus,
+                           const QString &switchStatus,
+                           double currentValue,
+                           const QString &valueUnit,
+                           const QString &modeText = QString());
     bool deleteDeviceById(const QString &deviceId);
     QString lastErrorText() const;
 
