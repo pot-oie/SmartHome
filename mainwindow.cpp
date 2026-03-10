@@ -47,7 +47,8 @@ void MainWindow::initUI()
     addNavItem(":/icons/settings.svg", "系统设置");
 
     // 创建各个子页面并添加到堆栈窗口
-    ui->stackWidget->addWidget(new HomeWidget(this));          // 索引 0
+    HomeWidget *homeWidget = new HomeWidget(this);
+    ui->stackWidget->addWidget(homeWidget);                    // 索引 0
     ui->stackWidget->addWidget(new DeviceControlWidget(this)); // 索引 1
     ui->stackWidget->addWidget(new SceneWidget(this));         // 索引 2
     ui->stackWidget->addWidget(new HistoryWidget(this));       // 索引 3
@@ -63,6 +64,7 @@ void MainWindow::initUI()
     connect(ui->navBar, &QListWidget::currentRowChanged, this, &MainWindow::onNavBarItemClicked);
     connect(settingsWidget, &SettingsWidget::themeChanged, this, &MainWindow::onThemeChanged);
     connect(settingsWidget, &SettingsWidget::languageChanged, this, &MainWindow::onLanguageChanged);
+    connect(settingsWidget, &SettingsWidget::devicesChanged, homeWidget, &HomeWidget::refreshDeviceStatus);
 }
 
 void MainWindow::onNavBarItemClicked(int index)

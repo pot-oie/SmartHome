@@ -1,6 +1,7 @@
 #include "HistoryDao.h"
 
 #include "../databasemanager.h"
+#include "services/usercontext.h"
 
 #include <QDateTime>
 #include <QDebug>
@@ -22,25 +23,24 @@ namespace
         return QString::fromUtf8(QJsonDocument(payload).toJson(QJsonDocument::Compact));
     }
 
-    QString defaultOperatorName(DatabaseManager &databaseManager, qint64 *userId)
+    QString currentOperatorName(qint64 *userId)
     {
         if (userId)
         {
             *userId = 0;
         }
 
-        QSqlQuery query = databaseManager.query(
-            "SELECT id, display_name FROM users WHERE username = 'admin' LIMIT 1", {});
-        if (query.isActive() && query.next())
+        const UserContext &userContext = UserContext::instance();
+        if (userContext.hasCurrentUser())
         {
             if (userId)
             {
-                *userId = query.value("id").toLongLong();
+                *userId = userContext.currentUser().id;
             }
-            return query.value("display_name").toString().trimmed();
+            return userContext.operatorName();
         }
 
-        return QStringLiteral("\u7ba1\u7406\u5458");
+        return QString();
     }
 
     bool isBinaryJsonError(const QString &errorText)
@@ -178,7 +178,7 @@ bool HistoryDao::insertOperationLog(const QString &moduleName,
     }
 
     qint64 userId = 0;
-    const QString operatorName = defaultOperatorName(databaseManager, &userId);
+    const QString operatorName = currentOperatorName(&userId);
 
     QVariant devicePk;
     if (!deviceId.trimmed().isEmpty())

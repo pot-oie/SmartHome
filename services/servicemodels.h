@@ -86,13 +86,19 @@ struct AlarmLogEntry
 
 using AlarmLogList = QVector<AlarmLogEntry>;
 
+struct DeviceStatusSummary
+{
+    int onlineCount = 0;
+    int totalCount = 0;
+};
+
 struct SettingsDeviceEntry
 {
     QString id;
     QString name;
     QString type;
     QString ip;
-    bool online;
+    QString onlineStatus;
 };
 
 using SettingsDeviceList = QVector<SettingsDeviceEntry>;
@@ -101,5 +107,6 @@ enum class LoginCheckResult
 {
     Success,
     EmptyCredential,
-    InvalidCredential
+    InvalidCredential,
+    ServiceError
 };

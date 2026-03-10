@@ -36,6 +36,7 @@ SOURCES += \
     services/alarmservice.cpp \
     services/settingsservice.cpp \
     services/loginservice.cpp \
+    services/usercontext.cpp \
     network/networkmanager.cpp \
     database/databasemanager.cpp \
     database/dao/SystemConfigDao.cpp \
@@ -64,6 +65,7 @@ HEADERS += \
     services/alarmservice.h \
     services/settingsservice.h \
     services/loginservice.h \
+    services/usercontext.h \
     services/servicemodels.h \
     network/networkmanager.h \
     network/protocol.h \

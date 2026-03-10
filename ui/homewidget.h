@@ -1,8 +1,10 @@
 #pragma once
 
 #include <QJsonObject>
+#include <QShowEvent>
 
 #include "services/environmentservice.h"
+#include "services/settingsservice.h"
 #include <QList>
 #include <QString>
 #include <QWidget>
@@ -26,6 +28,7 @@ signals:
 public slots:
     void updateEnvironmentData(double temp, double hum);
     void updateEnvironmentUI(const QJsonObject &data);
+    void refreshDeviceStatus();
 
 private slots:
     void on_btnGoHome_clicked();
@@ -34,6 +37,11 @@ private slots:
 private:
     Ui::HomeWidget *ui;
     EnvironmentService m_environmentService;
+    SettingsService m_settingsService;
     void initConnections();
     void applyTemperatureColor(double temperature);
+    void updateDeviceStatusLabel(const DeviceStatusSummary &summary);
+
+protected:
+    void showEvent(QShowEvent *event) override;
 };
