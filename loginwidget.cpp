@@ -1,4 +1,5 @@
 #include "loginwidget.h"
+#include "ui/registerwidget.h"
 #include "ui_loginwidget.h"
 
 #include <QDebug>
@@ -8,7 +9,8 @@
 #include <QScreen>
 
 LoginWidget::LoginWidget(QWidget *parent)
-    : QWidget(parent), ui(new Ui::LoginWidget)
+    : QWidget(parent)
+    , ui(new Ui::LoginWidget)
 {
     ui->setupUi(this);
     setWindowTitle(QStringLiteral("智能家居系统 - 登录"));
@@ -57,7 +59,8 @@ void LoginWidget::on_btnRegister_clicked()
 {
     qDebug() << "注册按钮被点击";
 
-    QMessageBox::information(this, "提示", "这是注册逻辑的入口，对接你已写好的实现代码");
+    RegisterWidget *registerWidget = new RegisterWidget(nullptr);
+    registerWidget->show();
 }
 
 void LoginWidget::on_btnSkipLogin_clicked()

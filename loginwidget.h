@@ -27,9 +27,6 @@ private slots:
     void on_btnSkipLogin_clicked();
 
 private:
-    bool verifyUserInDatabase(const QString &username, const QString &password);
-
-private:
     Ui::LoginWidget *ui;
     LoginService m_loginService;
 };

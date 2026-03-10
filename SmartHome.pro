@@ -27,6 +27,7 @@ SOURCES += \
     ui/devicecontrolwidget.cpp \
     ui/historywidget.cpp \
     ui/homewidget.cpp \
+    ui/registerwidget.cpp \
     ui/scenewidget.cpp \
     ui/settingswidget.cpp \
     ui/quickcontrolmanagedialog.cpp \
@@ -37,6 +38,7 @@ SOURCES += \
     services/alarmservice.cpp \
     services/settingsservice.cpp \
     services/loginservice.cpp \
+    services/registerservice.cpp \
     services/usercontext.cpp \
     services/quickcontrolservice.cpp \
     network/networkmanager.cpp \
@@ -59,6 +61,7 @@ HEADERS += \
     ui/devicecontrolwidget.h \
     ui/historywidget.h \
     ui/homewidget.h \
+    ui/registerwidget.h \
     ui/scenewidget.h \
     ui/settingswidget.h \
     ui/quickcontrolmanagedialog.h \
@@ -69,6 +72,7 @@ HEADERS += \
     services/alarmservice.h \
     services/settingsservice.h \
     services/loginservice.h \
+    services/registerservice.h \
     services/usercontext.h \
     services/servicemodels.h \
     services/quickcontrolservice.h \
