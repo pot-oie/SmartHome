@@ -1,50 +1,144 @@
 #include "sceneservice.h"
 
+#include "database/dao/DeviceDao.h"
 #include "database/dao/SceneDao.h"
 
 #include <QJsonArray>
+#include <QRegularExpression>
 
 namespace
 {
+    const QString kActionEnable = QStringLiteral("\u5f00\u542f");
+    const QString kActionDisable = QStringLiteral("\u5173\u95ed");
+    const QString kActionOpen = QStringLiteral("\u6253\u5f00");
+    const QString kActionUnlock = QStringLiteral("\u89e3\u9501");
+    const QString kActionLock = QStringLiteral("\u4e0a\u9501");
+
     SceneDeviceAction makeAction(const QString &deviceId, const QString &deviceName, const QString &actionText, const QString &paramText = QString())
     {
-        return {deviceId, deviceName, actionText, paramText};
+        SceneDeviceAction action;
+        action.deviceId = deviceId;
+        action.deviceName = deviceName;
+        action.actionText = actionText;
+        action.paramText = paramText;
+        return action;
+    }
+
+    SceneList builtInScenes()
+    {
+        return {
+            {"scene_go_home", QStringLiteral("\u56de\u5bb6\u6a21\u5f0f"), ":/icons/home.svg", QStringLiteral("\u6b22\u8fce\u56de\u5bb6\uff0c\u81ea\u52a8\u5f00\u542f\u7167\u660e\u3001\u7a7a\u8c03\u5e76\u6253\u5f00\u7a97\u5e18"),
+             {makeAction("light_living", QStringLiteral("\u5ba2\u5385\u4e3b\u706f"), kActionEnable, "80%"),
+              makeAction("curtain_living", QStringLiteral("\u5ba2\u5385\u7a97\u5e18"), kActionEnable, "100%"),
+              makeAction("ac_living", QStringLiteral("\u5ba2\u5385\u7a7a\u8c03"), kActionEnable, "24C")}},
+
+            {"scene_sleep", QStringLiteral("\u7761\u7720\u6a21\u5f0f"), ":/icons/bedtime.svg", QStringLiteral("\u5173\u95ed\u4e3b\u7167\u660e\uff0c\u62c9\u4e0a\u7a97\u5e18\uff0c\u5e76\u628a\u5367\u5ba4\u7a7a\u8c03\u8c03\u5230\u8212\u9002\u6e29\u5ea6"),
+             {makeAction("light_bedroom", QStringLiteral("\u5367\u5ba4\u706f"), kActionDisable),
+              makeAction("light_living", QStringLiteral("\u5ba2\u5385\u4e3b\u706f"), kActionDisable),
+              makeAction("curtain_bedroom", QStringLiteral("\u5367\u5ba4\u7a97\u5e18"), kActionDisable, "0%"),
+              makeAction("ac_bedroom", QStringLiteral("\u5367\u5ba4\u7a7a\u8c03"), kActionEnable, "26C")}},
+
+            {"scene_movie", QStringLiteral("\u5f71\u9662\u6a21\u5f0f"), ":/icons/movie.svg", QStringLiteral("\u8c03\u6697\u706f\u5149\u3001\u5173\u95ed\u7a97\u5e18\uff0c\u8425\u9020\u89c2\u5f71\u73af\u5883"),
+             {makeAction("light_living", QStringLiteral("\u5ba2\u5385\u4e3b\u706f"), kActionDisable),
+              makeAction("curtain_living", QStringLiteral("\u5ba2\u5385\u7a97\u5e18"), kActionDisable, "0%"),
+              makeAction("tv_living", QStringLiteral("\u5ba2\u5385\u7535\u89c6"), kActionEnable)}},
+
+            {"scene_party", QStringLiteral("\u6d3e\u5bf9\u6a21\u5f0f"), ":/icons/celebration.svg", QStringLiteral("\u5f00\u542f\u4e3b\u8981\u7167\u660e\u548c\u5a31\u4e50\u8bbe\u5907"),
+             {makeAction("light_living", QStringLiteral("\u5ba2\u5385\u4e3b\u706f"), kActionEnable, "100%"),
+              makeAction("light_bedroom", QStringLiteral("\u5367\u5ba4\u706f"), kActionEnable, "80%"),
+              makeAction("light_kitchen", QStringLiteral("\u53a8\u623f\u706f"), kActionEnable, "100%"),
+              makeAction("tv_living", QStringLiteral("\u5ba2\u5385\u7535\u89c6"), kActionEnable)}},
+
+            {"scene_wakeup", QStringLiteral("\u8d77\u5e8a\u6a21\u5f0f"), ":/icons/wb_sunny.svg", QStringLiteral("\u9010\u6b65\u5f00\u542f\u7167\u660e\u548c\u7a97\u5e18\uff0c\u5e2e\u52a9\u81ea\u7136\u5524\u9192"),
+             {makeAction("light_bedroom", QStringLiteral("\u5367\u5ba4\u706f"), kActionEnable, "60%"),
+              makeAction("curtain_bedroom", QStringLiteral("\u5367\u5ba4\u7a97\u5e18"), kActionEnable, "80%"),
+              makeAction("ac_bedroom", QStringLiteral("\u5367\u5ba4\u7a7a\u8c03"), kActionDisable)}},
+
+            {"scene_leave_home", QStringLiteral("\u79bb\u5bb6\u6a21\u5f0f"), ":/icons/flight_takeoff.svg", QStringLiteral("\u5173\u95ed\u5173\u952e\u8bbe\u5907\u5e76\u9501\u95e8"),
+             {makeAction("light_living", QStringLiteral("\u5ba2\u5385\u4e3b\u706f"), kActionDisable),
+              makeAction("light_bedroom", QStringLiteral("\u5367\u5ba4\u706f"), kActionDisable),
+              makeAction("curtain_living", QStringLiteral("\u5ba2\u5385\u7a97\u5e18"), kActionDisable, "0%"),
+              makeAction("ac_living", QStringLiteral("\u5ba2\u5385\u7a7a\u8c03"), kActionDisable),
+              makeAction("lock_door", QStringLiteral("\u524d\u95e8\u667a\u80fd\u9501"), kActionLock)}}};
+    }
+
+    void seedBuiltInScenes(SceneDao &dao)
+    {
+        const SceneList defaults = builtInScenes();
+        for (const SceneDefinition &defaultScene : defaults)
+        {
+            const SceneList currentScenes = dao.listScenesWithActions();
+            bool exists = false;
+            for (const SceneDefinition &current : currentScenes)
+            {
+                if (current.id == defaultScene.id)
+                {
+                    exists = true;
+                    break;
+                }
+            }
+
+            if (exists)
+            {
+                continue;
+            }
+
+            SceneDefinition scene = defaultScene;
+            if (!dao.insertScene(scene) || scene.id.isEmpty())
+            {
+                continue;
+            }
+
+            for (const SceneDeviceAction &action : defaultScene.actions)
+            {
+                dao.insertSceneAction(scene.id, action);
+            }
+        }
     }
 
     int parseParamValue(const QString &paramText)
     {
         QString raw = paramText;
-        raw.remove('%').remove("°C").remove("亮度:");
-        return raw.trimmed().toInt();
+        raw.remove(QRegularExpression("[^\\d-]"));
+        return raw.toInt();
+    }
+
+    bool isTurnOnAction(const QString &actionText)
+    {
+        const QString trimmed = actionText.trimmed();
+        const QString lower = trimmed.toLower();
+        return trimmed == kActionEnable
+               || trimmed == kActionOpen
+               || trimmed == kActionUnlock
+               || lower == "on"
+               || lower == "open"
+               || lower == "unlock";
     }
 }
 
 SceneList SceneService::loadDefaultScenes() const
 {
     SceneDao dao;
-    const SceneList scenesFromDb = dao.listScenesWithActions();
+    SceneList scenesFromDb = dao.listScenesWithActions();
     if (!scenesFromDb.isEmpty())
     {
         return scenesFromDb;
     }
 
-    return {
-        {"scene_go_home", "回家模式", ":/icons/home.svg", "欢迎回家！自动开启照明、空调并打开窗帘", {makeAction("light_living", "客厅主灯", "开启", "80%"), makeAction("curtain_living", "客厅窗帘", "开启", "100%"), makeAction("ac_living", "客厅空调", "开启", "24°C"), makeAction("lock_door", "前门智能锁", "解锁")}},
+    seedBuiltInScenes(dao);
+    scenesFromDb = dao.listScenesWithActions();
+    return scenesFromDb;
+}
 
-        {"scene_sleep", "睡眠模式", ":/icons/bedtime.svg", "晚安！关闭所有照明，窗帘合上，空调调至舒适温度", {makeAction("light_bedroom", "卧室灯", "关闭"), makeAction("light_living", "客厅主灯", "关闭"), makeAction("curtain_bedroom", "卧室窗帘", "关闭", "0%"), makeAction("ac_bedroom", "卧室空调", "开启", "26°C")}},
-
-        {"scene_movie", "影院模式", ":/icons/movie.svg", "享受电影时光！调暗灯光，关闭窗帘", {makeAction("light_living", "客厅主灯", "关闭"), makeAction("curtain_living", "客厅窗帘", "关闭", "0%"), makeAction("tv_living", "客厅电视", "开启")}},
-
-        {"scene_party", "派对模式", ":/icons/celebration.svg", "派对时间！所有灯光全开", {makeAction("light_living", "客厅主灯", "开启", "100%"), makeAction("light_bedroom", "卧室灯", "开启", "80%"), makeAction("light_kitchen", "厨房灯", "开启", "100%"), makeAction("tv_living", "客厅电视", "开启")}},
-
-        {"scene_wakeup", "起床模式", ":/icons/wb_sunny.svg", "早安！缓缓开启灯光和窗帘，帮助您自然苏醒", {makeAction("light_bedroom", "卧室灯", "开启", "60%"), makeAction("curtain_bedroom", "卧室窗帘", "开启", "80%"), makeAction("ac_bedroom", "卧室空调", "关闭")}},
-
-        {"scene_leave_home", "离家模式", ":/icons/flight_takeoff.svg", "安全离家！关闭所有电器，开启安防监控", {makeAction("light_all", "所有灯光", "关闭"), makeAction("curtain_all", "所有窗帘", "关闭"), makeAction("ac_living", "客厅空调", "关闭"), makeAction("ac_bedroom", "卧室空调", "关闭"), makeAction("lock_door", "前门智能锁", "上锁")}}};
+SettingsDeviceList SceneService::loadAvailableDevices() const
+{
+    DeviceDao dao;
+    return dao.listSettingsDevices();
 }
 
 SceneDefinition SceneService::createCustomScene(const QString &sceneName) const
 {
-    return createScene(sceneName, "自定义场景", ":/icons/scene.svg");
+    return createScene(sceneName, QStringLiteral("\u81ea\u5b9a\u4e49\u573a\u666f"), ":/icons/scene.svg");
 }
 
 SceneDefinition SceneService::createScene(const QString &sceneName, const QString &sceneDescription, const QString &iconPath) const
@@ -70,6 +164,17 @@ SceneDefinition SceneService::createScene(const QString &sceneName, const QStrin
     return scene;
 }
 
+bool SceneService::updateScene(const SceneDefinition &scene) const
+{
+    if (scene.id.trimmed().isEmpty() || scene.name.trimmed().isEmpty() || scene.description.trimmed().isEmpty())
+    {
+        return false;
+    }
+
+    SceneDao dao;
+    return dao.updateScene(scene);
+}
+
 bool SceneService::addDeviceAction(const SceneDefinition &scene, const SceneDeviceAction &action) const
 {
     if (scene.id.trimmed().isEmpty())
@@ -79,6 +184,17 @@ bool SceneService::addDeviceAction(const SceneDefinition &scene, const SceneDevi
 
     SceneDao dao;
     return dao.insertSceneAction(scene.id.trimmed(), action);
+}
+
+bool SceneService::updateDeviceAction(const SceneDefinition &scene, const SceneDeviceAction &oldAction, const SceneDeviceAction &newAction) const
+{
+    if (scene.id.trimmed().isEmpty())
+    {
+        return false;
+    }
+
+    SceneDao dao;
+    return dao.updateSceneAction(scene.id.trimmed(), oldAction, newAction);
 }
 
 bool SceneService::removeDeviceAction(const SceneDefinition &scene, const SceneDeviceAction &action) const
@@ -117,14 +233,14 @@ QJsonObject SceneService::buildTriggerSceneCommand(const SceneDefinition &scene)
         QJsonObject cmd;
         cmd["device_id"] = action.deviceId;
 
-        if (!action.paramText.isEmpty())
+        if (!action.paramText.trimmed().isEmpty())
         {
             cmd["command"] = "set_param";
             cmd["param_value"] = parseParamValue(action.paramText);
         }
         else
         {
-            cmd["command"] = (action.actionText == "开启" || action.actionText == "解锁") ? "turn_on" : "turn_off";
+            cmd["command"] = isTurnOnAction(action.actionText) ? "turn_on" : "turn_off";
         }
 
         commandsArray.append(cmd);

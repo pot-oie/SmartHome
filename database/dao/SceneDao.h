@@ -9,7 +9,9 @@ class SceneDao
 public:
     SceneList listScenesWithActions();
     bool insertScene(SceneDefinition &scene);
+    bool updateScene(const SceneDefinition &scene);
     bool insertSceneAction(const QString &sceneCode, const SceneDeviceAction &action);
+    bool updateSceneAction(const QString &sceneCode, const SceneDeviceAction &oldAction, const SceneDeviceAction &newAction);
     bool deleteSceneAction(const QString &sceneCode, const SceneDeviceAction &action);
     bool deleteSceneByCode(const QString &sceneCode);
     QString lastErrorText() const;

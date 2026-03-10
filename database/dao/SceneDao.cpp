@@ -46,6 +46,63 @@ namespace
         }
         return ":/icons/scene.svg";
     }
+
+    bool resolveDevicePrimaryKey(DatabaseManager &databaseManager, const SceneDeviceAction &action, qlonglong *devicePk, QString *errorText)
+    {
+        const QString deviceUniqueId = action.deviceId.trimmed();
+        QSqlQuery deviceQuery;
+
+        if (!deviceUniqueId.isEmpty())
+        {
+            deviceQuery = databaseManager.query("SELECT id FROM devices WHERE device_id = ? LIMIT 1", {deviceUniqueId});
+            if (deviceQuery.isActive() && deviceQuery.next())
+            {
+                *devicePk = deviceQuery.value(0).toLongLong();
+                return true;
+            }
+        }
+
+        const QString deviceName = action.deviceName.trimmed();
+        if (!deviceName.isEmpty())
+        {
+            deviceQuery = databaseManager.query("SELECT id FROM devices WHERE device_name = ? LIMIT 1", {deviceName});
+            if (deviceQuery.isActive() && deviceQuery.next())
+            {
+                *devicePk = deviceQuery.value(0).toLongLong();
+                return true;
+            }
+        }
+
+        if (errorText)
+        {
+            *errorText = QString::fromUtf8("未找到对应设备，请先在系统设置中维护设备信息。");
+        }
+        return false;
+    }
+
+    qlonglong findSceneActionRecordId(DatabaseManager &databaseManager, const QString &sceneCode, const SceneDeviceAction &action)
+    {
+        if (action.recordId > 0)
+        {
+            return action.recordId;
+        }
+
+        static const QString sql =
+            "SELECT a.id FROM scene_actions a "
+            "INNER JOIN scenes s ON s.id = a.scene_id "
+            "INNER JOIN devices d ON d.id = a.device_id "
+            "WHERE s.scene_code = ? AND d.device_name = ? AND a.action_name = ? "
+            "AND COALESCE(a.action_param, '') = COALESCE(?, '') "
+            "ORDER BY a.action_order ASC, a.id ASC LIMIT 1";
+
+        QSqlQuery query = databaseManager.query(sql, {sceneCode, action.deviceName, action.actionText, action.paramText});
+        if (!query.isActive() || !query.next())
+        {
+            return 0;
+        }
+
+        return query.value(0).toLongLong();
+    }
 }
 
 SceneList SceneDao::listScenesWithActions()
@@ -63,9 +120,9 @@ SceneList SceneDao::listScenesWithActions()
     const bool iconColumnExists = hasSceneIconColumn(databaseManager);
     const QString sceneSql = iconColumnExists
                                  ? "SELECT scene_code, scene_name, scene_description, scene_icon "
-                                   "FROM scenes ORDER BY display_order ASC, id ASC"
+                                   "FROM scenes WHERE is_enabled = 1 ORDER BY display_order ASC, id ASC"
                                  : "SELECT scene_code, scene_name, scene_description "
-                                   "FROM scenes ORDER BY display_order ASC, id ASC";
+                                   "FROM scenes WHERE is_enabled = 1 ORDER BY display_order ASC, id ASC";
 
     QSqlQuery sceneQuery = databaseManager.query(sceneSql, {});
     if (!sceneQuery.isActive())
@@ -92,10 +149,11 @@ SceneList SceneDao::listScenesWithActions()
     }
 
     static const QString actionSql =
-        "SELECT s.scene_code, d.device_id, d.device_name, a.action_name, a.action_param "
+        "SELECT a.id AS action_id, s.scene_code, d.device_id, d.device_name, a.action_name, a.action_param "
         "FROM scene_actions a "
         "INNER JOIN scenes s ON s.id = a.scene_id "
         "INNER JOIN devices d ON d.id = a.device_id "
+        "WHERE s.is_enabled = 1 "
         "ORDER BY s.display_order ASC, a.action_order ASC, a.id ASC";
 
     QSqlQuery actionQuery = databaseManager.query(actionSql, {});
@@ -115,6 +173,7 @@ SceneList SceneDao::listScenesWithActions()
         }
 
         SceneDeviceAction action;
+        action.recordId = actionQuery.value("action_id").toLongLong();
         action.deviceId = actionQuery.value("device_id").toString();
         action.deviceName = actionQuery.value("device_name").toString();
         action.actionText = actionQuery.value("action_name").toString();
@@ -158,15 +217,26 @@ bool SceneDao::insertScene(SceneDefinition &scene)
 
     const bool iconColumnExists = hasSceneIconColumn(databaseManager);
     const QString iconPath = scene.icon.trimmed().isEmpty() ? QString(":/icons/scene.svg") : scene.icon.trimmed();
-    const QString insertSql = iconColumnExists
-                                  ? "INSERT INTO scenes (scene_code, scene_name, scene_description, scene_icon, is_default, display_order) "
-                                    "VALUES (CONCAT('scene_', UUID_SHORT()), ?, ?, ?, 0, ?)"
-                                  : "INSERT INTO scenes (scene_code, scene_name, scene_description, is_default, display_order) "
-                                    "VALUES (CONCAT('scene_', UUID_SHORT()), ?, ?, 0, ?)";
+    const bool hasPresetCode = !scene.id.trimmed().isEmpty();
+    const QString insertSql = hasPresetCode
+                                  ? (iconColumnExists
+                                         ? "INSERT INTO scenes (scene_code, scene_name, scene_description, scene_icon, is_default, is_enabled, display_order) "
+                                           "VALUES (?, ?, ?, ?, 0, 1, ?)"
+                                         : "INSERT INTO scenes (scene_code, scene_name, scene_description, is_default, is_enabled, display_order) "
+                                           "VALUES (?, ?, ?, 0, 1, ?)")
+                                  : (iconColumnExists
+                                         ? "INSERT INTO scenes (scene_code, scene_name, scene_description, scene_icon, is_default, is_enabled, display_order) "
+                                           "VALUES (CONCAT('scene_', UUID_SHORT()), ?, ?, ?, 0, 1, ?)"
+                                         : "INSERT INTO scenes (scene_code, scene_name, scene_description, is_default, is_enabled, display_order) "
+                                           "VALUES (CONCAT('scene_', UUID_SHORT()), ?, ?, 0, 1, ?)");
 
-    const QVariantList params = iconColumnExists
-                                    ? QVariantList{scene.name, scene.description, iconPath, nextOrder}
-                                    : QVariantList{scene.name, scene.description, nextOrder};
+    const QVariantList params = hasPresetCode
+                                    ? (iconColumnExists
+                                           ? QVariantList{scene.id.trimmed(), scene.name, scene.description, iconPath, nextOrder}
+                                           : QVariantList{scene.id.trimmed(), scene.name, scene.description, nextOrder})
+                                    : (iconColumnExists
+                                           ? QVariantList{scene.name, scene.description, iconPath, nextOrder}
+                                           : QVariantList{scene.name, scene.description, nextOrder});
 
     if (!databaseManager.exec(insertSql, params))
     {
@@ -175,15 +245,55 @@ bool SceneDao::insertScene(SceneDefinition &scene)
         return false;
     }
 
+    if (hasPresetCode)
+    {
+        scene.id = scene.id.trimmed();
+        clearLastError();
+        return true;
+    }
+
     QSqlQuery codeQuery = databaseManager.query("SELECT scene_code FROM scenes WHERE id = LAST_INSERT_ID() LIMIT 1", {});
     if (!codeQuery.isActive() || !codeQuery.next())
     {
-        setLastError(databaseManager.lastErrorText().isEmpty() ? QString("新增场景后读取 scene_code 失败。") : databaseManager.lastErrorText());
+        setLastError(databaseManager.lastErrorText().isEmpty()
+                         ? QString::fromUtf8("新增场景后读取 scene_code 失败。")
+                         : databaseManager.lastErrorText());
         qWarning().noquote() << LOG_PREFIX << m_lastErrorText;
         return false;
     }
 
     scene.id = codeQuery.value(0).toString().trimmed();
+
+    clearLastError();
+    return true;
+}
+
+bool SceneDao::updateScene(const SceneDefinition &scene)
+{
+    DatabaseManager &databaseManager = DatabaseManager::instance();
+    if (!databaseManager.isOpen() && !databaseManager.open())
+    {
+        setLastError(databaseManager.lastErrorText());
+        qWarning().noquote() << LOG_PREFIX << "Failed to open database before scene update:" << m_lastErrorText;
+        return false;
+    }
+
+    const bool iconColumnExists = hasSceneIconColumn(databaseManager);
+    const QString iconPath = scene.icon.trimmed().isEmpty() ? QString(":/icons/scene.svg") : scene.icon.trimmed();
+    const QString updateSql = iconColumnExists
+                                  ? "UPDATE scenes SET scene_name = ?, scene_description = ?, scene_icon = ? WHERE scene_code = ?"
+                                  : "UPDATE scenes SET scene_name = ?, scene_description = ? WHERE scene_code = ?";
+
+    const QVariantList params = iconColumnExists
+                                    ? QVariantList{scene.name, scene.description, iconPath, scene.id}
+                                    : QVariantList{scene.name, scene.description, scene.id};
+
+    if (!databaseManager.exec(updateSql, params))
+    {
+        setLastError(databaseManager.lastErrorText());
+        qWarning().noquote() << LOG_PREFIX << "Update scene failed:" << m_lastErrorText << "| scene_code:" << scene.id;
+        return false;
+    }
 
     clearLastError();
     return true;
@@ -199,16 +309,13 @@ bool SceneDao::insertSceneAction(const QString &sceneCode, const SceneDeviceActi
         return false;
     }
 
-    static const QString findDeviceSql =
-        "SELECT id FROM devices WHERE device_name = ? LIMIT 1";
-    QSqlQuery deviceQuery = databaseManager.query(findDeviceSql, {action.deviceName});
-    if (!deviceQuery.isActive() || !deviceQuery.next())
+    qlonglong devicePk = 0;
+    QString resolveError;
+    if (!resolveDevicePrimaryKey(databaseManager, action, &devicePk, &resolveError))
     {
-        setLastError("未找到对应设备，请先在系统设置中维护该设备。");
+        setLastError(resolveError);
         return false;
     }
-
-    const qlonglong devicePk = deviceQuery.value(0).toLongLong();
 
     static const QString insertActionSql =
         "INSERT INTO scene_actions (scene_id, device_id, action_name, action_param, action_order) "
@@ -227,6 +334,49 @@ bool SceneDao::insertSceneAction(const QString &sceneCode, const SceneDeviceActi
     return true;
 }
 
+bool SceneDao::updateSceneAction(const QString &sceneCode, const SceneDeviceAction &oldAction, const SceneDeviceAction &newAction)
+{
+    DatabaseManager &databaseManager = DatabaseManager::instance();
+    if (!databaseManager.isOpen() && !databaseManager.open())
+    {
+        setLastError(databaseManager.lastErrorText());
+        qWarning().noquote() << LOG_PREFIX << "Failed to open database before scene action update:" << m_lastErrorText;
+        return false;
+    }
+
+    const qlonglong actionId = findSceneActionRecordId(databaseManager, sceneCode, oldAction);
+    if (actionId <= 0)
+    {
+        setLastError(QString::fromUtf8("未找到可更新的场景设备动作记录。"));
+        qWarning().noquote() << LOG_PREFIX << m_lastErrorText
+                             << "| scene_code:" << sceneCode << "| device:" << oldAction.deviceName;
+        return false;
+    }
+
+    qlonglong devicePk = 0;
+    QString resolveError;
+    if (!resolveDevicePrimaryKey(databaseManager, newAction, &devicePk, &resolveError))
+    {
+        setLastError(resolveError);
+        return false;
+    }
+
+    static const QString updateSql =
+        "UPDATE scene_actions SET device_id = ?, action_name = ?, action_param = ? "
+        "WHERE id = ? AND scene_id = (SELECT id FROM scenes WHERE scene_code = ? LIMIT 1)";
+
+    if (!databaseManager.exec(updateSql, {devicePk, newAction.actionText, newAction.paramText, actionId, sceneCode}))
+    {
+        setLastError(databaseManager.lastErrorText());
+        qWarning().noquote() << LOG_PREFIX << "Update scene action failed:" << m_lastErrorText
+                             << "| scene_code:" << sceneCode << "| action_id:" << actionId;
+        return false;
+    }
+
+    clearLastError();
+    return true;
+}
+
 bool SceneDao::deleteSceneAction(const QString &sceneCode, const SceneDeviceAction &action)
 {
     DatabaseManager &databaseManager = DatabaseManager::instance();
@@ -237,31 +387,15 @@ bool SceneDao::deleteSceneAction(const QString &sceneCode, const SceneDeviceActi
         return false;
     }
 
-    static const QString findActionSql =
-        "SELECT a.id FROM scene_actions a "
-        "INNER JOIN scenes s ON s.id = a.scene_id "
-        "INNER JOIN devices d ON d.id = a.device_id "
-        "WHERE s.scene_code = ? AND d.device_name = ? AND a.action_name = ? AND COALESCE(a.action_param, '') = COALESCE(?, '') "
-        "ORDER BY a.action_order ASC, a.id ASC LIMIT 1";
-
-    QSqlQuery actionQuery = databaseManager.query(findActionSql, {sceneCode, action.deviceName, action.actionText, action.paramText});
-    if (!actionQuery.isActive())
+    const qlonglong actionId = findSceneActionRecordId(databaseManager, sceneCode, action);
+    if (actionId <= 0)
     {
-        setLastError(databaseManager.lastErrorText());
-        qWarning().noquote() << LOG_PREFIX << "Find scene action failed:" << m_lastErrorText
-                             << "| scene_code:" << sceneCode << "| device:" << action.deviceName;
-        return false;
-    }
-
-    if (!actionQuery.next())
-    {
-        setLastError("未找到可删除的设备动作记录。");
+        setLastError(QString::fromUtf8("未找到可删除的场景设备动作记录。"));
         qWarning().noquote() << LOG_PREFIX << m_lastErrorText
                              << "| scene_code:" << sceneCode << "| device:" << action.deviceName;
         return false;
     }
 
-    const qlonglong actionId = actionQuery.value(0).toLongLong();
     static const QString deleteSql = "DELETE FROM scene_actions WHERE id = ?";
     if (!databaseManager.exec(deleteSql, {actionId}))
     {

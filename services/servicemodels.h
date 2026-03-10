@@ -2,6 +2,7 @@
 
 #include <QDateTime>
 #include <QString>
+#include <QtGlobal>
 #include <QVector>
 
 struct OperationLogEntry
@@ -31,6 +32,7 @@ using EnvironmentSeries = QVector<EnvironmentPoint>;
 
 struct SceneDeviceAction
 {
+    qint64 recordId = 0;
     QString deviceId;
     QString deviceName;
     QString actionText;
