@@ -320,4 +320,10 @@ ON DUPLICATE KEY UPDATE
     updated_by = VALUES(updated_by),
     updated_at = VALUES(updated_at);
 
+INSERT IGNORE INTO quick_controls (target_type, target_id, display_order) VALUES 
+('scene', 1, 1),    -- 第1个显示：回家模式 (场景)
+('scene', 2, 2),    -- 第2个显示：离家模式 (场景)
+('device', 1, 3),   -- 第3个显示：客厅主灯 (设备)
+('device', 4, 4);   -- 第4个显示：客厅空调 (设备)
+
 COMMIT;

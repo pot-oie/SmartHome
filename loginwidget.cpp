@@ -73,3 +73,10 @@ void LoginWidget::on_btnResetPwd_clicked()
                                            "在实际应用中，这里会发送验证码到\n"
                                            "注册的邮箱或手机号进行密码重置。");
 }
+
+void LoginWidget::on_btnRegister_clicked()
+{
+    qDebug() << "注册按钮被点击";
+
+    QMessageBox::information(this, "提示", "这是注册逻辑的入口，对接你已写好的实现代码");
+}

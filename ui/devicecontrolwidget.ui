@@ -10,12 +10,6 @@
      <layout class="QVBoxLayout" name="verticalLayout_cat">
       <item>
        <widget class="QListWidget" name="listCategory">
-        <item><property name="text"><string>灯光设备</string></property></item>
-        <item><property name="text"><string>空调设备</string></property></item>
-        <item><property name="text"><string>窗帘设备</string></property></item>
-        <item><property name="text"><string>门锁设备</string></property></item>
-        <item><property name="text"><string>影音设备</string></property></item>
-        <item><property name="text"><string>其他设备</string></property></item>
        </widget>
       </item>
      </layout>

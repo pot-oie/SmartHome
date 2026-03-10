@@ -23,6 +23,7 @@ signals:
 
 public slots:
     void updateDeviceStatus(const QJsonObject &statusData);
+    void refreshDevices();
 
 private slots:
     void on_listCategory_currentRowChanged(int currentRow);

@@ -9,6 +9,9 @@ namespace Ui
 }
 QT_END_NAMESPACE
 
+class HomeWidget;
+class DeviceControlWidget;
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -28,5 +31,7 @@ private:
     void applyLanguage(const QString &languageKey);
     QString loadStyleSheet(const QString &resourcePath) const;
     Ui::MainWindow *ui;
+    HomeWidget *m_homeWidget = nullptr;
+    DeviceControlWidget *m_deviceControlWidget = nullptr;
     QTranslator m_translator;
 };

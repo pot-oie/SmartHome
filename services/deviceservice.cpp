@@ -68,18 +68,12 @@ namespace
 
     QString operationContentForSwitch(const DeviceDefinition &device, bool turnOn)
     {
-        return (turnOn ? QStringLiteral("\u5f00\u542f") : QStringLiteral("\u5173\u95ed"))
-               + QStringLiteral("\u8bbe\u5907\uff1a")
-               + device.name;
+        return (turnOn ? QStringLiteral("\u5f00\u542f") : QStringLiteral("\u5173\u95ed")) + QStringLiteral("\u8bbe\u5907\uff1a") + device.name;
     }
 
     QString operationContentForValue(const DeviceDefinition &device, int value)
     {
-        return QStringLiteral("\u8c03\u6574")
-               + device.name
-               + QStringLiteral("\u53c2\u6570\u4e3a ")
-               + QString::number(value)
-               + device.valueUnit;
+        return QStringLiteral("\u8c03\u6574") + device.name + QStringLiteral("\u53c2\u6570\u4e3a ") + QString::number(value) + device.valueUnit;
     }
 
     DeviceList builtInFallbackDevices()
@@ -123,9 +117,10 @@ QStringList DeviceService::categories() const
 
     for (const DeviceDao::DeviceCategoryRow &row : categoriesFromDb)
     {
-        if (!row.name.trimmed().isEmpty())
+        const QString name = row.name.trimmed();
+        if (!name.isEmpty() && name != QStringLiteral("新设备") && name != QStringLiteral("其他设备"))
         {
-            result.push_back(row.name.trimmed());
+            result.push_back(name);
         }
     }
 
@@ -252,16 +247,16 @@ bool DeviceService::updateSwitchState(const QString &deviceId,
             {"current_value", device.value}};
         QString historyErrorMessage;
         if (!historyService.addOperationLog(
-            "device_control",
-            turnOn ? "turn_on" : "turn_off",
-            operationContentForSwitch(device, turnOn),
-            "success",
-            200,
-            device.id,
-            device.name,
-            requestPayload,
-            responsePayload,
-            &historyErrorMessage))
+                "device_control",
+                turnOn ? "turn_on" : "turn_off",
+                operationContentForSwitch(device, turnOn),
+                "success",
+                200,
+                device.id,
+                device.name,
+                requestPayload,
+                responsePayload,
+                &historyErrorMessage))
         {
             const QString finalMessage = historyErrorMessage.trimmed().isEmpty()
                                              ? QStringLiteral("\u8bbe\u5907\u72b6\u6001\u5df2\u66f4\u65b0\uff0c\u4f46\u5199\u5165\u64cd\u4f5c\u5386\u53f2\u5931\u8d25\u3002")
@@ -321,16 +316,16 @@ bool DeviceService::updateDeviceValue(const DeviceDefinition &device,
         {"current_value", value}};
     QString historyErrorMessage;
     if (!historyService.addOperationLog(
-        "device_control",
-        "set_param",
-        operationContentForValue(device, value),
-        "success",
-        200,
-        device.id,
-        device.name,
-        requestPayload,
-        responsePayload,
-        &historyErrorMessage))
+            "device_control",
+            "set_param",
+            operationContentForValue(device, value),
+            "success",
+            200,
+            device.id,
+            device.name,
+            requestPayload,
+            responsePayload,
+            &historyErrorMessage))
     {
         const QString finalMessage = historyErrorMessage.trimmed().isEmpty()
                                          ? QStringLiteral("\u8bbe\u5907\u53c2\u6570\u5df2\u66f4\u65b0\uff0c\u4f46\u5199\u5165\u64cd\u4f5c\u5386\u53f2\u5931\u8d25\u3002")

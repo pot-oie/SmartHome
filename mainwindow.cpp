@@ -47,11 +47,13 @@ void MainWindow::initUI()
     addNavItem(":/icons/settings.svg", "系统设置");
 
     // 创建各个子页面并添加到堆栈窗口
-    ui->stackWidget->addWidget(new HomeWidget(this));          // 索引 0
-    ui->stackWidget->addWidget(new DeviceControlWidget(this)); // 索引 1
-    ui->stackWidget->addWidget(new SceneWidget(this));         // 索引 2
-    ui->stackWidget->addWidget(new HistoryWidget(this));       // 索引 3
-    ui->stackWidget->addWidget(new AlarmWidget(this));         // 索引 4
+    m_homeWidget = new HomeWidget(this);
+    m_deviceControlWidget = new DeviceControlWidget(this);
+    ui->stackWidget->addWidget(m_homeWidget);            // 索引 0
+    ui->stackWidget->addWidget(m_deviceControlWidget);   // 索引 1
+    ui->stackWidget->addWidget(new SceneWidget(this));   // 索引 2
+    ui->stackWidget->addWidget(new HistoryWidget(this)); // 索引 3
+    ui->stackWidget->addWidget(new AlarmWidget(this));   // 索引 4
     SettingsWidget *settingsWidget = new SettingsWidget(this);
     ui->stackWidget->addWidget(settingsWidget); // 索引 5
 
@@ -69,6 +71,16 @@ void MainWindow::onNavBarItemClicked(int index)
 {
     // 切换到对应的页面
     ui->stackWidget->setCurrentIndex(index);
+
+    // 页面切换时主动刷新，避免快捷控制和设备控制状态显示不一致
+    if (index == 0 && m_homeWidget)
+    {
+        m_homeWidget->refreshQuickControls();
+    }
+    else if (index == 1 && m_deviceControlWidget)
+    {
+        m_deviceControlWidget->refreshDevices();
+    }
 }
 
 void MainWindow::onThemeChanged(const QString &themeName)

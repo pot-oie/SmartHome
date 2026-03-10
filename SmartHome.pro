@@ -29,6 +29,7 @@ SOURCES += \
     ui/homewidget.cpp \
     ui/scenewidget.cpp \
     ui/settingswidget.cpp \
+    ui/quickcontrolmanagedialog.cpp \
     services/historyservice.cpp \
     services/environmentservice.cpp \
     services/sceneservice.cpp \
@@ -36,6 +37,7 @@ SOURCES += \
     services/alarmservice.cpp \
     services/settingsservice.cpp \
     services/loginservice.cpp \
+    services/quickcontrolservice.cpp \
     network/networkmanager.cpp \
     database/databasemanager.cpp \
     database/dao/SystemConfigDao.cpp \
@@ -44,6 +46,7 @@ SOURCES += \
     database/dao/HistoryDao.cpp \
     database/dao/SceneDao.cpp \
     database/dao/EnvRecordDao.cpp \
+    database/dao/QuickControlDao.cpp \
     qcustomplot.cpp
 
 HEADERS += \
@@ -57,6 +60,7 @@ HEADERS += \
     ui/homewidget.h \
     ui/scenewidget.h \
     ui/settingswidget.h \
+    ui/quickcontrolmanagedialog.h \
     services/historyservice.h \
     services/environmentservice.h \
     services/sceneservice.h \
@@ -65,6 +69,7 @@ HEADERS += \
     services/settingsservice.h \
     services/loginservice.h \
     services/servicemodels.h \
+    services/quickcontrolservice.h \
     network/networkmanager.h \
     network/protocol.h \
     database/databasemanager.h \
@@ -75,6 +80,7 @@ HEADERS += \
     database/dao/HistoryDao.h \
     database/dao/SceneDao.h \
     database/dao/EnvRecordDao.h \
+    database/dao/QuickControlDao.h \
     qcustomplot.h
 
 FORMS += \

@@ -1,11 +1,12 @@
 #pragma once
 
 #include <QJsonObject>
-
-#include "services/environmentservice.h"
 #include <QList>
 #include <QString>
 #include <QWidget>
+
+#include "services/environmentservice.h"
+#include "services/quickcontrolservice.h"
 
 namespace Ui
 {
@@ -20,20 +21,23 @@ public:
     explicit HomeWidget(QWidget *parent = nullptr);
     ~HomeWidget();
 
-signals:
-    void requestQuickControl(QString deviceId, QString cmd);
-
 public slots:
     void updateEnvironmentData(double temp, double hum);
     void updateEnvironmentUI(const QJsonObject &data);
+    void refreshQuickControls();
 
 private slots:
-    void on_btnGoHome_clicked();
     void onQuickControlClicked();
+    void on_btnGoHome_clicked();
 
 private:
     Ui::HomeWidget *ui;
     EnvironmentService m_environmentService;
+    QuickControlService m_quickControlService;
+    QString m_selectedSceneId;
+
     void initConnections();
     void applyTemperatureColor(double temperature);
+
+    void loadQuickControls();
 };

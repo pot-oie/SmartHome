@@ -23,8 +23,7 @@ namespace
 }
 
 DeviceControlWidget::DeviceControlWidget(QWidget *parent)
-    : QWidget(parent)
-    , ui(new Ui::DeviceControlWidget)
+    : QWidget(parent), ui(new Ui::DeviceControlWidget)
 {
     ui->setupUi(this);
     reloadDevices(true);
@@ -108,7 +107,8 @@ void DeviceControlWidget::updateDeviceListUI(int category)
                 "; color: white; border: none; border-radius: 4px; padding: 8px; }"
                 "QPushButton:hover { opacity: 0.8; }");
 
-            connect(switchBtn, &QPushButton::clicked, this, [this, device]() {
+            connect(switchBtn, &QPushButton::clicked, this, [this, device]()
+                    {
                 const bool newState = !device.isOn;
                 QString errorMessage;
                 QString warningMessage;
@@ -129,8 +129,7 @@ void DeviceControlWidget::updateDeviceListUI(int category)
                 if (!warningMessage.trimmed().isEmpty())
                 {
                     QMessageBox::warning(this, kWarning, warningMessage);
-                }
-            });
+                } });
             cardLayout->addWidget(switchBtn);
 
             if (m_deviceService.supportsAdjust(device))
@@ -146,11 +145,11 @@ void DeviceControlWidget::updateDeviceListUI(int category)
                 slider->setRange(range.first, range.second);
                 slider->setValue(device.value);
 
-                connect(slider, &QSlider::valueChanged, this, [this, valueLabel, device](int val) {
-                    valueLabel->setText(m_deviceService.valueText(device, val));
-                });
+                connect(slider, &QSlider::valueChanged, this, [this, valueLabel, device](int val)
+                        { valueLabel->setText(m_deviceService.valueText(device, val)); });
 
-                connect(slider, &QSlider::sliderReleased, this, [this, slider, device]() {
+                connect(slider, &QSlider::sliderReleased, this, [this, slider, device]()
+                        {
                     QString errorMessage;
                     QString warningMessage;
                     if (!m_deviceService.updateDeviceValue(device, slider->value(), &errorMessage, &warningMessage))
@@ -170,8 +169,7 @@ void DeviceControlWidget::updateDeviceListUI(int category)
                     if (!warningMessage.trimmed().isEmpty())
                     {
                         QMessageBox::warning(this, kWarning, warningMessage);
-                    }
-                });
+                    } });
 
                 sliderLayout->addWidget(slider);
                 cardLayout->addLayout(sliderLayout);
@@ -205,6 +203,12 @@ void DeviceControlWidget::updateDeviceStatus(const QJsonObject &statusData)
         return;
     }
 
+    reloadDevices(false);
+    updateDeviceListUI(ui->listCategory->currentRow());
+}
+
+void DeviceControlWidget::refreshDevices()
+{
     reloadDevices(false);
     updateDeviceListUI(ui->listCategory->currentRow());
 }

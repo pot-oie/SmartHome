@@ -56,44 +56,19 @@
      </item>
     </layout>
    </item>
+   
    <item>
     <widget class="QGroupBox" name="groupBox_quickControl">
      <property name="title"><string>快捷控制</string></property>
-     <layout class="QGridLayout" name="gridLayout_quick">
-      <item row="0" column="0">
-       <widget class="QPushButton" name="btnQuickLight">
-        <property name="text"><string>客厅灯</string></property>
-        <property name="minimumSize"><size><width>0</width><height>50</height></size></property>
-       </widget>
-      </item>
-      <item row="0" column="1">
-       <widget class="QPushButton" name="btnQuickAC">
-        <property name="text"><string>空调</string></property>
-        <property name="minimumSize"><size><width>0</width><height>50</height></size></property>
-       </widget>
-      </item>
-      <item row="0" column="2">
-       <widget class="QPushButton" name="btnQuickCurtain">
-        <property name="text"><string>窗帘</string></property>
-        <property name="minimumSize"><size><width>0</width><height>50</height></size></property>
-       </widget>
-      </item>
-      <item row="1" column="0">
-       <widget class="QPushButton" name="btnQuickTV">
-        <property name="text"><string>电视</string></property>
-        <property name="minimumSize"><size><width>0</width><height>50</height></size></property>
-       </widget>
-      </item>
-      <item row="1" column="1">
-       <widget class="QPushButton" name="btnQuickDoor">
-        <property name="text"><string>门锁</string></property>
-        <property name="minimumSize"><size><width>0</width><height>50</height></size></property>
-       </widget>
-      </item>
-      <item row="1" column="2">
-       <widget class="QPushButton" name="btnGoHome">
-        <property name="text"><string>回家模式</string></property>
-        <property name="minimumSize"><size><width>0</width><height>50</height></size></property>
+     <layout class="QVBoxLayout" name="verticalLayout_quick">
+      <item>
+       <widget class="QWidget" name="quickControlContainer" native="true">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>120</height>
+         </size>
+        </property>
        </widget>
       </item>
      </layout>
@@ -115,5 +90,6 @@
    </item>
   </layout>
  </widget>
- <resources/><connections/>
+ <resources/>
+ <connections/>
 </ui>

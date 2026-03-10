@@ -63,7 +63,7 @@ namespace
             {"tv_living", "\u5ba2\u5385\u7535\u89c6", "\u5f71\u97f3\u8bbe\u5907", "192.168.1.110", "online", "off", 50.0, "%", true, 0.0, 100.0, 10, true, "btnQuickTV", "\u5ba2\u5385\u7535\u89c6"}};
     }
 
-    QString iconForType(const QString &deviceType)
+    QString iconForType(const QString &deviceType, const QString &deviceName, const QString &deviceId)
     {
         if (deviceType.contains(QStringLiteral("\u7167\u660e")))
         {
@@ -72,6 +72,18 @@ namespace
         if (deviceType.contains(QStringLiteral("\u7a7a\u8c03")) || deviceType.contains(QStringLiteral("\u6e29\u63a7")))
         {
             return QString(":/icons/ac.svg");
+        }
+        const QString type = deviceType.toLower();
+        const QString name = deviceName.toLower();
+        const QString id = deviceId.toLower();
+
+        if (type.contains(QStringLiteral("锁")) || name.contains(QStringLiteral("锁")) || id.contains("lock"))
+        {
+            return QString(":/icons/lock.svg");
+        }
+        if (type.contains(QStringLiteral("摄像")) || name.contains(QStringLiteral("摄像")) || id.contains("camera"))
+        {
+            return QString(":/icons/check.svg");
         }
         if (deviceType.contains(QStringLiteral("\u7a97\u5e18")))
         {
@@ -195,11 +207,7 @@ namespace
 
     bool supportsSliderForType(const QString &deviceType)
     {
-        return deviceType.contains(QStringLiteral("\u7167\u660e"))
-               || deviceType.contains(QStringLiteral("\u7a7a\u8c03"))
-               || deviceType.contains(QStringLiteral("\u6e29\u63a7"))
-               || deviceType.contains(QStringLiteral("\u7a97\u5e18"))
-               || deviceType.contains(QStringLiteral("\u5f71\u97f3"));
+        return deviceType.contains(QStringLiteral("\u7167\u660e")) || deviceType.contains(QStringLiteral("\u7a7a\u8c03")) || deviceType.contains(QStringLiteral("\u6e29\u63a7")) || deviceType.contains(QStringLiteral("\u7a97\u5e18")) || deviceType.contains(QStringLiteral("\u5f71\u97f3"));
     }
 
     QPair<double, double> sliderRangeForType(const QString &deviceType)
@@ -318,7 +326,7 @@ DeviceList DeviceDao::listDeviceDefinitions()
         device.id = query.value("device_id").toString();
         device.name = query.value("device_name").toString();
         device.type = query.value("category_name").toString();
-        device.icon = iconForType(device.type);
+        device.icon = iconForType(device.type, device.name, device.id);
         device.isOnline = (query.value("online_status").toString() == "online");
         device.isOn = (query.value("switch_status").toString() == "on");
         device.value = qRound(query.value("current_value").toDouble());

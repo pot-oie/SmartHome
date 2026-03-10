@@ -118,6 +118,13 @@
         </widget>
        </item>
        <item>
+        <widget class="QPushButton" name="btnRegister">
+         <property name="text"><string>注 册</string></property>
+         <property name="minimumSize"><size><width>120</width><height>40</height></size></property>
+         <property name="font"><font><pointsize>11</pointsize></font></property>
+        </widget>
+       </item>
+       <item>
         <widget class="QPushButton" name="btnResetPwd">
          <property name="text"><string>重置密码</string></property>
          <property name="minimumSize"><size><width>120</width><height>40</height></size></property>

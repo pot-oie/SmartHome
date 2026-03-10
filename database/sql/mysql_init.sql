@@ -401,3 +401,18 @@ CREATE TABLE IF NOT EXISTS system_configs (
         ON UPDATE CASCADE
         ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- ==========================================================
+-- 首页快捷控制配置表
+-- ==========================================================
+CREATE TABLE IF NOT EXISTS quick_controls (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    target_type ENUM('device', 'scene') NOT NULL COMMENT '快捷项类型：设备(device)或场景(scene)',
+    target_id BIGINT NOT NULL COMMENT '关联的 devices.id 或 scenes.id',
+    display_order INT NOT NULL DEFAULT 0 COMMENT '首页展示排序（数字越小越靠前）',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    -- 保证同一个设备或场景不会被重复添加到快捷列表
+    UNIQUE KEY uq_quick_controls_target (target_type, target_id),
+    KEY idx_quick_controls_order (display_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='首页快捷控制配置表';
