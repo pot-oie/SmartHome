@@ -49,8 +49,7 @@ namespace
 }
 
 SceneWidget::SceneWidget(QWidget *parent)
-    : QWidget(parent)
-    , ui(new Ui::SceneWidget)
+    : QWidget(parent), ui(new Ui::SceneWidget)
 {
     ui->setupUi(this);
     ui->tableWidget_devices->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -58,9 +57,8 @@ SceneWidget::SceneWidget(QWidget *parent)
     ui->tableWidget_devices->setSelectionMode(QAbstractItemView::SingleSelection);
 
     connect(ui->listWidget_scenes, &QListWidget::currentRowChanged, this, &SceneWidget::updateSceneDetails);
-    connect(ui->listWidget_scenes, &QListWidget::itemDoubleClicked, this, [this](QListWidgetItem *) {
-        editSelectedScene();
-    });
+    connect(ui->listWidget_scenes, &QListWidget::itemDoubleClicked, this, [this](QListWidgetItem *)
+            { editSelectedScene(); });
     connect(ui->tableWidget_devices, &QTableWidget::cellDoubleClicked, this, &SceneWidget::editSelectedAction);
 
     loadScenesFromDatabase();
@@ -350,8 +348,7 @@ void SceneWidget::on_btnDeleteScene_clicked()
     const SceneDefinition selectedScene = m_scenes.at(currentRow);
     if (QMessageBox::question(this,
                               QStringLiteral("\u786e\u8ba4\u5220\u9664"),
-                              QStringLiteral("\u786e\u5b9a\u8981\u5220\u9664\u573a\u666f\u201c") + selectedScene.name + QStringLiteral("\u201d\u5417\uff1f"))
-        != QMessageBox::Yes)
+                              QStringLiteral("\u786e\u5b9a\u8981\u5220\u9664\u573a\u666f\u201c") + selectedScene.name + QStringLiteral("\u201d\u5417\uff1f")) != QMessageBox::Yes)
     {
         return;
     }
@@ -438,6 +435,18 @@ void SceneWidget::on_btnRemoveDevice_clicked()
     }
 
     loadScenesFromDatabase(scene.id);
+}
+
+void SceneWidget::on_btnEditDeviceInScene_clicked()
+{
+    const int row = ui->tableWidget_devices->currentRow();
+    if (row < 0)
+    {
+        QMessageBox::warning(this, kTextHint, QStringLiteral("请先在表格中选择要修改的设备动作。"));
+        return;
+    }
+
+    editSelectedAction(row, 0);
 }
 
 void SceneWidget::editSelectedScene()

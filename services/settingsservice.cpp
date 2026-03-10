@@ -1,7 +1,10 @@
 #include "settingsservice.h"
 
+#include "database/DatabaseConfig.h"
 #include "database/dao/DeviceDao.h"
 
+#include <QFileInfo>
+#include <QProcess>
 #include <QRandomGenerator>
 
 QStringList SettingsService::themeOptions() const
@@ -21,6 +24,24 @@ QString SettingsService::themeKeyByIndex(int index) const
         return "auto";
     default:
         return "light";
+    }
+}
+
+QStringList SettingsService::languageOptions() const
+{
+    return {"简体中文", "English"};
+}
+
+QString SettingsService::languageKeyByIndex(int index) const
+{
+    switch (index)
+    {
+    case 0:
+        return "zh_CN";
+    case 1:
+        return "en_US";
+    default:
+        return "zh_CN";
     }
 }
 
@@ -86,6 +107,76 @@ bool SettingsService::deleteDeviceById(const QString &deviceId, QString *errorTe
         }
         return false;
     }
+    return true;
+}
+
+bool SettingsService::backupDatabase(const QString &sqlFilePath, QString *errorText) const
+{
+    if (sqlFilePath.trimmed().isEmpty())
+    {
+        if (errorText)
+        {
+            *errorText = "备份文件路径不能为空。";
+        }
+        return false;
+    }
+
+    const QFileInfo targetInfo(sqlFilePath);
+    const QString outputDir = targetInfo.absolutePath();
+    if (outputDir.isEmpty())
+    {
+        if (errorText)
+        {
+            *errorText = "备份目录无效。";
+        }
+        return false;
+    }
+
+    const DatabaseConfig config;
+    QStringList args;
+    args << QString("--host=%1").arg(config.host)
+         << QString("--port=%1").arg(config.port)
+         << QString("--user=%1").arg(config.userName)
+         << QString("--password=%1").arg(config.password)
+         << "--default-character-set=utf8mb4"
+         << config.databaseName;
+
+    QProcess process;
+    process.setProgram("mysqldump");
+    process.setArguments(args);
+    process.setWorkingDirectory(outputDir);
+    process.setStandardOutputFile(sqlFilePath, QIODevice::Truncate);
+    process.start();
+
+    if (!process.waitForStarted(5000))
+    {
+        if (errorText)
+        {
+            *errorText = "无法启动 mysqldump，请确认 MySQL 客户端工具已安装并已加入 PATH。";
+        }
+        return false;
+    }
+
+    if (!process.waitForFinished(120000))
+    {
+        process.kill();
+        if (errorText)
+        {
+            *errorText = "备份超时，请稍后重试。";
+        }
+        return false;
+    }
+
+    if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0)
+    {
+        if (errorText)
+        {
+            const QString stdErr = QString::fromUtf8(process.readAllStandardError()).trimmed();
+            *errorText = stdErr.isEmpty() ? "mysqldump 执行失败。" : stdErr;
+        }
+        return false;
+    }
+
     return true;
 }
 

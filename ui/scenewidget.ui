@@ -79,6 +79,11 @@
              <property name="text"><string>添加设备</string></property>
             </widget>
            </item>
+                     <item>
+                        <widget class="QPushButton" name="btnEditDeviceInScene">
+                         <property name="text"><string>修改设备</string></property>
+                        </widget>
+                     </item>
            <item>
             <widget class="QPushButton" name="btnRemoveDevice">
              <property name="text"><string>移除设备</string></property>

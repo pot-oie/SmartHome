@@ -37,6 +37,12 @@ void SettingsWidget::loadSystemSettings()
     ui->cmbTheme->addItems(m_settingsService.themeOptions());
     ui->cmbTheme->setCurrentIndex(0);
     ui->cmbTheme->blockSignals(false);
+
+    ui->comboBox_language->blockSignals(true);
+    ui->comboBox_language->clear();
+    ui->comboBox_language->addItems(m_settingsService.languageOptions());
+    ui->comboBox_language->setCurrentIndex(0);
+    ui->comboBox_language->blockSignals(false);
 }
 
 void SettingsWidget::loadFakeDevices()
@@ -76,16 +82,28 @@ void SettingsWidget::on_btnBackupDatabase_clicked()
     qDebug() << "备份数据库";
 
     QString fileName = QFileDialog::getSaveFileName(this, "备份数据库",
-                                                    QDir::homePath() + "/smarthome_backup.db",
-                                                    "数据库文件 (*.db)");
+                                                    QDir::homePath() + "/smarthome_backup.sql",
+                                                    "SQL文件 (*.sql)");
     if (fileName.isEmpty())
     {
         return;
     }
 
+    QString errorText;
+    if (!m_settingsService.backupDatabase(fileName, &errorText))
+    {
+        QMessageBox::critical(this, "备份失败", "数据库备份失败：\n" + (errorText.isEmpty() ? "未知错误" : errorText));
+        return;
+    }
+
     QMessageBox::information(this, "备份成功",
-                             "数据库已备份到：\n" + fileName + "\n\n" +
-                                 "（演示版本，实际未生成文件）");
+                             "数据库已备份到：\n" + fileName);
+}
+
+void SettingsWidget::on_comboBox_language_currentIndexChanged(int index)
+{
+    const QString languageKey = m_settingsService.languageKeyByIndex(index);
+    emit languageChanged(languageKey);
 }
 
 void SettingsWidget::on_btnAddDevice_clicked()

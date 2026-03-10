@@ -3,6 +3,7 @@
     <qresource prefix="/">
         <!-- 样式表 -->
         <file>style.qss</file>
+        <file>style_dark.qss</file>
         
         <!-- 主导航图标 -->
         <file>icons/home.svg</file>

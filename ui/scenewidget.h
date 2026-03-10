@@ -29,6 +29,7 @@ private slots:
     void on_btnDeleteScene_clicked();
     void on_btnActivateScene_clicked();
     void on_btnAddDeviceToScene_clicked();
+    void on_btnEditDeviceInScene_clicked();
     void on_btnRemoveDevice_clicked();
     void updateSceneDetails(int row);
     void editSelectedScene();

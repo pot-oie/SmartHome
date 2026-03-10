@@ -19,10 +19,12 @@ public:
 signals:
     // 【向外发送】当用户切换暗黑/明亮主题时，通知 MainWindow 刷新全局 QSS 样式表
     void themeChanged(const QString &themeName);
+    void languageChanged(const QString &languageKey);
 
 private slots:
     // 【UI 交互】系统设置区
     void on_cmbTheme_currentIndexChanged(int index);
+    void on_comboBox_language_currentIndexChanged(int index);
     void on_btnBackupDatabase_clicked(); // 执行 SQL 备份命令
 
     // 【UI 交互】设备管理区
