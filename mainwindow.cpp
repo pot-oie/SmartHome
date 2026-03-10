@@ -47,13 +47,12 @@ void MainWindow::initUI()
     addNavItem(":/icons/settings.svg", "系统设置");
 
     // 创建各个子页面并添加到堆栈窗口
-    m_homeWidget = new HomeWidget(this);
-    m_deviceControlWidget = new DeviceControlWidget(this);
-    ui->stackWidget->addWidget(m_homeWidget);            // 索引 0
-    ui->stackWidget->addWidget(m_deviceControlWidget);   // 索引 1
-    ui->stackWidget->addWidget(new SceneWidget(this));   // 索引 2
-    ui->stackWidget->addWidget(new HistoryWidget(this)); // 索引 3
-    ui->stackWidget->addWidget(new AlarmWidget(this));   // 索引 4
+    HomeWidget *homeWidget = new HomeWidget(this);
+    ui->stackWidget->addWidget(homeWidget);                    // 索引 0
+    ui->stackWidget->addWidget(new DeviceControlWidget(this)); // 索引 1
+    ui->stackWidget->addWidget(new SceneWidget(this));         // 索引 2
+    ui->stackWidget->addWidget(new HistoryWidget(this));       // 索引 3
+    ui->stackWidget->addWidget(new AlarmWidget(this));         // 索引 4
     SettingsWidget *settingsWidget = new SettingsWidget(this);
     ui->stackWidget->addWidget(settingsWidget); // 索引 5
 
@@ -65,6 +64,7 @@ void MainWindow::initUI()
     connect(ui->navBar, &QListWidget::currentRowChanged, this, &MainWindow::onNavBarItemClicked);
     connect(settingsWidget, &SettingsWidget::themeChanged, this, &MainWindow::onThemeChanged);
     connect(settingsWidget, &SettingsWidget::languageChanged, this, &MainWindow::onLanguageChanged);
+    connect(settingsWidget, &SettingsWidget::devicesChanged, homeWidget, &HomeWidget::refreshDeviceStatus);
 }
 
 void MainWindow::onNavBarItemClicked(int index)

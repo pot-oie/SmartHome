@@ -37,6 +37,7 @@ SOURCES += \
     services/alarmservice.cpp \
     services/settingsservice.cpp \
     services/loginservice.cpp \
+    services/usercontext.cpp \
     services/quickcontrolservice.cpp \
     network/networkmanager.cpp \
     database/databasemanager.cpp \
@@ -68,6 +69,7 @@ HEADERS += \
     services/alarmservice.h \
     services/settingsservice.h \
     services/loginservice.h \
+    services/usercontext.h \
     services/servicemodels.h \
     services/quickcontrolservice.h \
     network/networkmanager.h \

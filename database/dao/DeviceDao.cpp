@@ -378,7 +378,7 @@ SettingsDeviceList DeviceDao::listSettingsDevices()
         device.name = query.value("device_name").toString();
         device.type = query.value("device_type").toString();
         device.ip = query.value("ip_address").toString();
-        device.online = (query.value("online_status").toString() == "online");
+        device.onlineStatus = query.value("online_status").toString().trimmed().toLower();
         devices.push_back(device);
     }
 
@@ -527,7 +527,8 @@ bool DeviceDao::insertDevice(const SettingsDeviceEntry &device)
     const bool supportsSlider = supportsSliderForType(device.type);
     const QPair<double, double> range = sliderRangeForType(device.type);
     const QString valueUnit = valueUnitForType(device.type);
-    const double initialValue = supportsSlider ? range.first : (device.online ? 1.0 : 0.0);
+    const bool isOnline = (device.onlineStatus == QStringLiteral("online"));
+    const double initialValue = supportsSlider ? range.first : (isOnline ? 1.0 : 0.0);
     const int nextOrder = executeCountQuery("SELECT COUNT(*) FROM devices") + 1;
 
     if (!databaseManager.beginTransaction())
@@ -542,8 +543,8 @@ bool DeviceDao::insertDevice(const SettingsDeviceEntry &device)
         device.name,
         device.type,
         device.ip,
-        device.online ? "online" : "offline",
-        device.online ? "on" : "off",
+        isOnline ? "online" : "offline",
+        isOnline ? "on" : "off",
         initialValue,
         valueUnit,
         supportsSlider ? 1 : 0,
@@ -580,11 +581,11 @@ bool DeviceDao::insertDevice(const SettingsDeviceEntry &device)
             "INSERT INTO device_state_snapshots (device_id, online_status, switch_status, current_value, value_unit, mode_text, last_reported_at) "
             "VALUES (?, ?, ?, ?, ?, ?, NOW())",
             {devicePk,
-             device.online ? "online" : "offline",
-             device.online ? "on" : "off",
+             isOnline ? "online" : "offline",
+             isOnline ? "on" : "off",
              initialValue,
              valueUnit,
-             modeTextForState(device.type, device.online ? "on" : "off", initialValue)}))
+             modeTextForState(device.type, isOnline ? "on" : "off", initialValue)}))
     {
         setLastError(databaseManager.lastErrorText());
         databaseManager.rollback();

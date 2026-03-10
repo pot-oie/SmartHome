@@ -46,7 +46,7 @@
        <layout class="QVBoxLayout" name="verticalLayout_devices">
         <item>
          <widget class="QLabel" name="label_deviceCount">
-          <property name="text"><string>在线: 8/10</string></property>
+          <property name="text"><string>在线: 0/0</string></property>
           <property name="alignment"><set>Qt::AlignCenter</set></property>
           <property name="font"><font><pointsize>14</pointsize></font></property>
          </widget>

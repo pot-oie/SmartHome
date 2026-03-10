@@ -1,6 +1,10 @@
 #pragma once
 
 #include <QJsonObject>
+#include <QShowEvent>
+
+#include "services/environmentservice.h"
+#include "services/settingsservice.h"
 #include <QList>
 #include <QString>
 #include <QWidget>
