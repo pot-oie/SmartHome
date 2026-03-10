@@ -7,11 +7,13 @@
 
 struct OperationLogEntry
 {
+    qint64 recordId = 0;
     QDateTime timestamp;
     QString user;
     QString operation;
     QString device;
     QString detail;
+    QString result;
 };
 
 struct EnvironmentPoint
@@ -59,6 +61,10 @@ struct DeviceDefinition
     bool isOnline;
     bool isOn;
     int value;
+    QString valueUnit;
+    bool supportsSlider = false;
+    int minValue = 0;
+    int maxValue = 100;
 };
 
 using DeviceList = QVector<DeviceDefinition>;

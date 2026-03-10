@@ -6,7 +6,7 @@
 
 QStringList SettingsService::themeOptions() const
 {
-    return {"浅色主题", "深色主题", "自动"};
+    return {QStringLiteral("\u6d45\u8272\u4e3b\u9898"), QStringLiteral("\u6df1\u8272\u4e3b\u9898"), QStringLiteral("\u81ea\u52a8")};
 }
 
 QString SettingsService::themeKeyByIndex(int index) const
@@ -27,28 +27,34 @@ QString SettingsService::themeKeyByIndex(int index) const
 SettingsDeviceList SettingsService::loadDefaultDevices() const
 {
     DeviceDao dao;
-    const SettingsDeviceList devicesFromDb = dao.listSettingsDevices();
+    SettingsDeviceList devicesFromDb = dao.listSettingsDevices();
+    if (devicesFromDb.isEmpty())
+    {
+        dao.ensureDefaultDeviceData();
+        devicesFromDb = dao.listSettingsDevices();
+    }
+
     if (!devicesFromDb.isEmpty())
     {
         return devicesFromDb;
     }
 
     return {
-        {"light_living", "客厅主灯", "照明设备", "192.168.1.101", true},
-        {"light_bedroom", "卧室灯", "照明设备", "192.168.1.102", true},
-        {"ac_living", "客厅空调", "空调设备", "192.168.1.103", true},
-        {"curtain_living", "客厅窗帘", "窗帘设备", "192.168.1.104", true},
-        {"lock_door", "前门智能锁", "安防设备", "192.168.1.105", true},
-        {"camera_01", "客厅摄像头", "安防设备", "192.168.1.106", false},
-        {"tv_living", "客厅电视", "影音设备", "192.168.1.107", true}};
+        {"light_living", QStringLiteral("\u5ba2\u5385\u4e3b\u706f"), QStringLiteral("\u7167\u660e\u8bbe\u5907"), "192.168.1.101", true},
+        {"light_bedroom", QStringLiteral("\u5367\u5ba4\u706f"), QStringLiteral("\u7167\u660e\u8bbe\u5907"), "192.168.1.102", true},
+        {"ac_living", QStringLiteral("\u5ba2\u5385\u7a7a\u8c03"), QStringLiteral("\u7a7a\u8c03\u8bbe\u5907"), "192.168.1.103", true},
+        {"curtain_living", QStringLiteral("\u5ba2\u5385\u7a97\u5e18"), QStringLiteral("\u7a97\u5e18\u8bbe\u5907"), "192.168.1.104", true},
+        {"lock_door", QStringLiteral("\u524d\u95e8\u667a\u80fd\u9501"), QStringLiteral("\u5b89\u9632\u8bbe\u5907"), "192.168.1.105", true},
+        {"camera_01", QStringLiteral("\u5ba2\u5385\u6444\u50cf\u5934"), QStringLiteral("\u5b89\u9632\u8bbe\u5907"), "192.168.1.106", false},
+        {"tv_living", QStringLiteral("\u5ba2\u5385\u7535\u89c6"), QStringLiteral("\u5f71\u97f3\u8bbe\u5907"), "192.168.1.107", true}};
 }
 
 SettingsDeviceEntry SettingsService::createNewDevice(const QString &deviceName, int currentCount) const
 {
     SettingsDeviceEntry device;
     device.id = "device_" + QString::number(currentCount + 100);
-    device.name = deviceName;
-    device.type = "新设备";
+    device.name = deviceName.trimmed();
+    device.type = QStringLiteral("\u65b0\u8bbe\u5907");
     device.ip = "192.168.1." + QString::number(108 + currentCount);
     device.online = true;
     return device;

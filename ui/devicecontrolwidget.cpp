@@ -1,21 +1,33 @@
 #include "devicecontrolwidget.h"
 #include "ui_devicecontrolwidget.h"
 
-#include <QDebug>
+#include <QGroupBox>
+#include <QHBoxLayout>
+#include <QIcon>
 #include <QLabel>
+#include <QMessageBox>
 #include <QPushButton>
 #include <QSlider>
 #include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QGroupBox>
-#include <QIcon>
 
-DeviceControlWidget::DeviceControlWidget(QWidget *parent) : QWidget(parent),
-                                                            ui(new Ui::DeviceControlWidget)
+namespace
+{
+    const QString kHint = QStringLiteral("\u63d0\u793a");
+    const QString kFailed = QStringLiteral("\u5931\u8d25");
+    const QString kWarning = QStringLiteral("\u8b66\u544a");
+
+    QString onlineStatusText(bool isOn)
+    {
+        return isOn ? QStringLiteral("\u25cf \u5f00\u542f") : QStringLiteral("\u25cf \u5173\u95ed");
+    }
+}
+
+DeviceControlWidget::DeviceControlWidget(QWidget *parent)
+    : QWidget(parent)
+    , ui(new Ui::DeviceControlWidget)
 {
     ui->setupUi(this);
-    m_categories = m_deviceService.categories();
-    m_allDevices = m_deviceService.loadDefaultDevices();
+    reloadDevices(true);
     initDeviceList();
 }
 
@@ -29,8 +41,16 @@ void DeviceControlWidget::initDeviceList()
     ui->listCategory->clear();
     ui->listCategory->addItems(m_categories);
     ui->listCategory->setCurrentRow(0);
-
     updateDeviceListUI(0);
+}
+
+void DeviceControlWidget::reloadDevices(bool reloadCategories)
+{
+    if (reloadCategories || m_categories.isEmpty())
+    {
+        m_categories = m_deviceService.categories();
+    }
+    m_allDevices = m_deviceService.loadDefaultDevices();
 }
 
 void DeviceControlWidget::updateDeviceListUI(int category)
@@ -53,13 +73,11 @@ void DeviceControlWidget::updateDeviceListUI(int category)
 
         QHBoxLayout *cardLayout = new QHBoxLayout(deviceCard);
 
-        // 左侧：图标和状态
         QLabel *iconLabel = new QLabel();
         iconLabel->setPixmap(QIcon(device.icon).pixmap(48, 48));
         iconLabel->setFixedSize(48, 48);
         cardLayout->addWidget(iconLabel);
 
-        // 中间：设备信息
         QVBoxLayout *infoLayout = new QVBoxLayout();
         QLabel *nameLabel = new QLabel(device.name);
         nameLabel->setStyleSheet("font-size: 14pt; font-weight: bold;");
@@ -68,12 +86,12 @@ void DeviceControlWidget::updateDeviceListUI(int category)
         QLabel *statusLabel = new QLabel();
         if (device.isOnline)
         {
-            statusLabel->setText(device.isOn ? "● 开启" : "○ 关闭");
+            statusLabel->setText(onlineStatusText(device.isOn));
             statusLabel->setStyleSheet(device.isOn ? "color: #4CAF50;" : "color: #999;");
         }
         else
         {
-            statusLabel->setText("离线");
+            statusLabel->setText(QStringLiteral("\u79bb\u7ebf"));
             statusLabel->setStyleSheet("color: #f44336;");
         }
         infoLayout->addWidget(statusLabel);
@@ -83,32 +101,39 @@ void DeviceControlWidget::updateDeviceListUI(int category)
 
         if (device.isOnline)
         {
-            QPushButton *switchBtn = new QPushButton(device.isOn ? "关闭" : "开启");
+            QPushButton *switchBtn = new QPushButton(device.isOn ? QStringLiteral("\u5173\u95ed") : QStringLiteral("\u5f00\u542f"));
             switchBtn->setFixedWidth(80);
             switchBtn->setStyleSheet(
                 "QPushButton { background-color: " + QString(device.isOn ? "#4CAF50" : "#2196F3") +
                 "; color: white; border: none; border-radius: 4px; padding: 8px; }"
                 "QPushButton:hover { opacity: 0.8; }");
 
-            connect(switchBtn, &QPushButton::clicked, this, [this, device]()
-                    {
+            connect(switchBtn, &QPushButton::clicked, this, [this, device]() {
                 const bool newState = !device.isOn;
-
-                for (DeviceDefinition &item : m_allDevices)
+                QString errorMessage;
+                QString warningMessage;
+                if (!m_deviceService.updateSwitchState(device.id, newState, &errorMessage, &warningMessage))
                 {
-                    if (item.id == device.id)
-                    {
-                        item.isOn = newState;
-                        break;
-                    }
+                    QMessageBox::critical(this,
+                                          kFailed,
+                                          errorMessage.trimmed().isEmpty()
+                                              ? QStringLiteral("\u8bbe\u5907\u72b6\u6001\u5199\u5165\u6570\u636e\u5e93\u5931\u8d25\u3002")
+                                              : errorMessage);
+                    return;
                 }
 
                 const QJsonObject controlCmd = m_deviceService.buildSwitchCommand(device.id, newState);
                 emit requestControlDevice(controlCmd);
-                updateDeviceListUI(ui->listCategory->currentRow()); });
+                reloadDevices(false);
+                updateDeviceListUI(ui->listCategory->currentRow());
+                if (!warningMessage.trimmed().isEmpty())
+                {
+                    QMessageBox::warning(this, kWarning, warningMessage);
+                }
+            });
             cardLayout->addWidget(switchBtn);
 
-            if (m_deviceService.supportsAdjust(device.type))
+            if (m_deviceService.supportsAdjust(device))
             {
                 QVBoxLayout *sliderLayout = new QVBoxLayout();
                 QLabel *valueLabel = new QLabel();
@@ -117,17 +142,36 @@ void DeviceControlWidget::updateDeviceListUI(int category)
 
                 QSlider *slider = new QSlider(Qt::Horizontal);
                 slider->setFixedWidth(120);
-                const QPair<int, int> range = m_deviceService.sliderRange(device.type);
+                const QPair<int, int> range = m_deviceService.sliderRange(device);
                 slider->setRange(range.first, range.second);
                 slider->setValue(device.value);
 
-                connect(slider, &QSlider::valueChanged, this, [this, valueLabel, device](int val)
-                        { valueLabel->setText(m_deviceService.valueText(device, val)); });
+                connect(slider, &QSlider::valueChanged, this, [this, valueLabel, device](int val) {
+                    valueLabel->setText(m_deviceService.valueText(device, val));
+                });
 
-                connect(slider, &QSlider::sliderReleased, this, [this, slider, device]()
-                        {
+                connect(slider, &QSlider::sliderReleased, this, [this, slider, device]() {
+                    QString errorMessage;
+                    QString warningMessage;
+                    if (!m_deviceService.updateDeviceValue(device, slider->value(), &errorMessage, &warningMessage))
+                    {
+                        QMessageBox::critical(this,
+                                              kFailed,
+                                              errorMessage.trimmed().isEmpty()
+                                                  ? QStringLiteral("\u8bbe\u5907\u53c2\u6570\u5199\u5165\u6570\u636e\u5e93\u5931\u8d25\u3002")
+                                                  : errorMessage);
+                        return;
+                    }
+
                     const QJsonObject controlCmd = m_deviceService.buildSetParamCommand(device, slider->value());
-                    emit requestControlDevice(controlCmd); });
+                    emit requestControlDevice(controlCmd);
+                    reloadDevices(false);
+                    updateDeviceListUI(ui->listCategory->currentRow());
+                    if (!warningMessage.trimmed().isEmpty())
+                    {
+                        QMessageBox::warning(this, kWarning, warningMessage);
+                    }
+                });
 
                 sliderLayout->addWidget(slider);
                 cardLayout->addLayout(sliderLayout);
@@ -149,65 +193,33 @@ void DeviceControlWidget::updateDeviceListUI(int category)
 void DeviceControlWidget::updateDeviceStatus(const QJsonObject &statusData)
 {
     const QString deviceId = statusData.value("device_id").toString().trimmed();
-    const QString status = statusData.value("status").toString().trimmed();
-    const QString switchState = statusData.value("current_state").toString().trimmed();
-    const int currentValue = statusData.value("current_value").toInt();
-
     if (deviceId.isEmpty())
     {
-        qDebug() << "收到无效设备状态更新：" << statusData;
+        qDebug() << "Ignore empty device status payload:" << statusData;
         return;
     }
 
-    for (DeviceDefinition &device : m_allDevices)
+    if (!m_deviceService.syncDeviceStatus(statusData))
     {
-        if (device.id != deviceId)
-        {
-            continue;
-        }
-
-        if (status == "online")
-        {
-            device.isOnline = true;
-        }
-        else if (status == "offline" || status == "error")
-        {
-            device.isOnline = false;
-        }
-
-        if (switchState == "on")
-        {
-            device.isOn = true;
-        }
-        else if (switchState == "off")
-        {
-            device.isOn = false;
-        }
-
-        if (statusData.contains("current_value"))
-        {
-            device.value = currentValue;
-        }
-
-        break;
+        qDebug() << "Failed to sync device status to database:" << statusData;
+        return;
     }
 
-    qDebug() << "收到设备状态更新：" << statusData;
+    reloadDevices(false);
     updateDeviceListUI(ui->listCategory->currentRow());
 }
 
 void DeviceControlWidget::on_listCategory_currentRowChanged(int currentRow)
 {
-    qDebug() << "切换设备分类，当前索引：" << currentRow;
     updateDeviceListUI(currentRow);
 }
 
 void DeviceControlWidget::onDeviceSwitchToggled(bool checked)
 {
-    qDebug() << "设备开关切换为：" << checked;
+    Q_UNUSED(checked);
 }
 
 void DeviceControlWidget::onDeviceSliderValueChanged(int value)
 {
-    qDebug() << "设备参数调节为：" << value;
+    Q_UNUSED(value);
 }
