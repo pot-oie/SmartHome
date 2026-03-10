@@ -15,6 +15,8 @@ namespace Ui
     class HomeWidget;
 }
 
+class QPushButton;
+
 class HomeWidget : public QWidget
 {
     Q_OBJECT
@@ -34,16 +36,19 @@ protected:
 
 private slots:
     void onQuickControlClicked();
+    void on_btnEditQuickControl_clicked();
     void on_btnGoHome_clicked();
 
 private:
     Ui::HomeWidget *ui;
+    QPushButton *m_editQuickControlButton;
     EnvironmentService m_environmentService;
     SettingsService m_settingsService;
     QuickControlService m_quickControlService;
     QString m_selectedSceneId;
 
     void initConnections();
+    void ensureQuickControlEditButton();
     void applyTemperatureColor(double temperature);
     void updateDeviceStatusLabel(const DeviceStatusSummary &summary);
     void loadQuickControls();

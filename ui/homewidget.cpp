@@ -2,6 +2,7 @@
 #include "ui_homewidget.h"
 #include "quickcontrolmanagedialog.h"
 #include <QDebug>
+#include <QHBoxLayout>
 #include <QTimer>
 #include <QGridLayout>
 #include <QToolButton>
@@ -10,6 +11,14 @@
 
 namespace
 {
+    QString quickControlCardStyle(const char *baseStyle, bool singleRowLayout)
+    {
+        const QString layoutStyle = singleRowLayout
+                                        ? QStringLiteral("QToolButton { padding: 18px 8px 14px 8px; }")
+                                        : QStringLiteral("QToolButton { padding: 18px 8px 12px 8px; }");
+        return QString::fromLatin1(baseStyle) + layoutStyle;
+    }
+
     const char *kDeviceOnStyle =
         "QToolButton { background-color: #E3F2FD; border: 1px solid #2196F3; border-radius: 10px; color: #1976D2; font-weight: bold; padding: 8px; }"
         "QToolButton:hover { background-color: #BBDEFB; }";
@@ -31,9 +40,11 @@ namespace
 }
 
 HomeWidget::HomeWidget(QWidget *parent) : QWidget(parent),
-                                          ui(new Ui::HomeWidget)
+                                          ui(new Ui::HomeWidget),
+                                          m_editQuickControlButton(nullptr)
 {
     ui->setupUi(this);
+    ensureQuickControlEditButton();
     refreshDeviceStatus();
 
     const EnvironmentSnapshot initial = m_environmentService.generateInitialSnapshot();
@@ -62,16 +73,52 @@ void HomeWidget::initConnections()
     // 连接已经在 cpp 对应的位置建立
 }
 
+void HomeWidget::ensureQuickControlEditButton()
+{
+    m_editQuickControlButton = findChild<QPushButton *>(QStringLiteral("btnEditQuickControl"));
+    if (!m_editQuickControlButton)
+    {
+        m_editQuickControlButton = new QPushButton(QStringLiteral("编辑快捷控制"), this);
+        m_editQuickControlButton->setObjectName(QStringLiteral("btnEditQuickControl"));
+
+        QHBoxLayout *actionLayout = new QHBoxLayout();
+        actionLayout->setContentsMargins(0, 0, 0, 0);
+        actionLayout->setSpacing(0);
+        actionLayout->addStretch();
+        actionLayout->addWidget(m_editQuickControlButton, 0, Qt::AlignRight);
+        ui->verticalLayout_quick->insertLayout(0, actionLayout);
+    }
+
+    m_editQuickControlButton->setText(QStringLiteral("编辑快捷控制"));
+    m_editQuickControlButton->setCursor(Qt::PointingHandCursor);
+    m_editQuickControlButton->setMinimumHeight(32);
+    m_editQuickControlButton->setMinimumWidth(140);
+    m_editQuickControlButton->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    m_editQuickControlButton->setVisible(true);
+    connect(m_editQuickControlButton, &QPushButton::clicked, this, &HomeWidget::on_btnEditQuickControl_clicked, Qt::UniqueConnection);
+}
+
 void HomeWidget::onQuickControlClicked()
 {
     qDebug() << "快捷控制被触发";
 }
 
 // 动态渲染快捷控制面板
+void HomeWidget::on_btnEditQuickControl_clicked()
+{
+    QuickControlManageDialog dialog(this);
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        loadQuickControls();
+    }
+}
+
 void HomeWidget::loadQuickControls()
 {
     // 1. 获取后端组装好的快捷项数据
     QList<QuickControlDisplayItem> items = m_quickControlService.getHomeShortcuts();
+    const int maxColumns = 4;
+    const bool singleRowLayout = !items.isEmpty() && items.size() <= maxColumns;
 
     // 2. 获取或创建容器的布局管理器
     QLayout *oldLayout = ui->quickControlContainer->layout();
@@ -97,6 +144,14 @@ void HomeWidget::loadQuickControls()
     }
 
     QGridLayout *gridLayout = qobject_cast<QGridLayout *>(oldLayout);
+    if (!gridLayout)
+    {
+        return;
+    }
+    gridLayout->setContentsMargins(0, 0, 0, 0);
+    gridLayout->setHorizontalSpacing(14);
+    gridLayout->setVerticalSpacing(14);
+    gridLayout->setAlignment(singleRowLayout ? Qt::AlignCenter : Qt::AlignTop);
 
     // 3. 动态生成按钮并放入网格
     int row = 0;
@@ -113,10 +168,14 @@ void HomeWidget::loadQuickControls()
                                      ? (item.targetType == "scene" ? QString(":/icons/scene.svg") : QString(":/icons/devices.svg"))
                                      : item.iconPath;
         btn->setIcon(QIcon(iconPath));
-        btn->setIconSize(QSize(36, 36));
+        btn->setIconSize(singleRowLayout ? QSize(40, 40) : QSize(36, 36));
         btn->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-        btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-        btn->setMinimumHeight(80);
+        btn->setSizePolicy(QSizePolicy::Expanding, singleRowLayout ? QSizePolicy::Fixed : QSizePolicy::Expanding);
+        btn->setMinimumHeight(singleRowLayout ? 150 : 150);
+        if (singleRowLayout)
+        {
+            btn->setMaximumHeight(150);
+        }
         btn->setCursor(Qt::PointingHandCursor);
         btn->setAutoRaise(false);
 
@@ -128,7 +187,7 @@ void HomeWidget::loadQuickControls()
             {
                 selectedSceneExists = true;
             }
-            btn->setStyleSheet(isSelectedScene ? kSceneSelectedStyle : kSceneUnselectedStyle);
+            btn->setStyleSheet(quickControlCardStyle(isSelectedScene ? kSceneSelectedStyle : kSceneUnselectedStyle, singleRowLayout));
             btn->setToolTip(isSelectedScene ? QStringLiteral("场景已选中，点击可再次执行")
                                             : QStringLiteral("场景未选中，点击可执行并选中"));
         }
@@ -136,13 +195,13 @@ void HomeWidget::loadQuickControls()
         {
             if (!item.isOnline)
             {
-                btn->setStyleSheet(kDeviceOfflineStyle);
+                btn->setStyleSheet(quickControlCardStyle(kDeviceOfflineStyle, singleRowLayout));
                 btn->setEnabled(false);
                 btn->setToolTip(QStringLiteral("设备离线"));
             }
             else
             {
-                btn->setStyleSheet(item.isOn ? kDeviceOnStyle : kDeviceOffStyle);
+                btn->setStyleSheet(quickControlCardStyle(item.isOn ? kDeviceOnStyle : kDeviceOffStyle, singleRowLayout));
                 btn->setToolTip(item.isOn ? QStringLiteral("当前已开启，点击关闭")
                                           : QStringLiteral("当前已关闭，点击开启"));
             }
@@ -240,4 +299,5 @@ void HomeWidget::showEvent(QShowEvent *event)
 {
     QWidget::showEvent(event);
     refreshDeviceStatus();
+    refreshQuickControls();
 }
