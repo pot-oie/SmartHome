@@ -1,12 +1,14 @@
 #pragma once
-#include <QWidget>
+
 #include <QJsonObject>
+#include <QShowEvent>
+#include <QTimer>
+#include <QWidget>
 
 #include "services/alarmservice.h"
-
 namespace Ui
 {
-    class AlarmWidget;
+class AlarmWidget;
 }
 
 class AlarmWidget : public QWidget
@@ -18,20 +20,24 @@ public:
     ~AlarmWidget();
 
 public slots:
-    // 【接收后端】底层判定数据超标或设备故障时，调用此槽，触发声光报警
     void triggerAlarm(const QJsonObject &alarmData);
 
+protected:
+    void showEvent(QShowEvent *event) override;
+
 private slots:
-    // 【UI 交互】保存设定的温湿度报警阈值
     void on_btnSaveThresholds_clicked();
-    // 【UI 交互】清除历史报警记录
     void on_btnClearLogs_clicked();
 
 private:
     Ui::AlarmWidget *ui;
     AlarmService m_alarmService;
+    QTimer *m_refreshTimer = nullptr;
 
-    void loadThresholds();    // 界面初始化时，从配置或数据库读取当前阈值
-    void loadFakeAlarmLogs(); // 加载假报警记录
+    void playAlarmAlertTone();
+    void refreshData();
+    void loadThresholds();
+    void loadAlarmStatus();
+    void loadAlarmLogs();
     void appendAlarmLogRow(int row, const AlarmLogEntry &entry);
 };

@@ -1,62 +1,62 @@
 #include "homewidget.h"
 #include "ui_homewidget.h"
 #include "quickcontrolmanagedialog.h"
+
 #include <QDebug>
-#include <QHBoxLayout>
-#include <QTimer>
 #include <QGridLayout>
-#include <QToolButton>
+#include <QHBoxLayout>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QTimer>
+#include <QToolButton>
 
 namespace
 {
-    QString quickControlCardStyle(const char *baseStyle, bool singleRowLayout)
-    {
-        const QString layoutStyle = singleRowLayout
-                                        ? QStringLiteral("QToolButton { padding: 18px 8px 14px 8px; }")
-                                        : QStringLiteral("QToolButton { padding: 18px 8px 12px 8px; }");
-        return QString::fromLatin1(baseStyle) + layoutStyle;
-    }
-
-    const char *kDeviceOnStyle =
-        "QToolButton { background-color: #E3F2FD; border: 1px solid #2196F3; border-radius: 10px; color: #1976D2; font-weight: bold; padding: 8px; }"
-        "QToolButton:hover { background-color: #BBDEFB; }";
-
-    const char *kDeviceOffStyle =
-        "QToolButton { background-color: #F7F7F7; border: 1px solid #E1E1E1; border-radius: 10px; color: #727272; padding: 8px; }"
-        "QToolButton:hover { background-color: #EEEEEE; }";
-
-    const char *kDeviceOfflineStyle =
-        "QToolButton { background-color: #F2F2F2; border: 1px dashed #C9C9C9; border-radius: 10px; color: #9A9A9A; padding: 8px; }";
-
-    const char *kSceneSelectedStyle =
-        "QToolButton { background-color: #D7F4E6; border: 1px solid #2EAD75; border-radius: 10px; color: #1B7E52; font-weight: bold; padding: 8px; }"
-        "QToolButton:hover { background-color: #C6ECD9; }";
-
-    const char *kSceneUnselectedStyle =
-        "QToolButton { background-color: #F5F5F5; border: 1px solid #DEDEDE; border-radius: 10px; color: #8A8A8A; padding: 8px; }"
-        "QToolButton:hover { background-color: #EDEDED; }";
+QString quickControlCardStyle(const char *baseStyle, bool singleRowLayout)
+{
+    const QString layoutStyle = singleRowLayout
+                                    ? QStringLiteral("QToolButton { padding: 18px 8px 14px 8px; }")
+                                    : QStringLiteral("QToolButton { padding: 18px 8px 12px 8px; }");
+    return QString::fromLatin1(baseStyle) + layoutStyle;
 }
 
-HomeWidget::HomeWidget(QWidget *parent) : QWidget(parent),
-                                          ui(new Ui::HomeWidget),
-                                          m_editQuickControlButton(nullptr),
-                                          m_environmentRefreshTimer(new QTimer(this))
+const char *kDeviceOnStyle =
+    "QToolButton { background-color: #E3F2FD; border: 1px solid #2196F3; border-radius: 10px; color: #1976D2; font-weight: bold; padding: 8px; }"
+    "QToolButton:hover { background-color: #BBDEFB; }";
+
+const char *kDeviceOffStyle =
+    "QToolButton { background-color: #F7F7F7; border: 1px solid #E1E1E1; border-radius: 10px; color: #727272; padding: 8px; }"
+    "QToolButton:hover { background-color: #EEEEEE; }";
+
+const char *kDeviceOfflineStyle =
+    "QToolButton { background-color: #F2F2F2; border: 1px dashed #C9C9C9; border-radius: 10px; color: #9A9A9A; padding: 8px; }";
+
+const char *kSceneSelectedStyle =
+    "QToolButton { background-color: #D7F4E6; border: 1px solid #2EAD75; border-radius: 10px; color: #1B7E52; font-weight: bold; padding: 8px; }"
+    "QToolButton:hover { background-color: #C6ECD9; }";
+
+const char *kSceneUnselectedStyle =
+    "QToolButton { background-color: #F5F5F5; border: 1px solid #DEDEDE; border-radius: 10px; color: #8A8A8A; padding: 8px; }"
+    "QToolButton:hover { background-color: #EDEDED; }";
+}
+
+HomeWidget::HomeWidget(QWidget *parent)
+    : QWidget(parent)
+    , ui(new Ui::HomeWidget)
+    , m_editQuickControlButton(nullptr)
+    , m_environmentRefreshTimer(new QTimer(this))
 {
     ui->setupUi(this);
     ensureQuickControlEditButton();
     refreshDeviceStatus();
     refreshEnvironmentSnapshot();
-
-    // 初始化时加载快捷控制面板
     loadQuickControls();
 
-    // 每 5 秒从数据库刷新一次首页环境快照
     connect(m_environmentRefreshTimer, &QTimer::timeout, this, [this]()
             {
-        refreshEnvironmentSnapshot();
-        refreshDeviceStatus(); });
+                refreshEnvironmentSnapshot();
+                refreshDeviceStatus();
+            });
     m_environmentRefreshTimer->start(5000);
 }
 
@@ -67,7 +67,6 @@ HomeWidget::~HomeWidget()
 
 void HomeWidget::initConnections()
 {
-    // 连接已经在 cpp 对应的位置建立
 }
 
 void HomeWidget::ensureQuickControlEditButton()
@@ -97,10 +96,9 @@ void HomeWidget::ensureQuickControlEditButton()
 
 void HomeWidget::onQuickControlClicked()
 {
-    qDebug() << "快捷控制被触发";
+    qDebug() << "快捷控制被点击";
 }
 
-// 动态渲染快捷控制面板
 void HomeWidget::on_btnEditQuickControl_clicked()
 {
     QuickControlManageDialog dialog(this);
@@ -112,17 +110,14 @@ void HomeWidget::on_btnEditQuickControl_clicked()
 
 void HomeWidget::loadQuickControls()
 {
-    // 1. 获取后端组装好的快捷项数据
-    QList<QuickControlDisplayItem> items = m_quickControlService.getHomeShortcuts();
+    const QList<QuickControlDisplayItem> items = m_quickControlService.getHomeShortcuts();
     const int maxColumns = 4;
     const bool singleRowLayout = !items.isEmpty() && items.size() <= maxColumns;
 
-    // 2. 获取或创建容器的布局管理器
     QLayout *oldLayout = ui->quickControlContainer->layout();
     if (oldLayout)
     {
-        // 如果已经有布局，清空里面的旧按钮（用于状态刷新）
-        QLayoutItem *child;
+        QLayoutItem *child = nullptr;
         while ((child = oldLayout->takeAt(0)) != nullptr)
         {
             if (child->widget())
@@ -134,10 +129,9 @@ void HomeWidget::loadQuickControls()
     }
     else
     {
-        // 如果没有布局，创建一个网格布局
         oldLayout = new QGridLayout(ui->quickControlContainer);
         oldLayout->setContentsMargins(0, 0, 0, 0);
-        oldLayout->setSpacing(10); // 按钮之间的间距
+        oldLayout->setSpacing(10);
     }
 
     QGridLayout *gridLayout = qobject_cast<QGridLayout *>(oldLayout);
@@ -145,30 +139,30 @@ void HomeWidget::loadQuickControls()
     {
         return;
     }
+
     gridLayout->setContentsMargins(0, 0, 0, 0);
     gridLayout->setHorizontalSpacing(14);
     gridLayout->setVerticalSpacing(14);
     gridLayout->setAlignment(singleRowLayout ? Qt::AlignCenter : Qt::AlignTop);
 
-    // 3. 动态生成按钮并放入网格
     int row = 0;
     int col = 0;
-    const int maxCols = 4; // 每行最多显示4个，你可以根据UI宽度自适应调整
+    const int maxCols = 4;
     bool selectedSceneExists = false;
 
-    for (const auto &item : items)
+    for (const QuickControlDisplayItem &item : items)
     {
-        // 使用 QToolButton 因为它非常适合“上图标+下文字”的展现形式
         QToolButton *btn = new QToolButton(ui->quickControlContainer);
         btn->setText(item.displayName);
         const QString iconPath = item.iconPath.isEmpty()
-                                     ? (item.targetType == "scene" ? QString(":/icons/scene.svg") : QString(":/icons/devices.svg"))
+                                     ? (item.targetType == "scene" ? QStringLiteral(":/icons/scene.svg")
+                                                                   : QStringLiteral(":/icons/devices.svg"))
                                      : item.iconPath;
         btn->setIcon(QIcon(iconPath));
         btn->setIconSize(singleRowLayout ? QSize(40, 40) : QSize(36, 36));
         btn->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
         btn->setSizePolicy(QSizePolicy::Expanding, singleRowLayout ? QSizePolicy::Fixed : QSizePolicy::Expanding);
-        btn->setMinimumHeight(singleRowLayout ? 150 : 150);
+        btn->setMinimumHeight(150);
         if (singleRowLayout)
         {
             btn->setMaximumHeight(150);
@@ -176,7 +170,6 @@ void HomeWidget::loadQuickControls()
         btn->setCursor(Qt::PointingHandCursor);
         btn->setAutoRaise(false);
 
-        // 4. 根据设备/场景类型应用不同风格
         if (item.targetType == "scene")
         {
             const bool isSelectedScene = (item.targetStringId == m_selectedSceneId);
@@ -204,37 +197,35 @@ void HomeWidget::loadQuickControls()
             }
         }
 
-        // 5. 使用 Lambda 表达式捕获 item 并绑定点击事件
         connect(btn, &QToolButton::clicked, this, [=](bool /*checked*/)
                 {
-            // 设备走开关切换；场景固定为触发动作
-            bool wantToTurnOn = (item.targetType == "device") ? !item.isOn : true;
+                    const bool wantToTurnOn = (item.targetType == "device") ? !item.isOn : true;
 
-            QString errorMsg;
-            // 直接调用 Service 统一执行
-            if (m_quickControlService.executeShortcut(item, wantToTurnOn, &errorMsg)) {
-                if (item.targetType == "scene") {
-                    m_selectedSceneId = item.targetStringId;
-                }
-                // 执行成功后，重新读取数据库并渲染，刷新 UI 状态
-                this->loadQuickControls();
-            } else {
-                QMessageBox::warning(this, "操作失败", errorMsg);
-            } });
+                    QString errorMsg;
+                    if (m_quickControlService.executeShortcut(item, wantToTurnOn, &errorMsg))
+                    {
+                        if (item.targetType == "scene")
+                        {
+                            m_selectedSceneId = item.targetStringId;
+                        }
+                        loadQuickControls();
+                    }
+                    else
+                    {
+                        QMessageBox::warning(this, QStringLiteral("操作失败"), errorMsg);
+                    }
+                });
 
-        // 加入网格布局
         gridLayout->addWidget(btn, row, col);
 
-        // 控制换行逻辑
-        col++;
+        ++col;
         if (col >= maxCols)
         {
             col = 0;
-            row++;
+            ++row;
         }
     }
 
-    // 选中的场景如果已被移除，自动清空选中态，避免错误高亮
     if (!selectedSceneExists)
     {
         m_selectedSceneId.clear();
@@ -245,23 +236,23 @@ void HomeWidget::updateEnvironmentData(double temp, double hum)
 {
     qDebug() << "更新环境数据: 温度 =" << temp << ", 湿度 =" << hum;
 
-    ui->label_temperature->setText(QString::number(temp, 'f', 1) + " °C");
-    ui->label_humidity->setText(QString::number(hum, 'f', 1) + " %");
+    ui->label_temperature->setText(QString::number(temp, 'f', 1) + QStringLiteral(" °C"));
+    ui->label_humidity->setText(QString::number(hum, 'f', 1) + QStringLiteral(" %"));
     applyTemperatureColor(temp);
 }
 
 void HomeWidget::updateEnvironmentUI(const QJsonObject &data)
 {
-    if (data.contains("temperature"))
+    if (data.contains(QStringLiteral("temperature")))
     {
-        const double temperature = data["temperature"].toDouble();
-        ui->label_temperature->setText(QString::number(temperature, 'f', 1) + " °C");
+        const double temperature = data.value(QStringLiteral("temperature")).toDouble();
+        ui->label_temperature->setText(QString::number(temperature, 'f', 1) + QStringLiteral(" °C"));
         applyTemperatureColor(temperature);
     }
 
-    if (data.contains("humidity"))
+    if (data.contains(QStringLiteral("humidity")))
     {
-        ui->label_humidity->setText(QString::number(data["humidity"].toDouble(), 'f', 1) + " %");
+        ui->label_humidity->setText(QString::number(data.value(QStringLiteral("humidity")).toDouble(), 'f', 1) + QStringLiteral(" %"));
     }
 }
 
@@ -272,14 +263,27 @@ void HomeWidget::refreshQuickControls()
 
 void HomeWidget::refreshEnvironmentSnapshot()
 {
-    const std::optional<QPair<double, double>> snapshot = m_envRecordDao.getLatestTemperatureAndHumidity();
+    const std::optional<EnvRealtimeSnapshot> snapshot = m_envRecordDao.getLatestRealtimeSnapshot();
     if (!snapshot.has_value())
     {
         qWarning() << "读取环境快照失败:" << m_envRecordDao.lastErrorText();
         return;
     }
 
-    updateEnvironmentData(snapshot->first, snapshot->second);
+    updateEnvironmentData(snapshot->temperature, snapshot->humidity);
+
+    QString errorText;
+    const QList<QJsonObject> triggeredAlarms = m_alarmService.evaluateEnvironmentSnapshot(snapshot.value(), &errorText);
+    if (!errorText.isEmpty())
+    {
+        qWarning() << "评估环境报警失败:" << errorText;
+        return;
+    }
+
+    for (const QJsonObject &alarmData : triggeredAlarms)
+    {
+        emit alarmTriggered(alarmData);
+    }
 }
 
 void HomeWidget::on_btnGoHome_clicked()
@@ -290,7 +294,7 @@ void HomeWidget::on_btnGoHome_clicked()
 void HomeWidget::applyTemperatureColor(double temperature)
 {
     const QString color = m_environmentService.temperatureColor(temperature);
-    ui->label_temperature->setStyleSheet(QString("color: %1; font-weight: bold;").arg(color));
+    ui->label_temperature->setStyleSheet(QStringLiteral("color: %1; font-weight: bold;").arg(color));
 }
 
 void HomeWidget::refreshDeviceStatus()

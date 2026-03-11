@@ -8,6 +8,7 @@
 #include <QWidget>
 
 #include "database/dao/EnvRecordDao.h"
+#include "services/alarmservice.h"
 #include "services/environmentservice.h"
 #include "services/settingsservice.h"
 #include "services/quickcontrolservice.h"
@@ -27,6 +28,9 @@ public:
     explicit HomeWidget(QWidget *parent = nullptr);
     ~HomeWidget();
 
+signals:
+    void alarmTriggered(const QJsonObject &alarmData);
+
 public slots:
     void updateEnvironmentData(double temp, double hum);
     void updateEnvironmentUI(const QJsonObject &data);
@@ -44,6 +48,7 @@ private slots:
 private:
     Ui::HomeWidget *ui;
     QPushButton *m_editQuickControlButton;
+    AlarmService m_alarmService;
     EnvironmentService m_environmentService;
     SettingsService m_settingsService;
     QuickControlService m_quickControlService;

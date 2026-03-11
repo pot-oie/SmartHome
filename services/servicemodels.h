@@ -29,6 +29,20 @@ struct EnvironmentSnapshot
     double humidity;
 };
 
+struct EnvRealtimeSnapshot
+{
+    qint64 recordId = 0;
+    QString locationCode;
+    QString locationName;
+    qint64 sourceDeviceId = 0;
+    double temperature = 0.0;
+    double humidity = 0.0;
+    double pm25 = 0.0;
+    double co2 = 0.0;
+    QString statusLevel;
+    QDateTime updatedAt;
+};
+
 using OperationLogList = QVector<OperationLogEntry>;
 using EnvironmentSeries = QVector<EnvironmentPoint>;
 
@@ -77,11 +91,23 @@ struct AlarmThreshold
     double humidityMax;
 };
 
+struct AlarmStatusSummary
+{
+    QString level;
+    QString text;
+    int activeCount = 0;
+};
+
 struct AlarmLogEntry
 {
+    qint64 recordId = 0;
     QDateTime timestamp;
     QString type;
+    QString triggerValue;
     QString detail;
+    QString severity;
+    QString handledStatus;
+    bool isActive = false;
 };
 
 using AlarmLogList = QVector<AlarmLogEntry>;
