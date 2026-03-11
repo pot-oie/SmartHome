@@ -1,6 +1,5 @@
 #pragma once
 
-#include <QJsonObject>
 #include <QWidget>
 
 #include "services/deviceservice.h"
@@ -18,11 +17,7 @@ public:
     explicit DeviceControlWidget(QWidget *parent = nullptr);
     ~DeviceControlWidget();
 
-signals:
-    void requestControlDevice(const QJsonObject &controlCmd);
-
 public slots:
-    void updateDeviceStatus(const QJsonObject &statusData);
     void refreshDevices();
 
 private slots:

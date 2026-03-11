@@ -3,6 +3,7 @@
 
 #include "qcustomplot.h"
 
+#include <QtConcurrent>
 #include <QAbstractItemView>
 #include <QDateTime>
 #include <QDir>
@@ -16,25 +17,24 @@
 
 namespace
 {
-    const QString kHint = QStringLiteral("\u63d0\u793a");
-    const QString kFailed = QStringLiteral("\u5931\u8d25");
-    const QString kSuccess = QStringLiteral("\u6210\u529f");
+    const QString kHint = QStringLiteral("提示");
+    const QString kFailed = QStringLiteral("失败");
+    const QString kSuccess = QStringLiteral("成功");
 }
 
 HistoryWidget::HistoryWidget(QWidget *parent)
-    : QWidget(parent)
-    , ui(new Ui::HistoryWidget)
+    : QWidget(parent), ui(new Ui::HistoryWidget), m_logWatcher(new QFutureWatcher<OperationLogList>(this)), m_envSeriesWatcher(new QFutureWatcher<EnvironmentSeries>(this))
 {
     ui->setupUi(this);
 
     ui->tableWidget_logs->setColumnCount(6);
     ui->tableWidget_logs->setHorizontalHeaderLabels(
-        {QStringLiteral("\u65f6\u95f4"),
-         QStringLiteral("\u7528\u6237"),
-         QStringLiteral("\u64cd\u4f5c\u7c7b\u578b"),
-         QStringLiteral("\u8bbe\u5907"),
-         QStringLiteral("\u8be6\u60c5"),
-         QStringLiteral("\u7ed3\u679c")});
+        {QStringLiteral("时间"),
+         QStringLiteral("用户"),
+         QStringLiteral("操作类型"),
+         QStringLiteral("设备"),
+         QStringLiteral("详情"),
+         QStringLiteral("结果")});
     ui->tableWidget_logs->horizontalHeader()->setStretchLastSection(true);
     ui->tableWidget_logs->setAlternatingRowColors(true);
     ui->tableWidget_logs->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -42,8 +42,8 @@ HistoryWidget::HistoryWidget(QWidget *parent)
     ui->tableWidget_logs->setSelectionMode(QAbstractItemView::SingleSelection);
 
     ui->comboBox_deviceType->clear();
-    ui->comboBox_deviceType->addItem(QStringLiteral("\u5168\u90e8"));
-    QStringList categories = m_deviceService.categories();
+    ui->comboBox_deviceType->addItem(QStringLiteral("全部"));
+    const QStringList categories = m_deviceService.categories();
     for (int index = 1; index < categories.size(); ++index)
     {
         ui->comboBox_deviceType->addItem(categories.at(index));
@@ -52,12 +52,15 @@ HistoryWidget::HistoryWidget(QWidget *parent)
     ui->dateTimeEdit_start->setDate(QDate::currentDate().addDays(-7));
     ui->dateTimeEdit_end->setDate(QDate::currentDate());
 
-    m_btnDeleteLog = new QPushButton(QStringLiteral("\u5220\u9664\u9009\u4e2d\u65e5\u5fd7"), this);
+    m_btnDeleteLog = new QPushButton(QStringLiteral("删除选中日志"), this);
     if (QLayout *filterLayout = ui->groupBox_filter->layout())
     {
         filterLayout->addWidget(m_btnDeleteLog);
     }
+
     connect(m_btnDeleteLog, &QPushButton::clicked, this, &HistoryWidget::deleteSelectedOperationLog);
+    connect(m_logWatcher, &QFutureWatcher<OperationLogList>::finished, this, &HistoryWidget::onOperationLogsLoaded);
+    connect(m_envSeriesWatcher, &QFutureWatcher<EnvironmentSeries>::finished, this, &HistoryWidget::onEnvironmentSeriesLoaded);
 
     queryOperationLogs();
 }
@@ -70,6 +73,11 @@ HistoryWidget::~HistoryWidget()
 void HistoryWidget::showEvent(QShowEvent *event)
 {
     QWidget::showEvent(event);
+    refreshData();
+}
+
+void HistoryWidget::refreshData()
+{
     queryOperationLogs();
     if (ui->tabWidget->currentIndex() == 1)
     {
@@ -77,16 +85,10 @@ void HistoryWidget::showEvent(QShowEvent *event)
     }
 }
 
-void HistoryWidget::queryOperationLogs()
+void HistoryWidget::renderOperationLogs(const OperationLogList &logs)
 {
-    const QDate startDate = ui->dateTimeEdit_start->date();
-    const QDate endDate = ui->dateTimeEdit_end->date();
-    const QString deviceType = ui->comboBox_deviceType->currentText();
-
-    m_currentLogs = m_historyService.queryOperationLogs(startDate, endDate, deviceType);
-
     ui->tableWidget_logs->setRowCount(0);
-    for (const OperationLogEntry &entry : m_currentLogs)
+    for (const OperationLogEntry &entry : logs)
     {
         const int row = ui->tableWidget_logs->rowCount();
         ui->tableWidget_logs->insertRow(row);
@@ -102,7 +104,26 @@ void HistoryWidget::queryOperationLogs()
     }
 }
 
-void HistoryWidget::queryEnvironmentDataAndDrawChart()
+void HistoryWidget::queryOperationLogs()
+{
+    if (m_logWatcher->isRunning())
+    {
+        return;
+    }
+
+    const QDate startDate = ui->dateTimeEdit_start->date();
+    const QDate endDate = ui->dateTimeEdit_end->date();
+    const QString deviceType = ui->comboBox_deviceType->currentText();
+
+    ui->tableWidget_logs->setRowCount(0);
+    m_logWatcher->setProperty("requestId", ++m_logRequestId);
+    m_logWatcher->setFuture(QtConcurrent::run([startDate, endDate, deviceType]()
+                                              {
+        HistoryService historyService;
+        return historyService.queryOperationLogs(startDate, endDate, deviceType); }));
+}
+
+void HistoryWidget::renderEnvironmentSeries(const EnvironmentSeries &series)
 {
     ui->label_chartPlaceholder->hide();
 
@@ -113,24 +134,23 @@ void HistoryWidget::queryEnvironmentDataAndDrawChart()
 
         customPlot->addGraph();
         customPlot->graph(0)->setPen(QPen(Qt::red, 2));
-        customPlot->graph(0)->setName(QStringLiteral("\u6e29\u5ea6 (C)"));
+        customPlot->graph(0)->setName(QStringLiteral("温度 (C)"));
 
         customPlot->addGraph();
         customPlot->graph(1)->setPen(QPen(Qt::blue, 2));
-        customPlot->graph(1)->setName(QStringLiteral("\u6e7f\u5ea6 (%)"));
+        customPlot->graph(1)->setName(QStringLiteral("湿度 (%)"));
 
         QSharedPointer<QCPAxisTickerDateTime> dateTicker(new QCPAxisTickerDateTime);
         dateTicker->setDateTimeFormat("MM-dd hh:mm");
         customPlot->xAxis->setTicker(dateTicker);
-        customPlot->xAxis->setLabel(QStringLiteral("\u65f6\u95f4"));
-        customPlot->yAxis->setLabel(QStringLiteral("\u73af\u5883\u6570\u503c"));
+        customPlot->xAxis->setLabel(QStringLiteral("时间"));
+        customPlot->yAxis->setLabel(QStringLiteral("环境数值"));
         customPlot->legend->setVisible(true);
     }
 
     QVector<double> timeData;
     QVector<double> tempData;
     QVector<double> humData;
-    const EnvironmentSeries series = m_historyService.queryEnvironmentSeries(24);
     for (const EnvironmentPoint &point : series)
     {
         timeData.push_back(point.timestamp.toSecsSinceEpoch());
@@ -140,7 +160,7 @@ void HistoryWidget::queryEnvironmentDataAndDrawChart()
 
     if (timeData.isEmpty())
     {
-        ui->label_chartPlaceholder->setText(QStringLiteral("\u5f53\u524d\u6ca1\u6709\u53ef\u7528\u7684\u73af\u5883\u5386\u53f2\u6570\u636e\u3002"));
+        ui->label_chartPlaceholder->setText(QStringLiteral("当前没有可用的环境历史数据。"));
         ui->label_chartPlaceholder->show();
         return;
     }
@@ -152,23 +172,65 @@ void HistoryWidget::queryEnvironmentDataAndDrawChart()
     customPlot->replot();
 }
 
+void HistoryWidget::queryEnvironmentDataAndDrawChart()
+{
+    if (m_envSeriesWatcher->isRunning())
+    {
+        return;
+    }
+
+    ui->label_chartPlaceholder->setText(QStringLiteral("正在加载环境历史数据..."));
+    ui->label_chartPlaceholder->show();
+    m_envSeriesWatcher->setProperty("requestId", ++m_envSeriesRequestId);
+    m_envSeriesWatcher->setFuture(QtConcurrent::run([]()
+                                                    {
+        HistoryService historyService;
+        return historyService.queryEnvironmentSeries(24); }));
+}
+
+void HistoryWidget::onOperationLogsLoaded()
+{
+    if (m_logWatcher->property("requestId").toInt() != m_logRequestId)
+    {
+        return;
+    }
+
+    m_currentLogs = m_logWatcher->result();
+    renderOperationLogs(m_currentLogs);
+    if (m_showLogLoadedMessage)
+    {
+        m_showLogLoadedMessage = false;
+        QMessageBox::information(this, kSuccess, QStringLiteral("已加载 %1 条操作日志记录。").arg(m_currentLogs.size()));
+    }
+}
+
+void HistoryWidget::onEnvironmentSeriesLoaded()
+{
+    if (m_envSeriesWatcher->property("requestId").toInt() != m_envSeriesRequestId)
+    {
+        return;
+    }
+
+    renderEnvironmentSeries(m_envSeriesWatcher->result());
+}
+
 void HistoryWidget::on_btnSearch_clicked()
 {
     if (ui->dateTimeEdit_start->date() > ui->dateTimeEdit_end->date())
     {
-        QMessageBox::warning(this, kFailed, QStringLiteral("\u5f00\u59cb\u65f6\u95f4\u4e0d\u80fd\u665a\u4e8e\u7ed3\u675f\u65f6\u95f4\u3002"));
+        QMessageBox::warning(this, kFailed, QStringLiteral("开始时间不能晚于结束时间。"));
         return;
     }
 
+    m_showLogLoadedMessage = true;
     queryOperationLogs();
-    QMessageBox::information(this, kSuccess, QStringLiteral("\u5df2\u52a0\u8f7d %1 \u6761\u64cd\u4f5c\u65e5\u5fd7\u8bb0\u5f55\u3002").arg(m_currentLogs.size()));
 }
 
 void HistoryWidget::on_btnExport_clicked()
 {
     QString fileName = QFileDialog::getSaveFileName(
         this,
-        QStringLiteral("\u5bfc\u51fa\u6570\u636e"),
+        QStringLiteral("导出数据"),
         QDir::homePath() + "/operation_logs.xlsx",
         "Excel Files (*.xlsx)");
     if (fileName.isEmpty())
@@ -183,18 +245,18 @@ void HistoryWidget::on_btnExport_clicked()
 
     if (m_currentLogs.isEmpty())
     {
-        QMessageBox::warning(this, kFailed, QStringLiteral("\u5f53\u524d\u6ca1\u6709\u53ef\u5bfc\u51fa\u7684\u65e5\u5fd7\u6570\u636e\u3002"));
+        QMessageBox::warning(this, kFailed, QStringLiteral("当前没有可导出的日志数据。"));
         return;
     }
 
     QString errorMessage;
     if (!m_historyService.exportOperationLogsToExcel(fileName, m_currentLogs, &errorMessage))
     {
-        QMessageBox::critical(this, kFailed, QStringLiteral("\u5bfc\u51fa\u5931\u8d25\uff1a") + errorMessage);
+        QMessageBox::critical(this, kFailed, QStringLiteral("导出失败：") + errorMessage);
         return;
     }
 
-    QMessageBox::information(this, kSuccess, QStringLiteral("\u6570\u636e\u5df2\u5bfc\u51fa\u5230\uff1a\n") + fileName);
+    QMessageBox::information(this, kSuccess, QStringLiteral("数据已导出到：\n") + fileName);
 }
 
 void HistoryWidget::on_tabWidget_currentChanged(int index)
@@ -214,15 +276,14 @@ void HistoryWidget::deleteSelectedOperationLog()
     const int currentRow = ui->tableWidget_logs->currentRow();
     if (currentRow < 0 || currentRow >= m_currentLogs.size())
     {
-        QMessageBox::warning(this, kHint, QStringLiteral("\u8bf7\u5148\u9009\u62e9\u4e00\u6761\u65e5\u5fd7\u8bb0\u5f55\u3002"));
+        QMessageBox::warning(this, kHint, QStringLiteral("请先选择一条日志记录。"));
         return;
     }
 
     const OperationLogEntry entry = m_currentLogs.at(currentRow);
     if (QMessageBox::question(this,
-                              QStringLiteral("\u786e\u8ba4\u5220\u9664"),
-                              QStringLiteral("\u786e\u5b9a\u8981\u5220\u9664\u8be5\u6761\u5386\u53f2\u8bb0\u5f55\u5417\uff1f"))
-        != QMessageBox::Yes)
+                              QStringLiteral("确认删除"),
+                              QStringLiteral("确定要删除该条历史记录吗？")) != QMessageBox::Yes)
     {
         return;
     }
@@ -230,7 +291,7 @@ void HistoryWidget::deleteSelectedOperationLog()
     QString errorMessage;
     if (!m_historyService.deleteOperationLog(entry.recordId, &errorMessage))
     {
-        QMessageBox::critical(this, kFailed, QStringLiteral("\u5220\u9664\u5931\u8d25\uff1a") + errorMessage);
+        QMessageBox::critical(this, kFailed, QStringLiteral("删除失败：") + errorMessage);
         return;
     }
 

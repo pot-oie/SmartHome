@@ -49,7 +49,7 @@ void DeviceControlWidget::reloadDevices(bool reloadCategories)
     {
         m_categories = m_deviceService.categories();
     }
-    m_allDevices = m_deviceService.loadDefaultDevices();
+    m_allDevices = m_deviceService.loadDevices();
 }
 
 void DeviceControlWidget::updateDeviceListUI(int category)
@@ -122,8 +122,6 @@ void DeviceControlWidget::updateDeviceListUI(int category)
                     return;
                 }
 
-                const QJsonObject controlCmd = m_deviceService.buildSwitchCommand(device.id, newState);
-                emit requestControlDevice(controlCmd);
                 reloadDevices(false);
                 updateDeviceListUI(ui->listCategory->currentRow());
                 if (!warningMessage.trimmed().isEmpty())
@@ -162,8 +160,6 @@ void DeviceControlWidget::updateDeviceListUI(int category)
                         return;
                     }
 
-                    const QJsonObject controlCmd = m_deviceService.buildSetParamCommand(device, slider->value());
-                    emit requestControlDevice(controlCmd);
                     reloadDevices(false);
                     updateDeviceListUI(ui->listCategory->currentRow());
                     if (!warningMessage.trimmed().isEmpty())
@@ -186,25 +182,6 @@ void DeviceControlWidget::updateDeviceListUI(int category)
         delete ui->scrollArea->widget();
     }
     ui->scrollArea->setWidget(contentWidget);
-}
-
-void DeviceControlWidget::updateDeviceStatus(const QJsonObject &statusData)
-{
-    const QString deviceId = statusData.value("device_id").toString().trimmed();
-    if (deviceId.isEmpty())
-    {
-        qDebug() << "Ignore empty device status payload:" << statusData;
-        return;
-    }
-
-    if (!m_deviceService.syncDeviceStatus(statusData))
-    {
-        qDebug() << "Failed to sync device status to database:" << statusData;
-        return;
-    }
-
-    reloadDevices(false);
-    updateDeviceListUI(ui->listCategory->currentRow());
 }
 
 void DeviceControlWidget::refreshDevices()

@@ -12,6 +12,8 @@ QT_END_NAMESPACE
 class HomeWidget;
 class DeviceControlWidget;
 class AlarmWidget;
+class SceneWidget;
+class HistoryWidget;
 
 class MainWindow : public QMainWindow
 {
@@ -34,6 +36,8 @@ private:
     Ui::MainWindow *ui;
     HomeWidget *m_homeWidget = nullptr;
     DeviceControlWidget *m_deviceControlWidget = nullptr;
+    SceneWidget *m_sceneWidget = nullptr;
+    HistoryWidget *m_historyWidget = nullptr;
     AlarmWidget *m_alarmWidget = nullptr;
     QTranslator m_translator;
 };

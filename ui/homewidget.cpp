@@ -1,62 +1,61 @@
 #include "homewidget.h"
-#include "ui_homewidget.h"
 #include "quickcontrolmanagedialog.h"
+#include "ui_homewidget.h"
 
+#include <QtConcurrent>
 #include <QDebug>
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QMessageBox>
 #include <QPushButton>
-#include <QTimer>
 #include <QToolButton>
 
 namespace
 {
-QString quickControlCardStyle(const char *baseStyle, bool singleRowLayout)
-{
-    const QString layoutStyle = singleRowLayout
-                                    ? QStringLiteral("QToolButton { padding: 18px 8px 14px 8px; }")
-                                    : QStringLiteral("QToolButton { padding: 18px 8px 12px 8px; }");
-    return QString::fromLatin1(baseStyle) + layoutStyle;
-}
+    QString quickControlCardStyle(const char *baseStyle, bool singleRowLayout)
+    {
+        const QString layoutStyle = singleRowLayout
+                                        ? QStringLiteral("QToolButton { padding: 18px 8px 14px 8px; }")
+                                        : QStringLiteral("QToolButton { padding: 18px 8px 12px 8px; }");
+        return QString::fromLatin1(baseStyle) + layoutStyle;
+    }
 
-const char *kDeviceOnStyle =
-    "QToolButton { background-color: #E3F2FD; border: 1px solid #2196F3; border-radius: 10px; color: #1976D2; font-weight: bold; padding: 8px; }"
-    "QToolButton:hover { background-color: #BBDEFB; }";
+    const char *kDeviceOnStyle =
+        "QToolButton { background-color: #E3F2FD; border: 1px solid #2196F3; border-radius: 10px; color: #1976D2; font-weight: bold; padding: 8px; }"
+        "QToolButton:hover { background-color: #BBDEFB; }";
 
-const char *kDeviceOffStyle =
-    "QToolButton { background-color: #F7F7F7; border: 1px solid #E1E1E1; border-radius: 10px; color: #727272; padding: 8px; }"
-    "QToolButton:hover { background-color: #EEEEEE; }";
+    const char *kDeviceOffStyle =
+        "QToolButton { background-color: #F7F7F7; border: 1px solid #E1E1E1; border-radius: 10px; color: #727272; padding: 8px; }"
+        "QToolButton:hover { background-color: #EEEEEE; }";
 
-const char *kDeviceOfflineStyle =
-    "QToolButton { background-color: #F2F2F2; border: 1px dashed #C9C9C9; border-radius: 10px; color: #9A9A9A; padding: 8px; }";
+    const char *kDeviceOfflineStyle =
+        "QToolButton { background-color: #F2F2F2; border: 1px dashed #C9C9C9; border-radius: 10px; color: #9A9A9A; padding: 8px; }";
 
-const char *kSceneSelectedStyle =
-    "QToolButton { background-color: #D7F4E6; border: 1px solid #2EAD75; border-radius: 10px; color: #1B7E52; font-weight: bold; padding: 8px; }"
-    "QToolButton:hover { background-color: #C6ECD9; }";
+    const char *kSceneSelectedStyle =
+        "QToolButton { background-color: #D7F4E6; border: 1px solid #2EAD75; border-radius: 10px; color: #1B7E52; font-weight: bold; padding: 8px; }"
+        "QToolButton:hover { background-color: #C6ECD9; }";
 
-const char *kSceneUnselectedStyle =
-    "QToolButton { background-color: #F5F5F5; border: 1px solid #DEDEDE; border-radius: 10px; color: #8A8A8A; padding: 8px; }"
-    "QToolButton:hover { background-color: #EDEDED; }";
+    const char *kSceneUnselectedStyle =
+        "QToolButton { background-color: #F5F5F5; border: 1px solid #DEDEDE; border-radius: 10px; color: #8A8A8A; padding: 8px; }"
+        "QToolButton:hover { background-color: #EDEDED; }";
 }
 
 HomeWidget::HomeWidget(QWidget *parent)
-    : QWidget(parent)
-    , ui(new Ui::HomeWidget)
-    , m_editQuickControlButton(nullptr)
-    , m_environmentRefreshTimer(new QTimer(this))
+    : QWidget(parent), ui(new Ui::HomeWidget), m_environmentRefreshTimer(new QTimer(this)), m_environmentWatcher(new QFutureWatcher<HomeEnvironmentRefreshResult>(this)), m_deviceStatusWatcher(new QFutureWatcher<DeviceStatusSummary>(this))
 {
     ui->setupUi(this);
     ensureQuickControlEditButton();
+
+    connect(m_environmentWatcher, &QFutureWatcher<HomeEnvironmentRefreshResult>::finished, this, &HomeWidget::onEnvironmentSnapshotLoaded);
+    connect(m_deviceStatusWatcher, &QFutureWatcher<DeviceStatusSummary>::finished, this, &HomeWidget::onDeviceStatusLoaded);
+    connect(m_environmentRefreshTimer, &QTimer::timeout, this, [this]()
+            {
+        refreshEnvironmentSnapshot();
+        refreshDeviceStatus(); });
+
     refreshDeviceStatus();
     refreshEnvironmentSnapshot();
     loadQuickControls();
-
-    connect(m_environmentRefreshTimer, &QTimer::timeout, this, [this]()
-            {
-                refreshEnvironmentSnapshot();
-                refreshDeviceStatus();
-            });
     m_environmentRefreshTimer->start(5000);
 }
 
@@ -199,22 +198,27 @@ void HomeWidget::loadQuickControls()
 
         connect(btn, &QToolButton::clicked, this, [=](bool /*checked*/)
                 {
-                    const bool wantToTurnOn = (item.targetType == "device") ? !item.isOn : true;
+            const bool wantToTurnOn = (item.targetType == "device") ? !item.isOn : true;
 
-                    QString errorMsg;
-                    if (m_quickControlService.executeShortcut(item, wantToTurnOn, &errorMsg))
-                    {
-                        if (item.targetType == "scene")
-                        {
-                            m_selectedSceneId = item.targetStringId;
-                        }
-                        loadQuickControls();
-                    }
-                    else
-                    {
-                        QMessageBox::warning(this, QStringLiteral("操作失败"), errorMsg);
-                    }
-                });
+            QString errorMsg;
+            QString warningMsg;
+            if (m_quickControlService.executeShortcut(item, wantToTurnOn, &errorMsg, &warningMsg))
+            {
+                if (item.targetType == "scene")
+                {
+                    m_selectedSceneId = item.targetStringId;
+                }
+                loadQuickControls();
+                refreshDeviceStatus();
+                if (!warningMsg.trimmed().isEmpty())
+                {
+                    QMessageBox::warning(this, QStringLiteral("部分成功"), warningMsg);
+                }
+            }
+            else
+            {
+                QMessageBox::warning(this, QStringLiteral("操作失败"), errorMsg);
+            } });
 
         gridLayout->addWidget(btn, row, col);
 
@@ -234,8 +238,6 @@ void HomeWidget::loadQuickControls()
 
 void HomeWidget::updateEnvironmentData(double temp, double hum)
 {
-    qDebug() << "更新环境数据: 温度 =" << temp << ", 湿度 =" << hum;
-
     ui->label_temperature->setText(QString::number(temp, 'f', 1) + QStringLiteral(" °C"));
     ui->label_humidity->setText(QString::number(hum, 'f', 1) + QStringLiteral(" %"));
     applyTemperatureColor(temp);
@@ -263,27 +265,87 @@ void HomeWidget::refreshQuickControls()
 
 void HomeWidget::refreshEnvironmentSnapshot()
 {
-    const std::optional<EnvRealtimeSnapshot> snapshot = m_envRecordDao.getLatestRealtimeSnapshot();
-    if (!snapshot.has_value())
+    if (m_environmentWatcher->isRunning())
     {
-        qWarning() << "读取环境快照失败:" << m_envRecordDao.lastErrorText();
         return;
     }
 
-    updateEnvironmentData(snapshot->temperature, snapshot->humidity);
+    m_environmentWatcher->setProperty("requestId", ++m_environmentRequestId);
+    m_environmentWatcher->setFuture(QtConcurrent::run([]()
+                                                      {
+        HomeEnvironmentRefreshResult result;
 
-    QString errorText;
-    const QList<QJsonObject> triggeredAlarms = m_alarmService.evaluateEnvironmentSnapshot(snapshot.value(), &errorText);
-    if (!errorText.isEmpty())
+        EnvRecordDao envRecordDao;
+        const std::optional<EnvRealtimeSnapshot> snapshot = envRecordDao.getLatestRealtimeSnapshot();
+        if (!snapshot.has_value())
+        {
+            result.success = envRecordDao.lastErrorText().trimmed().isEmpty();
+            result.errorText = envRecordDao.lastErrorText();
+            return result;
+        }
+
+        result.snapshot = snapshot;
+
+        AlarmService alarmService;
+        QString errorText;
+        result.triggeredAlarms = alarmService.evaluateEnvironmentSnapshot(snapshot.value(), &errorText);
+        if (!errorText.isEmpty())
+        {
+            result.errorText = errorText;
+            return result;
+        }
+
+        result.success = true;
+        return result; }));
+}
+
+void HomeWidget::refreshDeviceStatusAsync()
+{
+    if (m_deviceStatusWatcher->isRunning())
     {
-        qWarning() << "评估环境报警失败:" << errorText;
         return;
     }
 
-    for (const QJsonObject &alarmData : triggeredAlarms)
+    m_deviceStatusWatcher->setProperty("requestId", ++m_deviceStatusRequestId);
+    m_deviceStatusWatcher->setFuture(QtConcurrent::run([]()
+                                                       {
+        SettingsService settingsService;
+        return settingsService.loadDeviceStatusSummary(); }));
+}
+
+void HomeWidget::onEnvironmentSnapshotLoaded()
+{
+    if (m_environmentWatcher->property("requestId").toInt() != m_environmentRequestId)
+    {
+        return;
+    }
+
+    const HomeEnvironmentRefreshResult result = m_environmentWatcher->result();
+    if (!result.errorText.trimmed().isEmpty())
+    {
+        qWarning() << "读取环境快照或评估环境报警失败:" << result.errorText;
+        return;
+    }
+
+    if (result.snapshot.has_value())
+    {
+        updateEnvironmentData(result.snapshot->temperature, result.snapshot->humidity);
+    }
+
+    for (const QJsonObject &alarmData : result.triggeredAlarms)
     {
         emit alarmTriggered(alarmData);
     }
+}
+
+void HomeWidget::onDeviceStatusLoaded()
+{
+    if (m_deviceStatusWatcher->property("requestId").toInt() != m_deviceStatusRequestId)
+    {
+        return;
+    }
+
+    updateDeviceStatusLabel(m_deviceStatusWatcher->result());
 }
 
 void HomeWidget::on_btnGoHome_clicked()
@@ -299,8 +361,7 @@ void HomeWidget::applyTemperatureColor(double temperature)
 
 void HomeWidget::refreshDeviceStatus()
 {
-    const DeviceStatusSummary summary = m_settingsService.loadDeviceStatusSummary();
-    updateDeviceStatusLabel(summary);
+    refreshDeviceStatusAsync();
 }
 
 void HomeWidget::updateDeviceStatusLabel(const DeviceStatusSummary &summary)

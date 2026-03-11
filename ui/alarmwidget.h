@@ -8,7 +8,7 @@
 #include "services/alarmservice.h"
 namespace Ui
 {
-class AlarmWidget;
+    class AlarmWidget;
 }
 
 class AlarmWidget : public QWidget
@@ -20,6 +20,7 @@ public:
     ~AlarmWidget();
 
 public slots:
+    void refreshData();
     void triggerAlarm(const QJsonObject &alarmData);
 
 protected:
@@ -35,7 +36,6 @@ private:
     QTimer *m_refreshTimer = nullptr;
 
     void playAlarmAlertTone();
-    void refreshData();
     void loadThresholds();
     void loadAlarmStatus();
     void loadAlarmLogs();

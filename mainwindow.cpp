@@ -12,8 +12,7 @@
 #include <QListWidgetItem>
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
-    , ui(new Ui::MainWindow)
+    : QMainWindow(parent), ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
     initUI();
@@ -50,8 +49,11 @@ void MainWindow::initUI()
     m_deviceControlWidget = new DeviceControlWidget(this);
     ui->stackWidget->addWidget(m_deviceControlWidget);
 
-    ui->stackWidget->addWidget(new SceneWidget(this));
-    ui->stackWidget->addWidget(new HistoryWidget(this));
+    m_sceneWidget = new SceneWidget(this);
+    ui->stackWidget->addWidget(m_sceneWidget);
+
+    m_historyWidget = new HistoryWidget(this);
+    ui->stackWidget->addWidget(m_historyWidget);
 
     m_alarmWidget = new AlarmWidget(this);
     ui->stackWidget->addWidget(m_alarmWidget);
@@ -66,7 +68,14 @@ void MainWindow::initUI()
     connect(settingsWidget, &SettingsWidget::themeChanged, this, &MainWindow::onThemeChanged);
     connect(settingsWidget, &SettingsWidget::languageChanged, this, &MainWindow::onLanguageChanged);
     connect(settingsWidget, &SettingsWidget::devicesChanged, m_homeWidget, &HomeWidget::refreshDeviceStatus);
+    connect(settingsWidget, &SettingsWidget::devicesChanged, m_homeWidget, &HomeWidget::refreshQuickControls);
+    connect(settingsWidget, &SettingsWidget::devicesChanged, m_deviceControlWidget, &DeviceControlWidget::refreshDevices);
+    connect(settingsWidget, &SettingsWidget::devicesChanged, m_historyWidget, &HistoryWidget::refreshData);
     connect(m_homeWidget, &HomeWidget::alarmTriggered, m_alarmWidget, &AlarmWidget::triggerAlarm);
+    connect(m_sceneWidget, &SceneWidget::sceneExecuted, m_homeWidget, &HomeWidget::refreshQuickControls);
+    connect(m_sceneWidget, &SceneWidget::sceneExecuted, m_homeWidget, &HomeWidget::refreshDeviceStatus);
+    connect(m_sceneWidget, &SceneWidget::sceneExecuted, m_deviceControlWidget, &DeviceControlWidget::refreshDevices);
+    connect(m_sceneWidget, &SceneWidget::sceneExecuted, m_historyWidget, &HistoryWidget::refreshData);
 }
 
 void MainWindow::onNavBarItemClicked(int index)
@@ -76,10 +85,23 @@ void MainWindow::onNavBarItemClicked(int index)
     if (index == 0 && m_homeWidget)
     {
         m_homeWidget->refreshQuickControls();
+        m_homeWidget->refreshDeviceStatus();
     }
     else if (index == 1 && m_deviceControlWidget)
     {
         m_deviceControlWidget->refreshDevices();
+    }
+    else if (index == 2 && m_sceneWidget)
+    {
+        m_sceneWidget->refreshScenes();
+    }
+    else if (index == 3 && m_historyWidget)
+    {
+        m_historyWidget->refreshData();
+    }
+    else if (index == 4 && m_alarmWidget)
+    {
+        m_alarmWidget->refreshData();
     }
 }
 

@@ -2,14 +2,13 @@
 
 #include "services/servicemodels.h"
 
-#include <QJsonObject>
 #include <QStringList>
 
 class DeviceService
 {
 public:
     QStringList categories() const;
-    DeviceList loadDefaultDevices() const;
+    DeviceList loadDevices() const;
     DeviceList filterDevices(const DeviceList &allDevices, int categoryIndex, const QStringList &categories) const;
 
     bool supportsAdjust(const DeviceDefinition &device) const;
@@ -24,8 +23,4 @@ public:
                            int value,
                            QString *errorMessage = nullptr,
                            QString *warningMessage = nullptr) const;
-    bool syncDeviceStatus(const QJsonObject &statusData) const;
-
-    QJsonObject buildSwitchCommand(const QString &deviceId, bool turnOn) const;
-    QJsonObject buildSetParamCommand(const DeviceDefinition &device, int value) const;
 };

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <QJsonObject>
 #include <QWidget>
 
 #include "services/sceneservice.h"
@@ -18,11 +17,11 @@ public:
     explicit SceneWidget(QWidget *parent = nullptr);
     ~SceneWidget();
 
-signals:
-    void requestTriggerScene(const QJsonObject &sceneCmd);
-
 public slots:
-    void updateSceneExecutionResult(const QJsonObject &resultData);
+    void refreshScenes();
+
+signals:
+    void sceneExecuted();
 
 private slots:
     void on_btnAddScene_clicked();

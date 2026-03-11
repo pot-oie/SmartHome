@@ -21,6 +21,42 @@ namespace
     const QString kTextSuccess = QStringLiteral("\u6210\u529f");
     const QString kTextSceneNamePrefix = QStringLiteral("\u573a\u666f\u540d\u79f0\uff1a");
 
+    QString buildSceneExecutionMessage(const SceneExecutionResult &result)
+    {
+        QString summary;
+        if (result.isSuccess())
+        {
+            summary = QStringLiteral("场景执行成功，共成功 %1 项。")
+                          .arg(result.successCount);
+        }
+        else if (result.isPartialSuccess())
+        {
+            summary = QStringLiteral("场景部分成功，成功 %1 项，失败 %2 项。")
+                          .arg(result.successCount)
+                          .arg(result.failureCount);
+        }
+        else
+        {
+            summary = QStringLiteral("场景执行失败，未成功执行任何设备动作。");
+        }
+
+        QStringList lines;
+        for (const SceneActionExecutionResult &actionResult : result.actionResults)
+        {
+            lines << QStringLiteral("[%1] %2：%3")
+                         .arg(actionResult.success ? QStringLiteral("成功") : QStringLiteral("失败"))
+                         .arg(actionResult.deviceName)
+                         .arg(actionResult.message);
+        }
+
+        if (!lines.isEmpty())
+        {
+            summary += QStringLiteral("\n\n") + lines.join(QStringLiteral("\n"));
+        }
+
+        return summary;
+    }
+
     void populateSceneIconCombo(QComboBox *comboBox)
     {
         comboBox->addItem(QIcon(":/icons/home.svg"), QStringLiteral("\u56de\u5bb6"), ":/icons/home.svg");
@@ -71,7 +107,7 @@ SceneWidget::~SceneWidget()
 
 void SceneWidget::loadScenesFromDatabase(const QString &sceneCodeToSelect, qint64 actionIdToSelect)
 {
-    m_scenes = m_sceneService.loadDefaultScenes();
+    m_scenes = m_sceneService.loadScenes();
     renderSceneList();
 
     if (m_scenes.isEmpty())
@@ -311,9 +347,9 @@ void SceneWidget::updateSceneDetails(int row)
     renderSceneDetails(m_scenes.at(row));
 }
 
-void SceneWidget::updateSceneExecutionResult(const QJsonObject &resultData)
+void SceneWidget::refreshScenes()
 {
-    qDebug() << "Scene execution result:" << resultData;
+    loadScenesFromDatabase();
 }
 
 void SceneWidget::on_btnAddScene_clicked()
@@ -372,12 +408,29 @@ void SceneWidget::on_btnActivateScene_clicked()
     }
 
     const SceneDefinition scene = m_scenes.at(currentRow);
-    QMessageBox::information(this,
-                             QStringLiteral("\u573a\u666f\u6fc0\u6d3b"),
-                             QStringLiteral("\u6b63\u5728\u6267\u884c\u573a\u666f\uff1a") + scene.name + QStringLiteral("\n\n\u8bf7\u6c42\u6307\u4ee4\u5df2\u53d1\u9001\u81f3\u7f51\u7edc\u5c42\u3002"));
+    const SceneExecutionResult result = m_sceneService.executeScene(scene);
+    loadScenesFromDatabase(scene.id);
+    emit sceneExecuted();
 
-    const QJsonObject sceneCmd = m_sceneService.buildTriggerSceneCommand(scene);
-    emit requestTriggerScene(sceneCmd);
+    if (result.isSuccess())
+    {
+        QMessageBox::information(this,
+                                 QStringLiteral("\u573a\u666f\u6fc0\u6d3b"),
+                                 buildSceneExecutionMessage(result));
+        return;
+    }
+
+    if (result.isPartialSuccess())
+    {
+        QMessageBox::warning(this,
+                             QStringLiteral("\u573a\u666f\u90e8\u5206\u6210\u529f"),
+                             buildSceneExecutionMessage(result));
+        return;
+    }
+
+    QMessageBox::critical(this,
+                          QStringLiteral("\u573a\u666f\u6267\u884c\u5931\u8d25"),
+                          buildSceneExecutionMessage(result));
 }
 
 void SceneWidget::on_btnAddDeviceToScene_clicked()

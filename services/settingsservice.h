@@ -23,7 +23,7 @@ public:
     QString languageKeyByIndex(int index) const;
 
     DeviceStatusSummary loadDeviceStatusSummary() const;
-    SettingsDeviceList loadDefaultDevices() const;
+    SettingsDeviceList loadDevices() const;
     SettingsDeviceEntry createNewDevice(const QString &deviceName, int currentCount) const;
     bool addDevice(const QString &deviceName, int currentCount, SettingsDeviceEntry *createdDevice, QString *errorText = nullptr) const;
     bool deleteDeviceById(const QString &deviceId, QString *errorText = nullptr) const;
