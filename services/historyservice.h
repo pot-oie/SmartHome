@@ -2,14 +2,14 @@
 
 #include "services/servicemodels.h"
 
-#include <QDate>
+#include <QDateTime>
 #include <QJsonObject>
 #include <QString>
 
 class HistoryService
 {
 public:
-    OperationLogList queryOperationLogs(const QDate &startDate, const QDate &endDate, const QString &deviceType = QString()) const;
+    OperationLogList queryOperationLogs(const QDateTime &startTime, const QDateTime &endTime, const QString &deviceType = QString()) const;
     EnvironmentSeries queryEnvironmentSeries(int hours) const;
     bool addOperationLog(const QString &moduleName,
                          const QString &operationType,

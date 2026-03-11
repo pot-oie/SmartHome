@@ -50,10 +50,10 @@ namespace
     }
 }
 
-OperationLogList HistoryDao::queryOperationLogs(const QDate &startDate, const QDate &endDate, const QString &deviceType)
+OperationLogList HistoryDao::queryOperationLogs(const QDateTime &startTime, const QDateTime &endTime, const QString &deviceType)
 {
     OperationLogList logs;
-    if (!startDate.isValid() || !endDate.isValid() || startDate > endDate)
+    if (!startTime.isValid() || !endTime.isValid() || startTime > endTime)
     {
         return logs;
     }
@@ -76,11 +76,11 @@ OperationLogList HistoryDao::queryOperationLogs(const QDate &startDate, const QD
         "LEFT JOIN users u ON u.id = l.user_id "
         "LEFT JOIN devices d ON d.id = l.device_id "
         "LEFT JOIN device_categories c ON c.id = d.category_id "
-        "WHERE l.created_at >= ? AND l.created_at <= ? ";
+        "WHERE l.created_at >= ? AND l.created_at < ? ";
 
     QVariantList params = {
-        QDateTime(startDate, QTime(0, 0, 0)),
-        QDateTime(endDate, QTime(23, 59, 59))};
+        startTime,
+        endTime};
 
     const QString trimmedType = deviceType.trimmed();
     if (!trimmedType.isEmpty() && trimmedType != QStringLiteral("\u5168\u90e8"))

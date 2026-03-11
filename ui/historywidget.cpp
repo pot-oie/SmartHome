@@ -13,6 +13,7 @@
 #include <QLayout>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QSignalBlocker>
 #include <QTableWidgetItem>
 
 namespace
@@ -49,8 +50,37 @@ HistoryWidget::HistoryWidget(QWidget *parent)
         ui->comboBox_deviceType->addItem(categories.at(index));
     }
 
-    ui->dateTimeEdit_start->setDate(QDate::currentDate().addDays(-7));
-    ui->dateTimeEdit_end->setDate(QDate::currentDate());
+    ui->dateTimeEdit_start->setDateTime(QDateTime(QDate::currentDate().addDays(-7), QTime(0, 0, 0)));
+    ui->dateTimeEdit_end->setDateTime(QDateTime(QDate::currentDate(), QTime(23, 59, 59)));
+
+    const auto normalizeStartDateTime = [this]()
+    {
+        const QDateTime normalizedDateTime(ui->dateTimeEdit_start->date(), QTime(0, 0, 0));
+        if (ui->dateTimeEdit_start->dateTime() == normalizedDateTime)
+        {
+            return;
+        }
+
+        const QSignalBlocker blocker(ui->dateTimeEdit_start);
+        ui->dateTimeEdit_start->setDateTime(normalizedDateTime);
+    };
+
+    const auto normalizeEndDateTime = [this]()
+    {
+        const QDateTime normalizedDateTime(ui->dateTimeEdit_end->date(), QTime(23, 59, 59));
+        if (ui->dateTimeEdit_end->dateTime() == normalizedDateTime)
+        {
+            return;
+        }
+
+        const QSignalBlocker blocker(ui->dateTimeEdit_end);
+        ui->dateTimeEdit_end->setDateTime(normalizedDateTime);
+    };
+
+    connect(ui->dateTimeEdit_start, &QDateTimeEdit::dateChanged, this, [normalizeStartDateTime](const QDate &) { normalizeStartDateTime(); });
+    connect(ui->dateTimeEdit_start, &QDateTimeEdit::timeChanged, this, [normalizeStartDateTime](const QTime &) { normalizeStartDateTime(); });
+    connect(ui->dateTimeEdit_end, &QDateTimeEdit::dateChanged, this, [normalizeEndDateTime](const QDate &) { normalizeEndDateTime(); });
+    connect(ui->dateTimeEdit_end, &QDateTimeEdit::timeChanged, this, [normalizeEndDateTime](const QTime &) { normalizeEndDateTime(); });
 
     m_btnDeleteLog = new QPushButton(QStringLiteral("删除选中日志"), this);
     if (QLayout *filterLayout = ui->groupBox_filter->layout())
@@ -113,14 +143,16 @@ void HistoryWidget::queryOperationLogs()
 
     const QDate startDate = ui->dateTimeEdit_start->date();
     const QDate endDate = ui->dateTimeEdit_end->date();
+    const QDateTime startTime(startDate, QTime(0, 0, 0));
+    const QDateTime endTime(endDate.addDays(1), QTime(0, 0, 0));
     const QString deviceType = ui->comboBox_deviceType->currentText();
 
     ui->tableWidget_logs->setRowCount(0);
     m_logWatcher->setProperty("requestId", ++m_logRequestId);
-    m_logWatcher->setFuture(QtConcurrent::run([startDate, endDate, deviceType]()
+    m_logWatcher->setFuture(QtConcurrent::run([startTime, endTime, deviceType]()
                                               {
         HistoryService historyService;
-        return historyService.queryOperationLogs(startDate, endDate, deviceType); }));
+        return historyService.queryOperationLogs(startTime, endTime, deviceType); }));
 }
 
 void HistoryWidget::renderEnvironmentSeries(const EnvironmentSeries &series)

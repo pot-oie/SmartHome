@@ -57,7 +57,7 @@ HomeWidget::HomeWidget(QWidget *parent)
     refreshDeviceStatus();
     refreshEnvironmentSnapshot();
     loadQuickControls();
-    m_environmentRefreshTimer->start(5000);
+    m_environmentRefreshTimer->start(3000);
 }
 
 HomeWidget::~HomeWidget()
