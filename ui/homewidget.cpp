@@ -41,26 +41,23 @@ namespace
 
 HomeWidget::HomeWidget(QWidget *parent) : QWidget(parent),
                                           ui(new Ui::HomeWidget),
-                                          m_editQuickControlButton(nullptr)
+                                          m_editQuickControlButton(nullptr),
+                                          m_environmentRefreshTimer(new QTimer(this))
 {
     ui->setupUi(this);
     ensureQuickControlEditButton();
     refreshDeviceStatus();
-
-    const EnvironmentSnapshot initial = m_environmentService.generateInitialSnapshot();
-    updateEnvironmentData(initial.temperature, initial.humidity);
+    refreshEnvironmentSnapshot();
 
     // 初始化时加载快捷控制面板
     loadQuickControls();
 
-    // 使用定时器模拟数据更新（每5秒更新一次）
-    QTimer *timer = new QTimer(this);
-    connect(timer, &QTimer::timeout, this, [this]()
+    // 每 5 秒从数据库刷新一次首页环境快照
+    connect(m_environmentRefreshTimer, &QTimer::timeout, this, [this]()
             {
-        const EnvironmentSnapshot snapshot = m_environmentService.generateNextSnapshot();
-        updateEnvironmentData(snapshot.temperature, snapshot.humidity);
+        refreshEnvironmentSnapshot();
         refreshDeviceStatus(); });
-    timer->start(5000);
+    m_environmentRefreshTimer->start(5000);
 }
 
 HomeWidget::~HomeWidget()
@@ -273,6 +270,18 @@ void HomeWidget::refreshQuickControls()
     loadQuickControls();
 }
 
+void HomeWidget::refreshEnvironmentSnapshot()
+{
+    const std::optional<QPair<double, double>> snapshot = m_envRecordDao.getLatestTemperatureAndHumidity();
+    if (!snapshot.has_value())
+    {
+        qWarning() << "读取环境快照失败:" << m_envRecordDao.lastErrorText();
+        return;
+    }
+
+    updateEnvironmentData(snapshot->first, snapshot->second);
+}
+
 void HomeWidget::on_btnGoHome_clicked()
 {
     qDebug() << "返回首页按钮被点击";
@@ -298,6 +307,7 @@ void HomeWidget::updateDeviceStatusLabel(const DeviceStatusSummary &summary)
 void HomeWidget::showEvent(QShowEvent *event)
 {
     QWidget::showEvent(event);
+    refreshEnvironmentSnapshot();
     refreshDeviceStatus();
     refreshQuickControls();
 }

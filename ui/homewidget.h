@@ -4,8 +4,10 @@
 #include <QShowEvent>
 #include <QList>
 #include <QString>
+#include <QTimer>
 #include <QWidget>
 
+#include "database/dao/EnvRecordDao.h"
 #include "services/environmentservice.h"
 #include "services/settingsservice.h"
 #include "services/quickcontrolservice.h"
@@ -45,11 +47,14 @@ private:
     EnvironmentService m_environmentService;
     SettingsService m_settingsService;
     QuickControlService m_quickControlService;
+    EnvRecordDao m_envRecordDao;
+    QTimer *m_environmentRefreshTimer;
     QString m_selectedSceneId;
 
     void initConnections();
     void ensureQuickControlEditButton();
     void applyTemperatureColor(double temperature);
     void updateDeviceStatusLabel(const DeviceStatusSummary &summary);
+    void refreshEnvironmentSnapshot();
     void loadQuickControls();
 };

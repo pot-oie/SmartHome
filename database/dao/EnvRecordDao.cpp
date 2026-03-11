@@ -21,7 +21,7 @@ std::optional<QPair<double, double>> EnvRecordDao::getLatestTemperatureAndHumidi
     }
 
     static const QString sql =
-        "SELECT temperature, humidity FROM env_records ORDER BY created_at DESC LIMIT 1";
+        "SELECT temperature, humidity FROM env_realtime_snapshots ORDER BY updated_at DESC LIMIT 1";
 
     QSqlQuery query = databaseManager.query(sql, {});
     if (!query.isActive())
