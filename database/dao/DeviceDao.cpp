@@ -201,7 +201,12 @@ int DeviceDao::countAllDevices()
 
 int DeviceDao::countOnlineDevices()
 {
-    return executeCountQuery("SELECT COUNT(*) FROM devices WHERE online_status = ?", {"online"});
+    return executeCountQuery(
+        "SELECT COUNT(*) "
+        "FROM devices d "
+        "LEFT JOIN device_state_snapshots s ON s.device_id = d.id "
+        "WHERE COALESCE(s.online_status, d.online_status) = ?",
+        {"online"});
 }
 
 QList<DeviceDao::DeviceCategoryRow> DeviceDao::listEnabledCategories()
@@ -254,9 +259,14 @@ DeviceList DeviceDao::listDeviceDefinitions()
     }
 
     static const QString sql =
-        "SELECT d.device_id, d.device_name, c.category_name, d.online_status, d.switch_status, d.current_value, "
-        "d.value_unit, d.supports_slider, d.slider_min, d.slider_max "
+        "SELECT d.device_id, d.device_name, c.category_name, "
+        "COALESCE(s.online_status, d.online_status) AS effective_online_status, "
+        "COALESCE(s.switch_status, d.switch_status) AS effective_switch_status, "
+        "COALESCE(s.current_value, d.current_value) AS effective_current_value, "
+        "COALESCE(NULLIF(s.value_unit, ''), d.value_unit) AS effective_value_unit, "
+        "d.supports_slider, d.slider_min, d.slider_max "
         "FROM devices d "
+        "LEFT JOIN device_state_snapshots s ON s.device_id = d.id "
         "INNER JOIN device_categories c ON c.id = d.category_id "
         "ORDER BY d.display_order ASC, d.id ASC";
 
@@ -275,10 +285,10 @@ DeviceList DeviceDao::listDeviceDefinitions()
         device.name = query.value("device_name").toString();
         device.type = query.value("category_name").toString();
         device.icon = iconForType(device.type, device.name, device.id);
-        device.isOnline = (query.value("online_status").toString() == "online");
-        device.isOn = (query.value("switch_status").toString() == "on");
-        device.value = qRound(query.value("current_value").toDouble());
-        device.valueUnit = query.value("value_unit").toString();
+        device.isOnline = (query.value("effective_online_status").toString() == "online");
+        device.isOn = (query.value("effective_switch_status").toString() == "on");
+        device.value = qRound(query.value("effective_current_value").toDouble());
+        device.valueUnit = query.value("effective_value_unit").toString();
         device.supportsSlider = query.value("supports_slider").toInt() == 1;
         device.minValue = qRound(query.value("slider_min").toDouble());
         device.maxValue = qRound(query.value("slider_max").toDouble());
@@ -308,8 +318,11 @@ SettingsDeviceList DeviceDao::listSettingsDevices()
     }
 
     static const QString sql =
-        "SELECT device_id, device_name, device_type, ip_address, online_status "
-        "FROM devices ORDER BY display_order ASC, id ASC";
+        "SELECT d.device_id, d.device_name, d.device_type, d.ip_address, "
+        "COALESCE(s.online_status, d.online_status) AS effective_online_status "
+        "FROM devices d "
+        "LEFT JOIN device_state_snapshots s ON s.device_id = d.id "
+        "ORDER BY d.display_order ASC, d.id ASC";
 
     QSqlQuery query = databaseManager.query(sql, {});
     if (!query.isActive())
@@ -326,7 +339,7 @@ SettingsDeviceList DeviceDao::listSettingsDevices()
         device.name = query.value("device_name").toString();
         device.type = query.value("device_type").toString();
         device.ip = query.value("ip_address").toString();
-        device.onlineStatus = query.value("online_status").toString().trimmed().toLower();
+        device.onlineStatus = query.value("effective_online_status").toString().trimmed().toLower();
         devices.push_back(device);
     }
 

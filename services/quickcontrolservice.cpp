@@ -46,11 +46,12 @@ QList<QuickControlDisplayItem> QuickControlService::getHomeShortcuts() const
             d.device_id AS string_id, 
             d.device_name AS display_name, 
             d.device_type AS device_type,
-            d.online_status, 
-            d.switch_status,
+            COALESCE(s.online_status, d.online_status) AS online_status, 
+            COALESCE(s.switch_status, d.switch_status) AS switch_status,
             '' AS icon_path
         FROM quick_controls q
         INNER JOIN devices d ON q.target_id = d.id AND q.target_type = 'device'
+        LEFT JOIN device_state_snapshots s ON s.device_id = d.id
         UNION ALL
         SELECT 
             q.id AS mapping_id, 

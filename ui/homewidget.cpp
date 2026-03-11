@@ -51,7 +51,8 @@ HomeWidget::HomeWidget(QWidget *parent)
     connect(m_environmentRefreshTimer, &QTimer::timeout, this, [this]()
             {
         refreshEnvironmentSnapshot();
-        refreshDeviceStatus(); });
+        refreshDeviceStatus();
+        refreshQuickControls(); });
 
     refreshDeviceStatus();
     refreshEnvironmentSnapshot();

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QWidget>
+#include <QTimer>
 
 #include "services/deviceservice.h"
 
@@ -20,6 +21,10 @@ public:
 public slots:
     void refreshDevices();
 
+protected:
+    void showEvent(QShowEvent *event) override;
+    void hideEvent(QHideEvent *event) override;
+
 private slots:
     void on_listCategory_currentRowChanged(int currentRow);
     void onDeviceSwitchToggled(bool checked);
@@ -35,4 +40,5 @@ private:
     DeviceService m_deviceService;
     DeviceList m_allDevices;
     QStringList m_categories;
+    QTimer *m_refreshTimer = nullptr;
 };

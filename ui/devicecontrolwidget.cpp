@@ -23,11 +23,14 @@ namespace
 }
 
 DeviceControlWidget::DeviceControlWidget(QWidget *parent)
-    : QWidget(parent), ui(new Ui::DeviceControlWidget)
+    : QWidget(parent), ui(new Ui::DeviceControlWidget), m_refreshTimer(new QTimer(this))
 {
     ui->setupUi(this);
     reloadDevices(true);
     initDeviceList();
+
+    m_refreshTimer->setInterval(3000);
+    connect(m_refreshTimer, &QTimer::timeout, this, &DeviceControlWidget::refreshDevices);
 }
 
 DeviceControlWidget::~DeviceControlWidget()
@@ -188,6 +191,25 @@ void DeviceControlWidget::refreshDevices()
 {
     reloadDevices(false);
     updateDeviceListUI(ui->listCategory->currentRow());
+}
+
+void DeviceControlWidget::showEvent(QShowEvent *event)
+{
+    QWidget::showEvent(event);
+    refreshDevices();
+    if (m_refreshTimer && !m_refreshTimer->isActive())
+    {
+        m_refreshTimer->start();
+    }
+}
+
+void DeviceControlWidget::hideEvent(QHideEvent *event)
+{
+    QWidget::hideEvent(event);
+    if (m_refreshTimer && m_refreshTimer->isActive())
+    {
+        m_refreshTimer->stop();
+    }
 }
 
 void DeviceControlWidget::on_listCategory_currentRowChanged(int currentRow)
