@@ -15,9 +15,21 @@
 #include <QPushButton>
 #include <QTimer>
 #include <QToolButton>
+#include <QGuiApplication>
+#include <QScreen>
 
 namespace
 {
+    qreal iconDevicePixelRatio()
+    {
+        QScreen *screen = QGuiApplication::primaryScreen();
+        if (!screen)
+        {
+            return 1.0;
+        }
+        return qMax<qreal>(1.0, screen->devicePixelRatio());
+    }
+
     bool isDarkTheme(const QPalette &palette)
     {
         return palette.color(QPalette::Window).lightness() < 128;
@@ -41,23 +53,31 @@ namespace
     {
         const QIcon baseIcon(path);
         const QSize safeSize = targetSize.isValid() ? targetSize : QSize(40, 40);
-        const QPixmap source = baseIcon.pixmap(safeSize);
+        const qreal dpr = iconDevicePixelRatio();
+        const QSize pixelSize(qMax(1, qRound(safeSize.width() * dpr)),
+                              qMax(1, qRound(safeSize.height() * dpr)));
+        const QPixmap source = baseIcon.pixmap(pixelSize);
         if (source.isNull())
         {
             return baseIcon;
         }
 
-        QPixmap tinted(safeSize);
+        QPixmap tinted(pixelSize);
+        tinted.setDevicePixelRatio(dpr);
         tinted.fill(Qt::transparent);
         QPainter painter(&tinted);
-        const QRect targetRect(QPoint(0, 0), safeSize);
-        const QPixmap scaled = source.scaled(safeSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-        const int iconShiftX = 8;
-        const QPoint offset((safeSize.width() - scaled.width()) / 2 + iconShiftX,
-                            (safeSize.height() - scaled.height()) / 2);
-        painter.drawPixmap(offset, scaled);
+        painter.setRenderHint(QPainter::Antialiasing, true);
+        painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
+
+        const QSizeF sourceLogicalSize(source.width() / dpr, source.height() / dpr);
+        QSizeF drawSize = sourceLogicalSize;
+        drawSize.scale(QSizeF(safeSize), Qt::KeepAspectRatio);
+        const QPointF offset((safeSize.width() - drawSize.width()) / 2.0,
+                             (safeSize.height() - drawSize.height()) / 2.0);
+        const QRectF targetRect(offset, drawSize);
+        painter.drawPixmap(targetRect, source, QRectF(0, 0, source.width(), source.height()));
         painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
-        painter.fillRect(targetRect, color);
+        painter.fillRect(QRectF(QPointF(0, 0), QSizeF(safeSize)), color);
         painter.end();
         return QIcon(tinted);
     }
