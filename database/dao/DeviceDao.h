@@ -3,6 +3,7 @@
 #include "../../services/servicemodels.h"
 
 #include <QList>
+#include <QHash>
 #include <QString>
 #include <QVariantMap>
 #include <QVariantList>
@@ -30,6 +31,7 @@ public:
                            const QString &valueUnit,
                            const QString &modeText = QString());
     QVariantMap loadDeviceExtraParams(const QString &deviceId);
+    QHash<QString, QVariantMap> loadDeviceExtraParamsBatch(const QStringList &deviceIds);
     bool upsertDeviceExtraParam(const QString &deviceId,
                                 const QString &paramCode,
                                 const QVariant &paramValue,

@@ -3,6 +3,7 @@
 #include "services/servicemodels.h"
 
 #include <QJsonObject>
+#include <QHash>
 #include <QVariant>
 #include <QVariantMap>
 #include <QStringList>
@@ -27,6 +28,7 @@ public:
                            QString *errorMessage = nullptr,
                            QString *warningMessage = nullptr) const;
     QVariantMap loadExtraParams(const QString &deviceId) const;
+    QHash<QString, QVariantMap> loadExtraParamsBatch(const QStringList &deviceIds) const;
     bool updateExtraParam(const QString &deviceId,
                           const QString &paramCode,
                           const QVariant &paramValue,

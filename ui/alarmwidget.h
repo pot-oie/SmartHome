@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QJsonObject>
+#include <QDateTime>
 #include <QShowEvent>
 #include <QTimer>
 #include <QWidget>
@@ -43,4 +44,7 @@ private:
     void loadAlarmLogs();
     void refreshRuntimeData();
     void appendAlarmLogRow(int row, const AlarmLogEntry &entry);
+
+private:
+    QDateTime m_lastAlarmDialogAt;
 };

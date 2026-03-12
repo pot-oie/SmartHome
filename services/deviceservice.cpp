@@ -281,6 +281,12 @@ QVariantMap DeviceService::loadExtraParams(const QString &deviceId) const
     return dao.loadDeviceExtraParams(deviceId);
 }
 
+QHash<QString, QVariantMap> DeviceService::loadExtraParamsBatch(const QStringList &deviceIds) const
+{
+    DeviceDao dao;
+    return dao.loadDeviceExtraParamsBatch(deviceIds);
+}
+
 bool DeviceService::updateExtraParam(const QString &deviceId,
                                      const QString &paramCode,
                                      const QVariant &paramValue,

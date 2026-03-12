@@ -216,6 +216,11 @@ void AlarmWidget::loadAlarmLogs()
 
 void AlarmWidget::appendAlarmLogRow(int row, const AlarmLogEntry &entry)
 {
+    if (!ui || !ui->tableWidget_alarmLogs)
+    {
+        return;
+    }
+
     ui->tableWidget_alarmLogs->setItem(row, 0, new QTableWidgetItem(entry.timestamp.toString("MM-dd HH:mm")));
     ui->tableWidget_alarmLogs->setItem(row, 1, new QTableWidgetItem(entry.type));
     ui->tableWidget_alarmLogs->setItem(row, 2, new QTableWidgetItem(entry.triggerValue.isEmpty() ? QStringLiteral("-") : entry.triggerValue));
@@ -224,11 +229,19 @@ void AlarmWidget::appendAlarmLogRow(int row, const AlarmLogEntry &entry)
     const QString typeColor = entry.severity == QStringLiteral("critical")
                                   ? QStringLiteral("#d32f2f")
                                   : QStringLiteral("#f44336");
-    ui->tableWidget_alarmLogs->item(row, 1)->setForeground(QBrush(QColor(typeColor)));
+    if (QTableWidgetItem *typeItem = ui->tableWidget_alarmLogs->item(row, 1))
+    {
+        typeItem->setForeground(QBrush(QColor(typeColor)));
+    }
 }
 
 void AlarmWidget::triggerAlarm(const QJsonObject &alarmData)
 {
+    if (!ui || !ui->tableWidget_alarmLogs)
+    {
+        return;
+    }
+
     qDebug() << "收到报警:" << alarmData;
 
     const AlarmLogEntry entry = m_alarmService.fromAlarmData(alarmData);
@@ -236,6 +249,18 @@ void AlarmWidget::triggerAlarm(const QJsonObject &alarmData)
     appendAlarmLogRow(0, entry);
     loadAlarmStatus();
     playAlarmAlertTone();
+
+    if (!isVisible())
+    {
+        return;
+    }
+
+    const QDateTime now = QDateTime::currentDateTime();
+    if (m_lastAlarmDialogAt.isValid() && m_lastAlarmDialogAt.msecsTo(now) < 12000)
+    {
+        return;
+    }
+    m_lastAlarmDialogAt = now;
 
     QMessageBox::critical(this,
                           QStringLiteral("系统报警"),

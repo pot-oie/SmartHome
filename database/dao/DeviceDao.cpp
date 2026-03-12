@@ -568,6 +568,81 @@ QVariantMap DeviceDao::loadDeviceExtraParams(const QString &deviceId)
     return params;
 }
 
+QHash<QString, QVariantMap> DeviceDao::loadDeviceExtraParamsBatch(const QStringList &deviceIds)
+{
+    QHash<QString, QVariantMap> allParams;
+    if (deviceIds.isEmpty())
+    {
+        return allParams;
+    }
+
+    DatabaseManager &databaseManager = DatabaseManager::instance();
+    if (!databaseManager.isOpen() && !databaseManager.open())
+    {
+        setLastError(databaseManager.lastErrorText());
+        qWarning().noquote() << LOG_PREFIX << "Failed to open database before batch loading extra params:" << m_lastErrorText;
+        return allParams;
+    }
+
+    QStringList placeholders;
+    QVariantList params;
+    placeholders.reserve(deviceIds.size());
+    params.reserve(deviceIds.size());
+    for (const QString &deviceId : deviceIds)
+    {
+        placeholders.push_back(QStringLiteral("?"));
+        params.push_back(deviceId);
+    }
+
+    const QString sql = QStringLiteral(
+                            "SELECT d.device_id AS device_key, p.param_code, p.param_type, "
+                            "p.param_value_int, p.param_value_decimal, p.param_value_text "
+                            "FROM device_control_params p "
+                            "INNER JOIN devices d ON d.id = p.device_id "
+                            "WHERE p.is_enabled = 1 AND d.device_id IN (%1)")
+                            .arg(placeholders.join(QStringLiteral(",")));
+
+    QSqlQuery query = databaseManager.query(sql, params);
+    if (!query.isActive())
+    {
+        setLastError(databaseManager.lastErrorText());
+        qWarning().noquote() << LOG_PREFIX << "Batch load extra params query failed:" << m_lastErrorText;
+        return allParams;
+    }
+
+    while (query.next())
+    {
+        const QString deviceKey = query.value("device_key").toString().trimmed();
+        const QString code = query.value("param_code").toString().trimmed();
+        if (deviceKey.isEmpty() || code.isEmpty())
+        {
+            continue;
+        }
+
+        const QString type = query.value("param_type").toString().trimmed().toLower();
+        QVariant value;
+        if (type == QStringLiteral("int") || type == QStringLiteral("bool"))
+        {
+            value = query.value("param_value_int").toInt();
+        }
+        else if (type == QStringLiteral("decimal"))
+        {
+            value = query.value("param_value_decimal").toDouble();
+        }
+        else
+        {
+            value = query.value("param_value_text").toString();
+        }
+
+        QVariantMap perDevice = allParams.value(deviceKey);
+        perDevice.insert(code, value);
+        allParams.insert(deviceKey, perDevice);
+    }
+
+    clearLastError();
+    return allParams;
+}
+
 bool DeviceDao::upsertDeviceExtraParam(const QString &deviceId,
                                        const QString &paramCode,
                                        const QVariant &paramValue,

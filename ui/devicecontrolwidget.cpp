@@ -421,7 +421,7 @@ DeviceControlWidget::DeviceControlWidget(QWidget *parent)
     reloadDevices(true);
     initDeviceList();
 
-    m_refreshTimer->setInterval(3000);
+    m_refreshTimer->setInterval(5000);
     connect(m_refreshTimer, &QTimer::timeout, this, &DeviceControlWidget::refreshDevices);
 }
 
@@ -499,8 +499,15 @@ void DeviceControlWidget::updateDeviceListUI(int category)
     const DeviceList filteredDevices = m_deviceService.filterDevices(m_allDevices, category, m_categories);
     const QPalette palette = this->palette();
     const bool isEnglish = (m_languageKey == QStringLiteral("en_US"));
-    EnvRecordDao envRecordDao;
-    const std::optional<EnvRealtimeSnapshot> envSnapshot = envRecordDao.getLatestRealtimeSnapshot();
+    QStringList filteredIds;
+    filteredIds.reserve(filteredDevices.size());
+    for (const DeviceDefinition &device : filteredDevices)
+    {
+        filteredIds.push_back(device.id);
+    }
+    const QHash<QString, QVariantMap> extraParamsMap = m_deviceService.loadExtraParamsBatch(filteredIds);
+    std::optional<EnvRealtimeSnapshot> envSnapshot;
+    bool envSnapshotFetched = false;
 
     auto refreshCurrentCategory = [this]() {
         reloadDevices(false);
@@ -685,6 +692,13 @@ void DeviceControlWidget::updateDeviceListUI(int category)
         if (isReadOnlySensor)
         {
             QString readingText = localizedValueText(device, device.value, isEnglish);
+            if (!envSnapshotFetched)
+            {
+                EnvRecordDao envRecordDao;
+                envSnapshot = envRecordDao.getLatestRealtimeSnapshot();
+                envSnapshotFetched = true;
+            }
+
             const bool useHomeSnapshot = envSnapshot.has_value()
                                          && (device.id.contains(QStringLiteral("living"), Qt::CaseInsensitive)
                                              || device.name.contains(QStringLiteral("客厅")));
@@ -743,7 +757,7 @@ void DeviceControlWidget::updateDeviceListUI(int category)
 
             if (!shouldHideExtraSettings(device) && device.type.contains(QStringLiteral("空调")))
             {
-                const QVariantMap extraParams = m_deviceService.loadExtraParams(device.id);
+                const QVariantMap extraParams = extraParamsMap.value(device.id);
                 QWidget *extraPanel = new QWidget();
                 extraPanel->setAttribute(Qt::WA_StyledBackground, true);
                 extraPanel->setStyleSheet(panelStyle(palette));
@@ -940,7 +954,7 @@ void DeviceControlWidget::updateDeviceListUI(int category)
             }
             else if (!shouldHideExtraSettings(device) && device.type.contains(QStringLiteral("照明")))
             {
-                const QVariantMap extraParams = m_deviceService.loadExtraParams(device.id);
+                const QVariantMap extraParams = extraParamsMap.value(device.id);
                 QWidget *modePanel = new QWidget();
                 modePanel->setAttribute(Qt::WA_StyledBackground, true);
                 modePanel->setStyleSheet(panelStyle(palette));
@@ -1018,6 +1032,12 @@ void DeviceControlWidget::updateDeviceListUI(int category)
 
 void DeviceControlWidget::refreshDevices()
 {
+    if (!isVisible())
+    {
+        reloadDevices(false);
+        return;
+    }
+
     reloadDevices(false);
     updateDeviceListUI(ui->listCategory->currentRow());
 }
