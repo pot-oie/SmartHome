@@ -13,15 +13,15 @@ QListWidget#navBar {
     border: 1px solid #DCE6F2;
     border-radius: 8px;
     outline: none;
-    padding: 8px 0;
+    padding: 12px 0;
 }
 
 QListWidget#navBar::item {
     color: #2F4258;
-    padding: 0 14px;
-    min-height: 42px;
+    padding: 0 16px;
+    min-height: 0px;
     border-left: 4px solid transparent;
-    font-size: 11pt;
+    font-size: 12pt;
     outline: none;
 }
 

@@ -1,5 +1,7 @@
 #pragma once
 #include <QMainWindow>
+#include <QResizeEvent>
+#include <QStyledItemDelegate>
 #include <QTranslator>
 
 QT_BEGIN_NAMESPACE
@@ -16,6 +18,16 @@ class SettingsWidget;
 class SceneWidget;
 class HistoryWidget;
 
+class NavBarItemDelegate : public QStyledItemDelegate
+{
+public:
+    explicit NavBarItemDelegate(QObject *parent = nullptr);
+
+    void paint(QPainter *painter,
+               const QStyleOptionViewItem &option,
+               const QModelIndex &index) const override;
+};
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -23,6 +35,9 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+
+protected:
+    void resizeEvent(QResizeEvent *event) override;
 
 private slots:
     void onNavBarItemClicked(int index);
@@ -35,6 +50,7 @@ private:
     void applyLanguage(const QString &languageKey);
     QString loadStyleSheet(const QString &resourcePath) const;
     void refreshNavIcons(bool darkTheme);
+    void updateNavBarLayout();
     Ui::MainWindow *ui;
     HomeWidget *m_homeWidget = nullptr;
     DeviceControlWidget *m_deviceControlWidget = nullptr;

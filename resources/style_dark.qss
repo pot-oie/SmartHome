@@ -30,15 +30,16 @@ QGroupBox::title {
 QListWidget#navBar {
     background-color: #12161d;
     border: none;
+    padding: 12px 0;
 }
 
 QListWidget#navBar::item {
     color: #cfd6e4;
-    padding: 0 14px;
-    min-height: 42px;
+    padding: 0 16px;
+    min-height: 0px;
     border-left: 4px solid transparent;
     outline: none;
-    font-size: 11pt;
+    font-size: 12pt;
 }
 
 QListWidget#navBar::item:focus {
