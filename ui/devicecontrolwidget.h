@@ -17,6 +17,7 @@ class DeviceControlWidget : public QWidget
 public:
     explicit DeviceControlWidget(QWidget *parent = nullptr);
     ~DeviceControlWidget();
+    void applyLanguage(const QString &languageKey);
 
 signals:
     void requestControlDevice(const QJsonObject &controlCmd);
@@ -24,6 +25,9 @@ signals:
 public slots:
     void updateDeviceStatus(const QJsonObject &statusData);
     void refreshDevices();
+
+protected:
+    void changeEvent(QEvent *event) override;
 
 private slots:
     void on_listCategory_currentRowChanged(int currentRow);
@@ -34,10 +38,13 @@ private:
     void initDeviceList();
     void reloadDevices(bool reloadCategories = false);
     void updateDeviceListUI(int category);
+    void scheduleThemeRefresh();
 
 private:
     Ui::DeviceControlWidget *ui;
     DeviceService m_deviceService;
     DeviceList m_allDevices;
     QStringList m_categories;
+    QString m_languageKey = QStringLiteral("zh_CN");
+    bool m_themeRefreshScheduled = false;
 };

@@ -10,21 +10,24 @@
 #include <QInputDialog>
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QSignalBlocker>
+#include <QHeaderView>
 #include <QTableWidgetItem>
 
 namespace
 {
 const int kSettingsRefreshIntervalMs = 20000;
 
-QString displayTextForOnlineStatus(const QString &onlineStatus)
+QString displayTextForOnlineStatus(const QString &onlineStatus, const QString &languageKey)
 {
+    const bool isEnglish = (languageKey == QStringLiteral("en_US"));
     if (onlineStatus == QStringLiteral("online"))
     {
-        return QStringLiteral("在线");
+        return isEnglish ? QStringLiteral("Online") : QStringLiteral("在线");
     }
     if (onlineStatus == QStringLiteral("offline"))
     {
-        return QStringLiteral("离线");
+        return isEnglish ? QStringLiteral("Offline") : QStringLiteral("离线");
     }
     return onlineStatus;
 }
@@ -49,15 +52,11 @@ SettingsWidget::SettingsWidget(QWidget *parent)
     , m_refreshTimer(new QTimer(this))
 {
     ui->setupUi(this);
+    refreshStaticTexts();
     loadSystemSettings();
 
     ui->tableWidget_devices->setColumnCount(5);
-    ui->tableWidget_devices->setHorizontalHeaderLabels(
-        {QStringLiteral("设备ID"),
-         QStringLiteral("设备名称"),
-         QStringLiteral("设备类型"),
-         QStringLiteral("IP地址"),
-         QStringLiteral("状态")});
+    ui->tableWidget_devices->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     ui->tableWidget_devices->horizontalHeader()->setStretchLastSection(true);
     ui->tableWidget_devices->setAlternatingRowColors(true);
     ui->tableWidget_devices->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -67,6 +66,7 @@ SettingsWidget::SettingsWidget(QWidget *parent)
     m_refreshTimer->start(kSettingsRefreshIntervalMs);
 
     reloadDevicesFromDatabase();
+    adjustDeviceTableForWidth();
 }
 
 SettingsWidget::~SettingsWidget()
@@ -76,17 +76,89 @@ SettingsWidget::~SettingsWidget()
 
 void SettingsWidget::loadSystemSettings()
 {
-    ui->cmbTheme->blockSignals(true);
-    ui->cmbTheme->clear();
-    ui->cmbTheme->addItems(m_settingsService.themeOptions());
-    ui->cmbTheme->setCurrentIndex(0);
-    ui->cmbTheme->blockSignals(false);
+    const bool isEnglish = (m_languageKey == QStringLiteral("en_US"));
+    const int currentThemeIndex = ui->cmbTheme->currentIndex();
+    const int currentLanguageIndex = ui->comboBox_language->currentIndex();
 
-    ui->comboBox_language->blockSignals(true);
+    const QSignalBlocker themeBlocker(ui->cmbTheme);
+    ui->cmbTheme->clear();
+    if (isEnglish)
+    {
+        ui->cmbTheme->addItems({QStringLiteral("Light"), QStringLiteral("Dark"), QStringLiteral("Auto")});
+    }
+    else
+    {
+        ui->cmbTheme->addItems(m_settingsService.themeOptions());
+    }
+    ui->cmbTheme->setCurrentIndex(qBound(0, currentThemeIndex < 0 ? 0 : currentThemeIndex, ui->cmbTheme->count() - 1));
+
+    const QSignalBlocker languageBlocker(ui->comboBox_language);
     ui->comboBox_language->clear();
-    ui->comboBox_language->addItems(m_settingsService.languageOptions());
-    ui->comboBox_language->setCurrentIndex(0);
-    ui->comboBox_language->blockSignals(false);
+    if (isEnglish)
+    {
+        ui->comboBox_language->addItems({QStringLiteral("Chinese (Simplified)"), QStringLiteral("English")});
+    }
+    else
+    {
+        ui->comboBox_language->addItems(m_settingsService.languageOptions());
+    }
+
+    int targetLanguageIndex = currentLanguageIndex;
+    if (targetLanguageIndex < 0)
+    {
+        targetLanguageIndex = (m_languageKey == QStringLiteral("en_US")) ? 1 : 0;
+    }
+    ui->comboBox_language->setCurrentIndex(qBound(0, targetLanguageIndex, ui->comboBox_language->count() - 1));
+}
+
+void SettingsWidget::refreshStaticTexts()
+{
+    const bool isEnglish = (m_languageKey == QStringLiteral("en_US"));
+
+    if (isEnglish)
+    {
+        ui->groupBox_system->setTitle(QStringLiteral("System Settings"));
+        ui->label_theme->setText(QStringLiteral("Theme:"));
+        ui->label_language->setText(QStringLiteral("Language:"));
+        ui->btnBackupDatabase->setText(QStringLiteral("Backup Database"));
+
+        ui->groupBox_deviceManagement->setTitle(QStringLiteral("Device Management"));
+        ui->btnAddDevice->setText(QStringLiteral("Add Device"));
+        ui->btnDeleteDevice->setText(QStringLiteral("Delete Device"));
+        ui->btnEditDevice->setText(QStringLiteral("Edit Device"));
+        ui->btnTestConnection->setText(QStringLiteral("Test Connectivity"));
+
+        ui->groupBox_about->setTitle(QStringLiteral("About"));
+        ui->label_about->setText(QStringLiteral("Smart Home Platform v1.0\nTeam: SmartHome Team\nStack: Qt 6.10.2 + C++17"));
+        ui->tableWidget_devices->setHorizontalHeaderLabels(
+            {QStringLiteral("Device ID"),
+             QStringLiteral("Device Name"),
+             QStringLiteral("Type"),
+             QStringLiteral("IP Address"),
+             QStringLiteral("Status")});
+    }
+    else
+    {
+        ui->groupBox_system->setTitle(QStringLiteral("系统设置"));
+        ui->label_theme->setText(QStringLiteral("界面主题:"));
+        ui->label_language->setText(QStringLiteral("语言设置:"));
+        ui->btnBackupDatabase->setText(QStringLiteral("一键备份数据库"));
+
+        ui->groupBox_deviceManagement->setTitle(QStringLiteral("设备管理"));
+        ui->btnAddDevice->setText(QStringLiteral("录入新设备"));
+        ui->btnDeleteDevice->setText(QStringLiteral("注销设备"));
+        ui->btnEditDevice->setText(QStringLiteral("编辑设备"));
+        ui->btnTestConnection->setText(QStringLiteral("测试连通性"));
+
+        ui->groupBox_about->setTitle(QStringLiteral("关于系统"));
+        ui->label_about->setText(QStringLiteral("智能家居监控平台 v1.0\n开发团队：SmartHome Team\n技术栈：Qt 6.10.2 + C++17"));
+        ui->tableWidget_devices->setHorizontalHeaderLabels(
+            {QStringLiteral("设备ID"),
+             QStringLiteral("设备名称"),
+             QStringLiteral("设备类型"),
+             QStringLiteral("IP地址"),
+             QStringLiteral("状态")});
+    }
 }
 
 void SettingsWidget::reloadDevicesFromDatabase()
@@ -117,6 +189,48 @@ void SettingsWidget::reloadDevicesFromDatabase()
             }
         }
     }
+
+    adjustDeviceTableForWidth();
+}
+
+void SettingsWidget::adjustDeviceTableForWidth()
+{
+    if (!ui || !ui->tableWidget_devices)
+    {
+        return;
+    }
+
+    const int tableWidth = ui->tableWidget_devices->viewport()->width();
+    if (tableWidth <= 0)
+    {
+        return;
+    }
+
+    // 窄宽度下优先保证设备名称和状态可读，其它列按优先级折叠。
+    if (tableWidth < 430)
+    {
+        ui->tableWidget_devices->setColumnHidden(0, true);
+        ui->tableWidget_devices->setColumnHidden(2, true);
+        ui->tableWidget_devices->setColumnHidden(3, true);
+    }
+    else if (tableWidth < 620)
+    {
+        ui->tableWidget_devices->setColumnHidden(0, false);
+        ui->tableWidget_devices->setColumnHidden(2, true);
+        ui->tableWidget_devices->setColumnHidden(3, true);
+    }
+    else if (tableWidth < 760)
+    {
+        ui->tableWidget_devices->setColumnHidden(0, false);
+        ui->tableWidget_devices->setColumnHidden(2, false);
+        ui->tableWidget_devices->setColumnHidden(3, true);
+    }
+    else
+    {
+        ui->tableWidget_devices->setColumnHidden(0, false);
+        ui->tableWidget_devices->setColumnHidden(2, false);
+        ui->tableWidget_devices->setColumnHidden(3, false);
+    }
 }
 
 void SettingsWidget::addDeviceRow(const SettingsDeviceEntry &device)
@@ -129,7 +243,7 @@ void SettingsWidget::addDeviceRow(const SettingsDeviceEntry &device)
     ui->tableWidget_devices->setItem(row, 2, new QTableWidgetItem(device.type));
     ui->tableWidget_devices->setItem(row, 3, new QTableWidgetItem(device.ip));
 
-    QTableWidgetItem *statusItem = new QTableWidgetItem(displayTextForOnlineStatus(device.onlineStatus));
+    QTableWidgetItem *statusItem = new QTableWidgetItem(displayTextForOnlineStatus(device.onlineStatus, m_languageKey));
     statusItem->setForeground(QBrush(QColor(displayColorForOnlineStatus(device.onlineStatus))));
     ui->tableWidget_devices->setItem(row, 4, statusItem);
 }
@@ -173,6 +287,19 @@ void SettingsWidget::on_comboBox_language_currentIndexChanged(int index)
 {
     const QString languageKey = m_settingsService.languageKeyByIndex(index);
     emit languageChanged(languageKey);
+}
+
+void SettingsWidget::applyLanguage(const QString &languageKey)
+{
+    if (languageKey.trimmed().isEmpty())
+    {
+        return;
+    }
+
+    m_languageKey = languageKey;
+    refreshStaticTexts();
+    loadSystemSettings();
+    reloadDevicesFromDatabase();
 }
 
 void SettingsWidget::on_btnAddDevice_clicked()
@@ -279,4 +406,23 @@ void SettingsWidget::showEvent(QShowEvent *event)
 {
     QWidget::showEvent(event);
     reloadDevicesFromDatabase();
+    adjustDeviceTableForWidth();
+}
+
+void SettingsWidget::changeEvent(QEvent *event)
+{
+    QWidget::changeEvent(event);
+
+    if (event->type() == QEvent::LanguageChange)
+    {
+        refreshStaticTexts();
+        loadSystemSettings();
+        reloadDevicesFromDatabase();
+    }
+}
+
+void SettingsWidget::resizeEvent(QResizeEvent *event)
+{
+    QWidget::resizeEvent(event);
+    adjustDeviceTableForWidth();
 }

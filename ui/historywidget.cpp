@@ -8,6 +8,7 @@
 #include <QDir>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QHash>
 #include <QHBoxLayout>
 #include <QLayout>
 #include <QMessageBox>
@@ -19,6 +20,29 @@ namespace
     const QString kHint = QStringLiteral("\u63d0\u793a");
     const QString kFailed = QStringLiteral("\u5931\u8d25");
     const QString kSuccess = QStringLiteral("\u6210\u529f");
+
+    QString localizedText(const QString &value, bool isEnglish)
+    {
+        if (!isEnglish)
+        {
+            return value;
+        }
+
+        static const QHash<QString, QString> map = {
+            {QStringLiteral("管理员"), QStringLiteral("Admin")},
+            {QStringLiteral("开启"), QStringLiteral("On")},
+            {QStringLiteral("关闭"), QStringLiteral("Off")},
+            {QStringLiteral("成功"), QStringLiteral("Success")},
+            {QStringLiteral("失败"), QStringLiteral("Failed")},
+            {QStringLiteral("客厅主灯"), QStringLiteral("Living Room Light")},
+            {QStringLiteral("卧室灯"), QStringLiteral("Bedroom Light")},
+            {QStringLiteral("客厅空调"), QStringLiteral("Living Room AC")},
+            {QStringLiteral("客厅窗帘"), QStringLiteral("Living Room Curtain")},
+            {QStringLiteral("前门智能锁"), QStringLiteral("Front Door Lock")},
+            {QStringLiteral("客厅摄像头"), QStringLiteral("Living Room Camera")},
+            {QStringLiteral("客厅电视"), QStringLiteral("Living Room TV")}};
+        return map.value(value, value);
+    }
 }
 
 HistoryWidget::HistoryWidget(QWidget *parent)
@@ -60,11 +84,40 @@ HistoryWidget::HistoryWidget(QWidget *parent)
     connect(m_btnDeleteLog, &QPushButton::clicked, this, &HistoryWidget::deleteSelectedOperationLog);
 
     queryOperationLogs();
+    applyLanguage(QStringLiteral("zh_CN"));
 }
 
 HistoryWidget::~HistoryWidget()
 {
     delete ui;
+}
+
+void HistoryWidget::applyLanguage(const QString &languageKey)
+{
+    if (languageKey.trimmed().isEmpty())
+    {
+        return;
+    }
+
+    m_languageKey = languageKey;
+    const bool isEnglish = (m_languageKey == QStringLiteral("en_US"));
+
+    ui->groupBox_filter->setTitle(isEnglish ? QStringLiteral("Filters") : QStringLiteral("查询条件"));
+    ui->label_startTime->setText(isEnglish ? QStringLiteral("Start Time:") : QStringLiteral("开始时间:"));
+    ui->label_endTime->setText(isEnglish ? QStringLiteral("End Time:") : QStringLiteral("结束时间:"));
+    ui->label_deviceType->setText(isEnglish ? QStringLiteral("Device Type:") : QStringLiteral("设备类型:"));
+    ui->btnSearch->setText(isEnglish ? QStringLiteral("Search") : QStringLiteral("查询记录"));
+    ui->btnExport->setText(isEnglish ? QStringLiteral("Export Excel") : QStringLiteral("导出Excel"));
+    if (m_btnDeleteLog)
+    {
+        m_btnDeleteLog->setText(isEnglish ? QStringLiteral("Delete Selected") : QStringLiteral("删除选中日志"));
+    }
+
+    ui->tabWidget->setTabText(0, isEnglish ? QStringLiteral("Operation Logs") : QStringLiteral("操作日志列表"));
+    ui->tabWidget->setTabText(1, isEnglish ? QStringLiteral("Environment Chart") : QStringLiteral("环境数据折线图"));
+    ui->tableWidget_logs->setHorizontalHeaderLabels(isEnglish
+                                                        ? QStringList{QStringLiteral("Time"), QStringLiteral("User"), QStringLiteral("Operation"), QStringLiteral("Device"), QStringLiteral("Details"), QStringLiteral("Result")}
+                                                        : QStringList{QStringLiteral("时间"), QStringLiteral("用户"), QStringLiteral("操作类型"), QStringLiteral("设备"), QStringLiteral("详情"), QStringLiteral("结果")});
 }
 
 void HistoryWidget::showEvent(QShowEvent *event)
@@ -94,11 +147,12 @@ void HistoryWidget::queryOperationLogs()
         QTableWidgetItem *timeItem = new QTableWidgetItem(entry.timestamp.toString("yyyy-MM-dd hh:mm:ss"));
         timeItem->setData(Qt::UserRole, entry.recordId);
         ui->tableWidget_logs->setItem(row, 0, timeItem);
-        ui->tableWidget_logs->setItem(row, 1, new QTableWidgetItem(entry.user));
-        ui->tableWidget_logs->setItem(row, 2, new QTableWidgetItem(entry.operation));
-        ui->tableWidget_logs->setItem(row, 3, new QTableWidgetItem(entry.device));
-        ui->tableWidget_logs->setItem(row, 4, new QTableWidgetItem(entry.detail));
-        ui->tableWidget_logs->setItem(row, 5, new QTableWidgetItem(entry.result));
+        const bool isEnglish = (m_languageKey == QStringLiteral("en_US"));
+        ui->tableWidget_logs->setItem(row, 1, new QTableWidgetItem(localizedText(entry.user, isEnglish)));
+        ui->tableWidget_logs->setItem(row, 2, new QTableWidgetItem(localizedText(entry.operation, isEnglish)));
+        ui->tableWidget_logs->setItem(row, 3, new QTableWidgetItem(localizedText(entry.device, isEnglish)));
+        ui->tableWidget_logs->setItem(row, 4, new QTableWidgetItem(isEnglish ? entry.detail : entry.detail));
+        ui->tableWidget_logs->setItem(row, 5, new QTableWidgetItem(localizedText(entry.result, isEnglish)));
     }
 }
 

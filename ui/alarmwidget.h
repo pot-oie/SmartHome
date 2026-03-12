@@ -18,6 +18,7 @@ class AlarmWidget : public QWidget
 public:
     explicit AlarmWidget(QWidget *parent = nullptr);
     ~AlarmWidget();
+    void applyLanguage(const QString &languageKey);
 
 public slots:
     void triggerAlarm(const QJsonObject &alarmData);
@@ -33,6 +34,7 @@ private:
     Ui::AlarmWidget *ui;
     AlarmService m_alarmService;
     QTimer *m_refreshTimer = nullptr;
+    QString m_languageKey = QStringLiteral("zh_CN");
 
     void playAlarmAlertTone();
     void refreshData();

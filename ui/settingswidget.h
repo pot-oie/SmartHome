@@ -1,8 +1,10 @@
 #pragma once
 
 #include <QShowEvent>
+#include <QResizeEvent>
 #include <QTimer>
 #include <QWidget>
+#include <QEvent>
 
 #include "services/settingsservice.h"
 
@@ -18,6 +20,7 @@ class SettingsWidget : public QWidget
 public:
     explicit SettingsWidget(QWidget *parent = nullptr);
     ~SettingsWidget();
+    void applyLanguage(const QString &languageKey);
 
 signals:
     void themeChanged(const QString &themeName);
@@ -37,11 +40,16 @@ private:
     SettingsService m_settingsService;
     SettingsDeviceList m_devices;
     QTimer *m_refreshTimer = nullptr;
+    QString m_languageKey = QStringLiteral("zh_CN");
 
     void loadSystemSettings();
+    void refreshStaticTexts();
     void reloadDevicesFromDatabase();
     void addDeviceRow(const SettingsDeviceEntry &device);
+    void adjustDeviceTableForWidth();
 
 protected:
     void showEvent(QShowEvent *event) override;
+    void changeEvent(QEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
 };

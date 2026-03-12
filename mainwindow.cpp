@@ -8,8 +8,35 @@
 #include "ui/settingswidget.h"
 
 #include <QApplication>
+#include <QColor>
 #include <QFile>
 #include <QListWidgetItem>
+#include <QPainter>
+#include <QPixmap>
+#include <QStyle>
+
+namespace
+{
+QIcon tintedIcon(const QString &path, const QColor &color)
+{
+    const QIcon baseIcon(path);
+    const QSize iconSize(24, 24);
+    const QPixmap src = baseIcon.pixmap(iconSize);
+    if (src.isNull())
+    {
+        return baseIcon;
+    }
+
+    QPixmap tinted(src.size());
+    tinted.fill(Qt::transparent);
+    QPainter painter(&tinted);
+    painter.drawPixmap(0, 0, src);
+    painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+    painter.fillRect(tinted.rect(), color);
+    painter.end();
+    return QIcon(tinted);
+}
+}
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -30,10 +57,12 @@ void MainWindow::initUI()
     resize(1024, 768);
 
     ui->navBar->setIconSize(QSize(24, 24));
+    ui->navBar->setFocusPolicy(Qt::NoFocus);
 
     auto addNavItem = [this](const QString &icon, const QString &text)
     {
         QListWidgetItem *item = new QListWidgetItem(QIcon(icon), text);
+        item->setData(Qt::UserRole, icon);
         ui->navBar->addItem(item);
     };
 
@@ -50,23 +79,28 @@ void MainWindow::initUI()
     m_deviceControlWidget = new DeviceControlWidget(this);
     ui->stackWidget->addWidget(m_deviceControlWidget);
 
-    ui->stackWidget->addWidget(new SceneWidget(this));
-    ui->stackWidget->addWidget(new HistoryWidget(this));
+    m_sceneWidget = new SceneWidget(this);
+    ui->stackWidget->addWidget(m_sceneWidget);
+
+    m_historyWidget = new HistoryWidget(this);
+    ui->stackWidget->addWidget(m_historyWidget);
 
     m_alarmWidget = new AlarmWidget(this);
     ui->stackWidget->addWidget(m_alarmWidget);
 
-    SettingsWidget *settingsWidget = new SettingsWidget(this);
-    ui->stackWidget->addWidget(settingsWidget);
+    m_settingsWidget = new SettingsWidget(this);
+    ui->stackWidget->addWidget(m_settingsWidget);
 
     ui->stackWidget->setCurrentIndex(0);
     ui->navBar->setCurrentRow(0);
 
     connect(ui->navBar, &QListWidget::currentRowChanged, this, &MainWindow::onNavBarItemClicked);
-    connect(settingsWidget, &SettingsWidget::themeChanged, this, &MainWindow::onThemeChanged);
-    connect(settingsWidget, &SettingsWidget::languageChanged, this, &MainWindow::onLanguageChanged);
-    connect(settingsWidget, &SettingsWidget::devicesChanged, m_homeWidget, &HomeWidget::refreshDeviceStatus);
+    connect(m_settingsWidget, &SettingsWidget::themeChanged, this, &MainWindow::onThemeChanged);
+    connect(m_settingsWidget, &SettingsWidget::languageChanged, this, &MainWindow::onLanguageChanged);
+    connect(m_settingsWidget, &SettingsWidget::devicesChanged, m_homeWidget, &HomeWidget::refreshDeviceStatus);
     connect(m_homeWidget, &HomeWidget::alarmTriggered, m_alarmWidget, &AlarmWidget::triggerAlarm);
+
+    refreshNavIcons(false);
 }
 
 void MainWindow::onNavBarItemClicked(int index)
@@ -108,11 +142,60 @@ void MainWindow::applyTheme(const QString &themeName)
     if (!styleSheet.isEmpty())
     {
         qApp->setStyleSheet(styleSheet);
+
+        // 强制重新抛光，避免主题来回切换后个别控件保留旧样式状态
+        const QWidgetList widgets = qApp->allWidgets();
+        for (QWidget *widget : widgets)
+        {
+            if (!widget)
+            {
+                continue;
+            }
+            widget->style()->unpolish(widget);
+            widget->style()->polish(widget);
+            widget->update();
+        }
+
+        refreshNavIcons(themeName == QStringLiteral("dark"));
+
+        if (m_homeWidget)
+        {
+            m_homeWidget->refreshQuickControls();
+        }
+        if (m_deviceControlWidget)
+        {
+            m_deviceControlWidget->refreshDevices();
+        }
+    }
+}
+
+void MainWindow::refreshNavIcons(bool darkTheme)
+{
+    if (!ui || !ui->navBar)
+    {
+        return;
+    }
+
+    const QColor iconColor = darkTheme ? QColor("#D8E7FF") : QColor("#30485F");
+    for (int i = 0; i < ui->navBar->count(); ++i)
+    {
+        QListWidgetItem *item = ui->navBar->item(i);
+        if (!item)
+        {
+            continue;
+        }
+
+        const QString iconPath = item->data(Qt::UserRole).toString();
+        if (!iconPath.trimmed().isEmpty())
+        {
+            item->setIcon(tintedIcon(iconPath, iconColor));
+        }
     }
 }
 
 void MainWindow::applyLanguage(const QString &languageKey)
 {
+    m_languageKey = languageKey;
     qApp->removeTranslator(&m_translator);
 
     if (languageKey == QStringLiteral("en_US"))
@@ -123,17 +206,49 @@ void MainWindow::applyLanguage(const QString &languageKey)
         }
     }
 
-    setWindowTitle(tr("智能家居监控平台"));
-    const QStringList navTexts = {
-        tr("首页"),
-        tr("设备控制"),
-        tr("场景管理"),
-        tr("历史记录"),
-        tr("报警设置"),
-        tr("系统设置")};
+    const bool isEnglish = (languageKey == QStringLiteral("en_US"));
+    setWindowTitle(isEnglish ? QStringLiteral("Smart Home Platform") : QStringLiteral("智能家居监控平台"));
+    const QStringList navTexts = isEnglish
+                                     ? QStringList{QStringLiteral("Home"),
+                                                   QStringLiteral("Devices"),
+                                                   QStringLiteral("Scenes"),
+                                                   QStringLiteral("History"),
+                                                   QStringLiteral("Alarms"),
+                                                   QStringLiteral("Settings")}
+                                     : QStringList{QStringLiteral("首页"),
+                                                   QStringLiteral("设备控制"),
+                                                   QStringLiteral("场景管理"),
+                                                   QStringLiteral("历史记录"),
+                                                   QStringLiteral("报警设置"),
+                                                   QStringLiteral("系统设置")};
     for (int i = 0; i < ui->navBar->count() && i < navTexts.size(); ++i)
     {
         ui->navBar->item(i)->setText(navTexts.at(i));
+    }
+
+    if (m_settingsWidget)
+    {
+        m_settingsWidget->applyLanguage(languageKey);
+    }
+    if (m_homeWidget)
+    {
+        m_homeWidget->applyLanguage(languageKey);
+    }
+    if (m_deviceControlWidget)
+    {
+        m_deviceControlWidget->applyLanguage(languageKey);
+    }
+    if (m_sceneWidget)
+    {
+        m_sceneWidget->applyLanguage(languageKey);
+    }
+    if (m_historyWidget)
+    {
+        m_historyWidget->applyLanguage(languageKey);
+    }
+    if (m_alarmWidget)
+    {
+        m_alarmWidget->applyLanguage(languageKey);
     }
 }
 

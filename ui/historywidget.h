@@ -21,6 +21,7 @@ class HistoryWidget : public QWidget
 public:
     explicit HistoryWidget(QWidget *parent = nullptr);
     ~HistoryWidget();
+    void applyLanguage(const QString &languageKey);
 
 protected:
     void showEvent(QShowEvent *event) override;
@@ -42,4 +43,5 @@ private:
     OperationLogList m_currentLogs;
     QCustomPlot *customPlot = nullptr;
     QPushButton *m_btnDeleteLog = nullptr;
+    QString m_languageKey = QStringLiteral("zh_CN");
 };

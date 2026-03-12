@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
 
     // 加载全局样式表
-    QFile styleFile(":/resources/style.qss");
+    QFile styleFile(":/style.qss");
     if (styleFile.open(QFile::ReadOnly))
     {
         QString style = QLatin1String(styleFile.readAll());

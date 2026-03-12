@@ -12,6 +12,9 @@ QT_END_NAMESPACE
 class HomeWidget;
 class DeviceControlWidget;
 class AlarmWidget;
+class SettingsWidget;
+class SceneWidget;
+class HistoryWidget;
 
 class MainWindow : public QMainWindow
 {
@@ -31,9 +34,14 @@ private:
     void applyTheme(const QString &themeName);
     void applyLanguage(const QString &languageKey);
     QString loadStyleSheet(const QString &resourcePath) const;
+    void refreshNavIcons(bool darkTheme);
     Ui::MainWindow *ui;
     HomeWidget *m_homeWidget = nullptr;
     DeviceControlWidget *m_deviceControlWidget = nullptr;
+    SceneWidget *m_sceneWidget = nullptr;
+    HistoryWidget *m_historyWidget = nullptr;
     AlarmWidget *m_alarmWidget = nullptr;
+    SettingsWidget *m_settingsWidget = nullptr;
     QTranslator m_translator;
+    QString m_languageKey = QStringLiteral("zh_CN");
 };

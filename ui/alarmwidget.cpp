@@ -26,6 +26,29 @@ std::atomic_bool g_alarmTonePlaying{false};
 }
 #endif
 
+namespace
+{
+QString localizedAlarmStatusText(const QString &text, bool isEnglish)
+{
+    if (!isEnglish)
+    {
+        return text;
+    }
+
+    if (text.trimmed().isEmpty())
+    {
+        return QStringLiteral("System normal, no alarms");
+    }
+
+    static const QHash<QString, QString> map = {
+        {QStringLiteral("系统正常，无报警"), QStringLiteral("System normal, no alarms")},
+        {QStringLiteral("系统正常，无报警信息"), QStringLiteral("System normal, no alarms")},
+        {QStringLiteral("系统正常，无报警记录"), QStringLiteral("System normal, no alarms")},
+        {QStringLiteral("系统运行正常，无报警"), QStringLiteral("System running normally, no alarms")}};
+    return map.value(text, text);
+}
+}
+
 AlarmWidget::AlarmWidget(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::AlarmWidget)
@@ -46,6 +69,7 @@ AlarmWidget::AlarmWidget(QWidget *parent)
     ui->tableWidget_alarmLogs->verticalHeader()->setVisible(false);
 
     refreshData();
+    applyLanguage(QStringLiteral("zh_CN"));
     connect(m_refreshTimer, &QTimer::timeout, this, &AlarmWidget::refreshData);
     m_refreshTimer->start(5000);
 }
@@ -53,6 +77,35 @@ AlarmWidget::AlarmWidget(QWidget *parent)
 AlarmWidget::~AlarmWidget()
 {
     delete ui;
+}
+
+void AlarmWidget::applyLanguage(const QString &languageKey)
+{
+    if (languageKey.trimmed().isEmpty())
+    {
+        return;
+    }
+
+    m_languageKey = languageKey;
+    const bool isEnglish = (m_languageKey == QStringLiteral("en_US"));
+
+    ui->groupBox_thresholds->setTitle(isEnglish ? QStringLiteral("Alarm Thresholds") : QStringLiteral("报警阈值设置"));
+    ui->label_tempMin->setText(isEnglish ? QStringLiteral("Temp Min (°C):") : QStringLiteral("温度下限 (°C):"));
+    ui->label_tempMax->setText(isEnglish ? QStringLiteral("Temp Max (°C):") : QStringLiteral("温度上限 (°C):"));
+    ui->label_humidityMin->setText(isEnglish ? QStringLiteral("Humidity Min (%):") : QStringLiteral("湿度下限 (%):"));
+    ui->label_humidityMax->setText(isEnglish ? QStringLiteral("Humidity Max (%):") : QStringLiteral("湿度上限 (%):"));
+    ui->btnSaveThresholds->setText(isEnglish ? QStringLiteral("Save Thresholds") : QStringLiteral("保存报警阈值设置"));
+
+    ui->groupBox_alarmStatus->setTitle(isEnglish ? QStringLiteral("Current Alarm Status") : QStringLiteral("当前报警状态"));
+    ui->groupBox_alarmHistory->setTitle(isEnglish ? QStringLiteral("Alarm History") : QStringLiteral("报警历史记录"));
+    ui->btnClearLogs->setText(isEnglish ? QStringLiteral("Clear History") : QStringLiteral("清空报警历史"));
+    ui->tableWidget_alarmLogs->setHorizontalHeaderLabels(isEnglish
+                                                             ? QStringList{QStringLiteral("Time"), QStringLiteral("Type"), QStringLiteral("Trigger"), QStringLiteral("Details")}
+                                                             : QStringList{QStringLiteral("时间"), QStringLiteral("报警类型"), QStringLiteral("触发值"), QStringLiteral("详情")});
+    if (ui->label_alarmText->text().contains(QStringLiteral("系统正常")) || ui->label_alarmText->text().contains(QStringLiteral("System normal")))
+    {
+        ui->label_alarmText->setText(isEnglish ? QStringLiteral("System normal, no alarms") : QStringLiteral("系统正常，无报警"));
+    }
 }
 
 void AlarmWidget::showEvent(QShowEvent *event)
@@ -125,9 +178,11 @@ void AlarmWidget::loadAlarmStatus()
         hasActiveAlarm
             ? QStringLiteral("color: #d32f2f;")
             : QStringLiteral("color: #2e7d32;"));
-    ui->label_alarmText->setText(status.text.isEmpty()
-                                     ? QStringLiteral("系统正常，无报警")
-                                     : status.text);
+    const bool isEnglish = (m_languageKey == QStringLiteral("en_US"));
+    ui->label_alarmText->setText(localizedAlarmStatusText(status.text.isEmpty()
+                                                              ? QStringLiteral("系统正常，无报警")
+                                                              : status.text,
+                                                          isEnglish));
 
     if (!errorText.isEmpty())
     {

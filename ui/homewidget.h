@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QJsonObject>
+#include <QResizeEvent>
 #include <QShowEvent>
 #include <QList>
 #include <QString>
@@ -27,6 +28,7 @@ class HomeWidget : public QWidget
 public:
     explicit HomeWidget(QWidget *parent = nullptr);
     ~HomeWidget();
+    void applyLanguage(const QString &languageKey);
 
 signals:
     void alarmTriggered(const QJsonObject &alarmData);
@@ -39,6 +41,7 @@ public slots:
 
 protected:
     void showEvent(QShowEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
 
 private slots:
     void onQuickControlClicked();
@@ -55,8 +58,10 @@ private:
     EnvRecordDao m_envRecordDao;
     QTimer *m_environmentRefreshTimer;
     QString m_selectedSceneId;
+    QString m_languageKey = QStringLiteral("zh_CN");
 
     void initConnections();
+    void refreshStaticTexts();
     void ensureQuickControlEditButton();
     void applyTemperatureColor(double temperature);
     void updateDeviceStatusLabel(const DeviceStatusSummary &summary);

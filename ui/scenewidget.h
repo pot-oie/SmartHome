@@ -1,6 +1,8 @@
 #pragma once
 
 #include <QJsonObject>
+#include <QEvent>
+#include <QResizeEvent>
 #include <QWidget>
 
 #include "services/sceneservice.h"
@@ -17,6 +19,7 @@ class SceneWidget : public QWidget
 public:
     explicit SceneWidget(QWidget *parent = nullptr);
     ~SceneWidget();
+    void applyLanguage(const QString &languageKey);
 
 signals:
     void requestTriggerScene(const QJsonObject &sceneCmd);
@@ -39,6 +42,7 @@ private:
     void loadScenesFromDatabase(const QString &sceneCodeToSelect = QString(), qint64 actionIdToSelect = 0);
     void renderSceneList();
     void renderSceneDetails(const SceneDefinition &scene);
+    void updateActionButtonsLayout();
     bool openSceneDialog(SceneDefinition *scene, const QString &title);
     bool openActionDialog(SceneDeviceAction *action, const QString &title);
     int findSceneRowByCode(const QString &sceneCode) const;
@@ -48,4 +52,9 @@ private:
     Ui::SceneWidget *ui;
     SceneService m_sceneService;
     SceneList m_scenes;
+    QString m_languageKey = QStringLiteral("zh_CN");
+
+protected:
+    void changeEvent(QEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
 };

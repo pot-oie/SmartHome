@@ -81,7 +81,7 @@ bool SystemConfigDao::saveAlarmThresholds(const AlarmThreshold &threshold, qint6
 
     const QVariant updatedByValue = updatedBy > 0
                                         ? QVariant::fromValue(updatedBy)
-                                        : QVariant(QVariant::LongLong);
+                                        : QVariant::fromValue(qint64(0));
     const bool ok = databaseManager.exec(
         sql,
         {QStringLiteral("default"),

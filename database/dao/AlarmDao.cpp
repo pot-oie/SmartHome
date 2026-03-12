@@ -320,7 +320,7 @@ std::optional<AlarmLogEntry> AlarmDao::createEnvironmentAlarm(const QString &ala
     const QString finalTriggerText = composeTriggerText(triggerValue, triggerDisplayText, triggerUnit);
     const QVariant deviceValue = sourceDeviceId > 0
                                      ? QVariant::fromValue(sourceDeviceId)
-                                     : QVariant(QVariant::LongLong);
+                                     : QVariant::fromValue(qint64(0));
 
     if (checkQuery.next())
     {
