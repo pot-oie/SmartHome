@@ -9,7 +9,6 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QHash>
-#include <QHBoxLayout>
 #include <QLayout>
 #include <QMessageBox>
 #include <QPushButton>
@@ -43,6 +42,20 @@ namespace
             {QStringLiteral("客厅摄像头"), QStringLiteral("Living Room Camera")},
             {QStringLiteral("客厅电视"), QStringLiteral("Living Room TV")}};
         return map.value(value, value);
+    }
+
+    QString noEnvironmentDataText(bool isEnglish)
+    {
+        return isEnglish
+                   ? QStringLiteral("No environment history data is available in the selected time range.")
+                   : QStringLiteral("当前所选时间范围内没有可用的环境历史数据。");
+    }
+
+    QString loadingEnvironmentDataText(bool isEnglish)
+    {
+        return isEnglish
+                   ? QStringLiteral("Loading environment history data...")
+                   : QStringLiteral("正在加载环境历史数据...");
     }
 }
 
@@ -153,9 +166,24 @@ void HistoryWidget::applyLanguage(const QString &languageKey)
 
     ui->tabWidget->setTabText(0, isEnglish ? QStringLiteral("Operation Logs") : QStringLiteral("操作日志列表"));
     ui->tabWidget->setTabText(1, isEnglish ? QStringLiteral("Environment Chart") : QStringLiteral("环境数据折线图"));
-    ui->tableWidget_logs->setHorizontalHeaderLabels(isEnglish
-                                                        ? QStringList{QStringLiteral("Time"), QStringLiteral("User"), QStringLiteral("Operation"), QStringLiteral("Device"), QStringLiteral("Details"), QStringLiteral("Result")}
-                                                        : QStringList{QStringLiteral("时间"), QStringLiteral("用户"), QStringLiteral("操作类型"), QStringLiteral("设备"), QStringLiteral("详情"), QStringLiteral("结果")});
+    ui->tableWidget_logs->setHorizontalHeaderLabels(
+        isEnglish
+            ? QStringList{QStringLiteral("Time"), QStringLiteral("User"), QStringLiteral("Operation"), QStringLiteral("Device"), QStringLiteral("Details"), QStringLiteral("Result")}
+            : QStringList{QStringLiteral("时间"), QStringLiteral("用户"), QStringLiteral("操作类型"), QStringLiteral("设备"), QStringLiteral("详情"), QStringLiteral("结果")});
+
+    if (customPlot)
+    {
+        customPlot->graph(0)->setName(isEnglish ? QStringLiteral("Temperature (C)") : QStringLiteral("温度 (C)"));
+        customPlot->graph(1)->setName(isEnglish ? QStringLiteral("Humidity (%)") : QStringLiteral("湿度 (%)"));
+        customPlot->xAxis->setLabel(isEnglish ? QStringLiteral("Time") : QStringLiteral("时间"));
+        customPlot->yAxis->setLabel(isEnglish ? QStringLiteral("Environment Value") : QStringLiteral("环境数值"));
+        customPlot->replot();
+    }
+
+    if (ui->label_chartPlaceholder->isVisible())
+    {
+        ui->label_chartPlaceholder->setText(noEnvironmentDataText(isEnglish));
+    }
 }
 
 void HistoryWidget::showEvent(QShowEvent *event)
@@ -183,14 +211,15 @@ void HistoryWidget::renderOperationLogs(const OperationLogList &logs)
     for (int i = 0; i < logs.size(); ++i)
     {
         const OperationLogEntry &entry = logs.at(i);
-        QTableWidgetItem *timeItem = new QTableWidgetItem(entry.timestamp.toString("yyyy-MM-dd hh:mm:ss"));
+        QTableWidgetItem *timeItem = new QTableWidgetItem(entry.timestamp.toString(QStringLiteral("yyyy-MM-dd hh:mm:ss")));
         timeItem->setData(Qt::UserRole, entry.recordId);
         ui->tableWidget_logs->setItem(i, 0, timeItem);
+
         const bool isEnglish = (m_languageKey == QStringLiteral("en_US"));
         ui->tableWidget_logs->setItem(i, 1, new QTableWidgetItem(localizedText(entry.user, isEnglish)));
         ui->tableWidget_logs->setItem(i, 2, new QTableWidgetItem(localizedText(entry.operation, isEnglish)));
         ui->tableWidget_logs->setItem(i, 3, new QTableWidgetItem(localizedText(entry.device, isEnglish)));
-        ui->tableWidget_logs->setItem(i, 4, new QTableWidgetItem(isEnglish ? entry.detail : entry.detail));
+        ui->tableWidget_logs->setItem(i, 4, new QTableWidgetItem(entry.detail));
         ui->tableWidget_logs->setItem(i, 5, new QTableWidgetItem(localizedText(entry.result, isEnglish)));
     }
 
@@ -212,6 +241,7 @@ void HistoryWidget::queryOperationLogs()
 void HistoryWidget::renderEnvironmentSeries(const EnvironmentSeries &series)
 {
     ui->label_chartPlaceholder->hide();
+    const bool isEnglish = (m_languageKey == QStringLiteral("en_US"));
 
     if (!customPlot)
     {
@@ -220,49 +250,89 @@ void HistoryWidget::renderEnvironmentSeries(const EnvironmentSeries &series)
 
         customPlot->addGraph();
         customPlot->graph(0)->setPen(QPen(Qt::red, 2));
-        customPlot->graph(0)->setName(QStringLiteral("温度 (C)"));
+        customPlot->graph(0)->setName(isEnglish ? QStringLiteral("Temperature (C)") : QStringLiteral("温度 (C)"));
 
         customPlot->addGraph();
         customPlot->graph(1)->setPen(QPen(Qt::blue, 2));
-        customPlot->graph(1)->setName(QStringLiteral("湿度 (%)"));
+        customPlot->graph(1)->setName(isEnglish ? QStringLiteral("Humidity (%)") : QStringLiteral("湿度 (%)"));
 
         QSharedPointer<QCPAxisTickerDateTime> dateTicker(new QCPAxisTickerDateTime);
-        dateTicker->setDateTimeFormat("MM-dd hh:mm");
+        dateTicker->setDateTimeFormat(QStringLiteral("MM-dd hh:mm"));
         customPlot->xAxis->setTicker(dateTicker);
-        customPlot->xAxis->setLabel(QStringLiteral("时间"));
-        customPlot->yAxis->setLabel(QStringLiteral("环境数值"));
+        customPlot->xAxis->setLabel(isEnglish ? QStringLiteral("Time") : QStringLiteral("时间"));
+        customPlot->yAxis->setLabel(isEnglish ? QStringLiteral("Environment Value") : QStringLiteral("环境数值"));
         customPlot->legend->setVisible(true);
     }
 
     QVector<double> timeData;
     QVector<double> tempData;
     QVector<double> humData;
+    double minValue = 0.0;
+    double maxValue = 0.0;
+    bool hasValue = false;
+
     for (const EnvironmentPoint &point : series)
     {
         timeData.push_back(point.timestamp.toSecsSinceEpoch());
         tempData.push_back(point.temperature);
         humData.push_back(point.humidity);
+
+        const double pointMin = qMin(point.temperature, point.humidity);
+        const double pointMax = qMax(point.temperature, point.humidity);
+        if (!hasValue)
+        {
+            minValue = pointMin;
+            maxValue = pointMax;
+            hasValue = true;
+        }
+        else
+        {
+            minValue = qMin(minValue, pointMin);
+            maxValue = qMax(maxValue, pointMax);
+        }
     }
+
+    const QDateTime visibleStartTime(ui->dateTimeEdit_start->date(), QTime(0, 0, 0));
+    const QDateTime visibleEndTime(ui->dateTimeEdit_end->date(), QTime(23, 59, 59));
 
     if (timeData.isEmpty())
     {
-        ui->label_chartPlaceholder->setText(QStringLiteral("当前没有可用的环境历史数据。"));
+        customPlot->graph(0)->data()->clear();
+        customPlot->graph(1)->data()->clear();
+        customPlot->xAxis->setRange(visibleStartTime.toSecsSinceEpoch(), visibleEndTime.toSecsSinceEpoch());
+        customPlot->yAxis->setRange(0, 100);
+        customPlot->replot();
+        ui->label_chartPlaceholder->setText(noEnvironmentDataText(isEnglish));
         ui->label_chartPlaceholder->show();
         return;
     }
 
     customPlot->graph(0)->setData(timeData, tempData);
     customPlot->graph(1)->setData(timeData, humData);
-    customPlot->xAxis->setRange(timeData.first(), timeData.last());
-    customPlot->yAxis->setRange(0, 100);
+    customPlot->xAxis->setRange(visibleStartTime.toSecsSinceEpoch(), visibleEndTime.toSecsSinceEpoch());
+
+    double lowerBound = minValue - 5.0;
+    double upperBound = maxValue + 5.0;
+    if (qFuzzyCompare(lowerBound, upperBound))
+    {
+        lowerBound -= 1.0;
+        upperBound += 1.0;
+    }
+
+    customPlot->yAxis->setRange(lowerBound, upperBound);
     customPlot->replot();
 }
 
 void HistoryWidget::queryEnvironmentDataAndDrawChart()
 {
-    ui->label_chartPlaceholder->setText(QStringLiteral("正在加载环境历史数据..."));
+    const QDate startDate = ui->dateTimeEdit_start->date();
+    const QDate endDate = ui->dateTimeEdit_end->date();
+    const QDateTime startTime(startDate, QTime(0, 0, 0));
+    const QDateTime endTime(endDate.addDays(1), QTime(0, 0, 0));
+
+    ui->label_chartPlaceholder->setText(loadingEnvironmentDataText(m_languageKey == QStringLiteral("en_US")));
     ui->label_chartPlaceholder->show();
-    m_historyService.asyncQueryEnvironmentSeries(24);
+    m_historyService.asyncQueryEnvironmentSeries(startTime, endTime);
 }
 
 void HistoryWidget::onOperationLogsLoaded(OperationLogList logs)
@@ -272,7 +342,10 @@ void HistoryWidget::onOperationLogsLoaded(OperationLogList logs)
     if (m_showLogLoadedMessage)
     {
         m_showLogLoadedMessage = false;
-        QMessageBox::information(this, kSuccess, QStringLiteral("已加载 %1 条操作日志记录。").arg(m_currentLogs.size()));
+        QMessageBox::information(this, kSuccess,
+                                 (m_languageKey == QStringLiteral("en_US"))
+                                     ? QStringLiteral("Loaded %1 operation log entries.").arg(m_currentLogs.size())
+                                     : QStringLiteral("已加载 %1 条操作日志记录。").arg(m_currentLogs.size()));
     }
 }
 
@@ -285,21 +358,28 @@ void HistoryWidget::on_btnSearch_clicked()
 {
     if (ui->dateTimeEdit_start->date() > ui->dateTimeEdit_end->date())
     {
-        QMessageBox::warning(this, kFailed, QStringLiteral("开始时间不能晚于结束时间。"));
+        QMessageBox::warning(this, kFailed,
+                             (m_languageKey == QStringLiteral("en_US"))
+                                 ? QStringLiteral("The start time cannot be later than the end time.")
+                                 : QStringLiteral("开始时间不能晚于结束时间。"));
         return;
     }
 
     m_showLogLoadedMessage = true;
     queryOperationLogs();
+    if (ui->tabWidget->currentIndex() == 1)
+    {
+        queryEnvironmentDataAndDrawChart();
+    }
 }
 
 void HistoryWidget::on_btnExport_clicked()
 {
     QString fileName = QFileDialog::getSaveFileName(
         this,
-        QStringLiteral("导出数据"),
-        QDir::homePath() + "/operation_logs.xlsx",
-        "Excel Files (*.xlsx)");
+        (m_languageKey == QStringLiteral("en_US")) ? QStringLiteral("Export Data") : QStringLiteral("导出数据"),
+        QDir::homePath() + QStringLiteral("/operation_logs.xlsx"),
+        QStringLiteral("Excel Files (*.xlsx)"));
     if (fileName.isEmpty())
     {
         return;
@@ -312,18 +392,27 @@ void HistoryWidget::on_btnExport_clicked()
 
     if (m_currentLogs.isEmpty())
     {
-        QMessageBox::warning(this, kFailed, QStringLiteral("当前没有可导出的日志数据。"));
+        QMessageBox::warning(this, kFailed,
+                             (m_languageKey == QStringLiteral("en_US"))
+                                 ? QStringLiteral("There is no log data to export.")
+                                 : QStringLiteral("当前没有可导出的日志数据。"));
         return;
     }
 
     QString errorMessage;
     if (!m_historyService.exportOperationLogsToExcel(fileName, m_currentLogs, &errorMessage))
     {
-        QMessageBox::critical(this, kFailed, QStringLiteral("导出失败：") + errorMessage);
+        QMessageBox::critical(this, kFailed,
+                              ((m_languageKey == QStringLiteral("en_US"))
+                                   ? QStringLiteral("Export failed: ")
+                                   : QStringLiteral("导出失败：")) + errorMessage);
         return;
     }
 
-    QMessageBox::information(this, kSuccess, QStringLiteral("数据已导出到：\n") + fileName);
+    QMessageBox::information(this, kSuccess,
+                             ((m_languageKey == QStringLiteral("en_US"))
+                                  ? QStringLiteral("Data exported to:\n")
+                                  : QStringLiteral("数据已导出到：\n")) + fileName);
 }
 
 void HistoryWidget::on_tabWidget_currentChanged(int index)
@@ -343,14 +432,19 @@ void HistoryWidget::deleteSelectedOperationLog()
     const int currentRow = ui->tableWidget_logs->currentRow();
     if (currentRow < 0 || currentRow >= m_currentLogs.size())
     {
-        QMessageBox::warning(this, kHint, QStringLiteral("请先选择一条日志记录。"));
+        QMessageBox::warning(this, kHint,
+                             (m_languageKey == QStringLiteral("en_US"))
+                                 ? QStringLiteral("Please select a log entry first.")
+                                 : QStringLiteral("请先选择一条日志记录。"));
         return;
     }
 
     const OperationLogEntry entry = m_currentLogs.at(currentRow);
     if (QMessageBox::question(this,
-                              QStringLiteral("确认删除"),
-                              QStringLiteral("确定要删除该条历史记录吗？")) != QMessageBox::Yes)
+                              (m_languageKey == QStringLiteral("en_US")) ? QStringLiteral("Confirm Delete") : QStringLiteral("确认删除"),
+                              (m_languageKey == QStringLiteral("en_US"))
+                                  ? QStringLiteral("Are you sure you want to delete this history entry?")
+                                  : QStringLiteral("确定要删除该条历史记录吗？")) != QMessageBox::Yes)
     {
         return;
     }
@@ -358,7 +452,10 @@ void HistoryWidget::deleteSelectedOperationLog()
     QString errorMessage;
     if (!m_historyService.deleteOperationLog(entry.recordId, &errorMessage))
     {
-        QMessageBox::critical(this, kFailed, QStringLiteral("删除失败：") + errorMessage);
+        QMessageBox::critical(this, kFailed,
+                              ((m_languageKey == QStringLiteral("en_US"))
+                                   ? QStringLiteral("Delete failed: ")
+                                   : QStringLiteral("删除失败：")) + errorMessage);
         return;
     }
 

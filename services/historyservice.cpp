@@ -315,10 +315,10 @@ OperationLogList HistoryService::queryOperationLogs(const QDateTime &startTime, 
     return dao.queryOperationLogs(startTime, endTime, deviceType);
 }
 
-EnvironmentSeries HistoryService::queryEnvironmentSeries(int hours) const
+EnvironmentSeries HistoryService::queryEnvironmentSeries(const QDateTime &startTime, const QDateTime &endTime) const
 {
     HistoryDao dao;
-    return dao.queryEnvironmentSeries(hours);
+    return dao.queryEnvironmentSeries(startTime, endTime);
 }
 
 bool HistoryService::addOperationLog(const QString &moduleName,
@@ -425,7 +425,7 @@ void HistoryService::asyncQueryOperationLogs(
         }));
 }
 
-void HistoryService::asyncQueryEnvironmentSeries(int hours)
+void HistoryService::asyncQueryEnvironmentSeries(const QDateTime &startTime, const QDateTime &endTime)
 {
     if (!m_envWatcher)
     {
@@ -434,10 +434,10 @@ void HistoryService::asyncQueryEnvironmentSeries(int hours)
                 this, &HistoryService::onEnvWatcherFinished);
     }
     m_envWatcher->setFuture(QtConcurrent::run(
-        [hours]() -> EnvironmentSeries
+        [startTime, endTime]() -> EnvironmentSeries
         {
             HistoryService temp;
-            return temp.queryEnvironmentSeries(hours);
+            return temp.queryEnvironmentSeries(startTime, endTime);
         }));
 }
 
