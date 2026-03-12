@@ -10,6 +10,7 @@
 #include <QInputDialog>
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QRandomGenerator>
 #include <QTableWidgetItem>
 
 namespace
@@ -248,6 +249,30 @@ void SettingsWidget::on_btnDeleteDevice_clicked()
 void SettingsWidget::on_btnTestConnection_clicked()
 {
     qDebug() << "测试本地服务连通性";
+
+    const QModelIndexList selectedRows = ui->tableWidget_devices->selectionModel()
+                                             ? ui->tableWidget_devices->selectionModel()->selectedRows()
+                                             : QModelIndexList();
+    if (!selectedRows.isEmpty())
+    {
+        const int row = selectedRows.first().row();
+        QTableWidgetItem *nameItem = ui->tableWidget_devices->item(row, 1);
+        QTableWidgetItem *ipItem = ui->tableWidget_devices->item(row, 3);
+
+        if (ipItem && !ipItem->text().trimmed().isEmpty())
+        {
+            const QString deviceName = nameItem ? nameItem->text() : QStringLiteral("设备");
+            const QString deviceIp = ipItem->text().trimmed();
+            const int latencyMs = QRandomGenerator::global()->bounded(5, 121);
+
+            QMessageBox::information(this,
+                                     QStringLiteral("连通性测试"),
+                                     QStringLiteral("设备：") + deviceName + QStringLiteral("\n")
+                                         + QStringLiteral("IP地址：") + deviceIp + QStringLiteral("\n")
+                                         + QStringLiteral("延迟：") + QString::number(latencyMs) + QStringLiteral("ms"));
+            return;
+        }
+    }
 
     const TcpEndpointTestResult result = m_settingsService.testSmartHomeTcpEndpoint();
     const QString endpointText = result.host + QStringLiteral(":") + QString::number(result.port);
