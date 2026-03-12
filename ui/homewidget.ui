@@ -48,7 +48,7 @@
          <widget class="QLabel" name="label_deviceCount">
           <property name="text"><string>在线: 0/0</string></property>
           <property name="alignment"><set>Qt::AlignCenter</set></property>
-          <property name="font"><font><pointsize>14</pointsize></font></property>
+          <property name="font"><font><pointsize>24</pointsize><weight>75</weight><bold>true</bold></font></property>
          </widget>
         </item>
        </layout>
