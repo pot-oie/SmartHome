@@ -280,12 +280,15 @@ namespace
 }
 
 DeviceControlWidget::DeviceControlWidget(QWidget *parent)
-    : QWidget(parent), ui(new Ui::DeviceControlWidget)
+    : QWidget(parent), ui(new Ui::DeviceControlWidget), m_refreshTimer(new QTimer(this))
 {
     ui->setupUi(this);
     applyLanguage(QStringLiteral("zh_CN"));
     reloadDevices(true);
     initDeviceList();
+
+    m_refreshTimer->setInterval(3000);
+    connect(m_refreshTimer, &QTimer::timeout, this, &DeviceControlWidget::refreshDevices);
 }
 
 DeviceControlWidget::~DeviceControlWidget()
@@ -341,7 +344,7 @@ void DeviceControlWidget::reloadDevices(bool reloadCategories)
     {
         m_categories = m_deviceService.categories();
     }
-    m_allDevices = m_deviceService.loadDefaultDevices();
+    m_allDevices = m_deviceService.loadDevices();
 }
 
 void DeviceControlWidget::updateDeviceListUI(int category)
@@ -651,25 +654,6 @@ void DeviceControlWidget::updateDeviceListUI(int category)
     ui->scrollArea->setWidget(contentWidget);
 }
 
-void DeviceControlWidget::updateDeviceStatus(const QJsonObject &statusData)
-{
-    const QString deviceId = statusData.value("device_id").toString().trimmed();
-    if (deviceId.isEmpty())
-    {
-        qDebug() << "Ignore empty device status payload:" << statusData;
-        return;
-    }
-
-    if (!m_deviceService.syncDeviceStatus(statusData))
-    {
-        qDebug() << "Failed to sync device status to database:" << statusData;
-        return;
-    }
-
-    reloadDevices(false);
-    updateDeviceListUI(ui->listCategory->currentRow());
-}
-
 void DeviceControlWidget::refreshDevices()
 {
     reloadDevices(false);
@@ -712,6 +696,25 @@ void DeviceControlWidget::changeEvent(QEvent *event)
         {
             scheduleThemeRefresh();
         }
+    }
+}
+
+void DeviceControlWidget::showEvent(QShowEvent *event)
+{
+    QWidget::showEvent(event);
+    refreshDevices();
+    if (m_refreshTimer && !m_refreshTimer->isActive())
+    {
+        m_refreshTimer->start();
+    }
+}
+
+void DeviceControlWidget::hideEvent(QHideEvent *event)
+{
+    QWidget::hideEvent(event);
+    if (m_refreshTimer && m_refreshTimer->isActive())
+    {
+        m_refreshTimer->stop();
     }
 }
 

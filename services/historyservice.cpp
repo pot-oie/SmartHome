@@ -348,10 +348,10 @@ bool writeZipFile(const QString &filePath, QVector<ZipEntry> entries, QString *e
 }
 }
 
-OperationLogList HistoryService::queryOperationLogs(const QDate &startDate, const QDate &endDate, const QString &deviceType) const
+OperationLogList HistoryService::queryOperationLogs(const QDateTime &startTime, const QDateTime &endTime, const QString &deviceType) const
 {
     HistoryDao dao;
-    return dao.queryOperationLogs(startDate, endDate, deviceType);
+    return dao.queryOperationLogs(startTime, endTime, deviceType);
 }
 
 EnvironmentSeries HistoryService::queryEnvironmentSeries(int hours) const

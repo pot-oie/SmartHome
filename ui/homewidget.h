@@ -1,18 +1,21 @@
 #pragma once
 
+#include <QFutureWatcher>
 #include <QJsonObject>
 #include <QResizeEvent>
-#include <QShowEvent>
 #include <QList>
+#include <QShowEvent>
 #include <QString>
 #include <QTimer>
 #include <QWidget>
 
+#include <optional>
+
 #include "database/dao/EnvRecordDao.h"
 #include "services/alarmservice.h"
 #include "services/environmentservice.h"
-#include "services/settingsservice.h"
 #include "services/quickcontrolservice.h"
+#include "services/settingsservice.h"
 
 namespace Ui
 {
@@ -20,6 +23,14 @@ namespace Ui
 }
 
 class QPushButton;
+
+struct HomeEnvironmentRefreshResult
+{
+    bool success = false;
+    QString errorText;
+    std::optional<EnvRealtimeSnapshot> snapshot;
+    QList<QJsonObject> triggeredAlarms;
+};
 
 class HomeWidget : public QWidget
 {
@@ -47,6 +58,8 @@ private slots:
     void onQuickControlClicked();
     void on_btnEditQuickControl_clicked();
     void on_btnGoHome_clicked();
+    void onEnvironmentSnapshotLoaded();
+    void onDeviceStatusLoaded();
 
 private:
     Ui::HomeWidget *ui;
@@ -66,5 +79,18 @@ private:
     void applyTemperatureColor(double temperature);
     void updateDeviceStatusLabel(const DeviceStatusSummary &summary);
     void refreshEnvironmentSnapshot();
+    void refreshDeviceStatusAsync();
     void loadQuickControls();
+
+private:
+    Ui::HomeWidget *ui;
+    QPushButton *m_editQuickControlButton = nullptr;
+    EnvironmentService m_environmentService;
+    QuickControlService m_quickControlService;
+    QTimer *m_environmentRefreshTimer = nullptr;
+    QString m_selectedSceneId;
+    QFutureWatcher<HomeEnvironmentRefreshResult> *m_environmentWatcher = nullptr;
+    QFutureWatcher<DeviceStatusSummary> *m_deviceStatusWatcher = nullptr;
+    int m_environmentRequestId = 0;
+    int m_deviceStatusRequestId = 0;
 };

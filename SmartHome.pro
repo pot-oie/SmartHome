@@ -1,4 +1,5 @@
 QT       += core gui network sql svg printsupport
+QT       += concurrent
 
 # 头文件搜索路径
 INCLUDEPATH += $$PWD \
@@ -41,7 +42,6 @@ SOURCES += \
     services/registerservice.cpp \
     services/usercontext.cpp \
     services/quickcontrolservice.cpp \
-    network/networkmanager.cpp \
     database/databasemanager.cpp \
     database/dao/SystemConfigDao.cpp \
     database/dao/UserDao.cpp \
@@ -76,8 +76,6 @@ HEADERS += \
     services/usercontext.h \
     services/servicemodels.h \
     services/quickcontrolservice.h \
-    network/networkmanager.h \
-    network/protocol.h \
     database/databasemanager.h \
     database/DatabaseConfig.h \
     database/dao/SystemConfigDao.h \

@@ -8,7 +8,7 @@
 #include "services/alarmservice.h"
 namespace Ui
 {
-class AlarmWidget;
+    class AlarmWidget;
 }
 
 class AlarmWidget : public QWidget
@@ -21,6 +21,7 @@ public:
     void applyLanguage(const QString &languageKey);
 
 public slots:
+    void refreshData();
     void triggerAlarm(const QJsonObject &alarmData);
 
 protected:
@@ -37,9 +38,9 @@ private:
     QString m_languageKey = QStringLiteral("zh_CN");
 
     void playAlarmAlertTone();
-    void refreshData();
     void loadThresholds();
     void loadAlarmStatus();
     void loadAlarmLogs();
+    void refreshRuntimeData();
     void appendAlarmLogRow(int row, const AlarmLogEntry &entry);
 };

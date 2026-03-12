@@ -70,7 +70,7 @@ AlarmWidget::AlarmWidget(QWidget *parent)
 
     refreshData();
     applyLanguage(QStringLiteral("zh_CN"));
-    connect(m_refreshTimer, &QTimer::timeout, this, &AlarmWidget::refreshData);
+    connect(m_refreshTimer, &QTimer::timeout, this, &AlarmWidget::refreshRuntimeData);
     m_refreshTimer->start(5000);
 }
 
@@ -146,6 +146,11 @@ void AlarmWidget::playAlarmAlertTone()
 void AlarmWidget::refreshData()
 {
     loadThresholds();
+    refreshRuntimeData();
+}
+
+void AlarmWidget::refreshRuntimeData()
+{
     loadAlarmStatus();
     loadAlarmLogs();
 }

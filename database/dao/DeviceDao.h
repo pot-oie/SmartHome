@@ -21,7 +21,6 @@ public:
     QList<DeviceCategoryRow> listEnabledCategories();
     DeviceList listDeviceDefinitions();
     SettingsDeviceList listSettingsDevices();
-    bool ensureDefaultDeviceData();
     bool insertDevice(const SettingsDeviceEntry &device);
     bool updateDeviceState(const QString &deviceId,
                            const QString &onlineStatus,

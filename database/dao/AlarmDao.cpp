@@ -10,56 +10,56 @@
 
 namespace
 {
-const char *LOG_PREFIX = "[AlarmDao]";
+    const char *LOG_PREFIX = "[AlarmDao]";
 
-QString composeTriggerText(const QSqlQuery &query)
-{
-    const QString displayText = query.value("trigger_display_text").toString().trimmed();
-    const QString unit = query.value("trigger_unit").toString().trimmed();
-    if (!displayText.isEmpty())
+    QString composeTriggerText(const QSqlQuery &query)
     {
-        if (!unit.isEmpty() && !displayText.endsWith(unit))
+        const QString displayText = query.value("trigger_display_text").toString().trimmed();
+        const QString unit = query.value("trigger_unit").toString().trimmed();
+        if (!displayText.isEmpty())
         {
-            return displayText + unit;
+            if (!unit.isEmpty() && !displayText.endsWith(unit))
+            {
+                return displayText + unit;
+            }
+            return displayText;
         }
-        return displayText;
-    }
 
-    const QVariant rawValue = query.value("trigger_value_decimal");
-    if (!rawValue.isValid() || rawValue.isNull())
-    {
-        return QStringLiteral("-");
-    }
-
-    return QLocale().toString(rawValue.toDouble(), 'f', 2) + unit;
-}
-
-QString composeTriggerText(double triggerValue, const QString &displayText, const QString &unit)
-{
-    if (!displayText.trimmed().isEmpty())
-    {
-        if (!unit.trimmed().isEmpty() && !displayText.endsWith(unit))
+        const QVariant rawValue = query.value("trigger_value_decimal");
+        if (!rawValue.isValid() || rawValue.isNull())
         {
-            return displayText + unit;
+            return QStringLiteral("-");
         }
-        return displayText;
+
+        return QLocale().toString(rawValue.toDouble(), 'f', 2) + unit;
     }
 
-    return QLocale().toString(triggerValue, 'f', 2) + unit;
-}
+    QString composeTriggerText(double triggerValue, const QString &displayText, const QString &unit)
+    {
+        if (!displayText.trimmed().isEmpty())
+        {
+            if (!unit.trimmed().isEmpty() && !displayText.endsWith(unit))
+            {
+                return displayText + unit;
+            }
+            return displayText;
+        }
 
-QString levelFromSeverity(const QString &severity)
-{
-    if (severity == QStringLiteral("critical"))
-    {
-        return QStringLiteral("critical");
+        return QLocale().toString(triggerValue, 'f', 2) + unit;
     }
-    if (severity == QStringLiteral("warning"))
+
+    QString levelFromSeverity(const QString &severity)
     {
-        return QStringLiteral("warning");
+        if (severity == QStringLiteral("critical"))
+        {
+            return QStringLiteral("critical");
+        }
+        if (severity == QStringLiteral("warning"))
+        {
+            return QStringLiteral("warning");
+        }
+        return QStringLiteral("normal");
     }
-    return QStringLiteral("normal");
-}
 }
 
 QList<QString> AlarmDao::getRecentAlarmTexts(int limit)
@@ -320,7 +320,7 @@ std::optional<AlarmLogEntry> AlarmDao::createEnvironmentAlarm(const QString &ala
     const QString finalTriggerText = composeTriggerText(triggerValue, triggerDisplayText, triggerUnit);
     const QVariant deviceValue = sourceDeviceId > 0
                                      ? QVariant::fromValue(sourceDeviceId)
-                                     : QVariant::fromValue(qint64(0));
+                                     : QVariant(QMetaType::fromType<qint64>());
 
     if (checkQuery.next())
     {

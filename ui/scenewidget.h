@@ -1,6 +1,5 @@
 #pragma once
 
-#include <QJsonObject>
 #include <QEvent>
 #include <QResizeEvent>
 #include <QWidget>
@@ -19,13 +18,12 @@ class SceneWidget : public QWidget
 public:
     explicit SceneWidget(QWidget *parent = nullptr);
     ~SceneWidget();
-    void applyLanguage(const QString &languageKey);
-
-signals:
-    void requestTriggerScene(const QJsonObject &sceneCmd);
 
 public slots:
-    void updateSceneExecutionResult(const QJsonObject &resultData);
+    void refreshScenes();
+
+signals:
+    void sceneExecuted();
 
 private slots:
     void on_btnAddScene_clicked();

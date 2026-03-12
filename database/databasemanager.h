@@ -2,9 +2,12 @@
 
 #include "DatabaseConfig.h"
 
+#include <QHash>
+#include <QMutex>
 #include <QSqlDatabase>
 #include <QSqlQuery>
 #include <QString>
+#include <QStringList>
 #include <QVariantList>
 
 class DatabaseManager
@@ -27,6 +30,10 @@ public:
 
 private:
     DatabaseManager() = default;
+    quintptr currentThreadKey() const;
+    QString connectionNameForCurrentThread() const;
+    QSqlDatabase databaseForCurrentThread() const;
+    void registerConnectionName(const QString &connectionName);
     ~DatabaseManager();
 
     DatabaseManager(const DatabaseManager &) = delete;
@@ -39,6 +46,7 @@ private:
 
 private:
     DatabaseConfig m_config;
-    QSqlDatabase m_database;
-    QString m_lastErrorText;
+    mutable QMutex m_mutex;
+    QHash<quintptr, QString> m_lastErrorTexts;
+    QStringList m_connectionNames;
 };

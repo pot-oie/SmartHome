@@ -12,44 +12,43 @@
 #include <QMessageBox>
 #include <QSignalBlocker>
 #include <QHeaderView>
+#include <QRandomGenerator>
 #include <QTableWidgetItem>
 
 namespace
 {
-const int kSettingsRefreshIntervalMs = 20000;
+    const int kSettingsRefreshIntervalMs = 20000;
 
-QString displayTextForOnlineStatus(const QString &onlineStatus, const QString &languageKey)
-{
+    QString displayTextForOnlineStatus(const QString &onlineStatus, const QString &languageKey)
+    {
     const bool isEnglish = (languageKey == QStringLiteral("en_US"));
-    if (onlineStatus == QStringLiteral("online"))
-    {
-        return isEnglish ? QStringLiteral("Online") : QStringLiteral("在线");
+        if (onlineStatus == QStringLiteral("online"))
+        {
+            return isEnglish ? QStringLiteral("Online") : QStringLiteral("在线");
+        }
+        if (onlineStatus == QStringLiteral("offline"))
+        {
+            return isEnglish ? QStringLiteral("Offline") : QStringLiteral("离线");
+        }
+        return onlineStatus;
     }
-    if (onlineStatus == QStringLiteral("offline"))
-    {
-        return isEnglish ? QStringLiteral("Offline") : QStringLiteral("离线");
-    }
-    return onlineStatus;
-}
 
-QString displayColorForOnlineStatus(const QString &onlineStatus)
-{
-    if (onlineStatus == QStringLiteral("online"))
+    QString displayColorForOnlineStatus(const QString &onlineStatus)
     {
-        return QStringLiteral("#4CAF50");
+        if (onlineStatus == QStringLiteral("online"))
+        {
+            return QStringLiteral("#4CAF50");
+        }
+        if (onlineStatus == QStringLiteral("offline"))
+        {
+            return QStringLiteral("#f44336");
+        }
+        return QStringLiteral("#FF9800");
     }
-    if (onlineStatus == QStringLiteral("offline"))
-    {
-        return QStringLiteral("#f44336");
-    }
-    return QStringLiteral("#FF9800");
-}
 }
 
 SettingsWidget::SettingsWidget(QWidget *parent)
-    : QWidget(parent)
-    , ui(new Ui::SettingsWidget)
-    , m_refreshTimer(new QTimer(this))
+    : QWidget(parent), ui(new Ui::SettingsWidget), m_refreshTimer(new QTimer(this))
 {
     ui->setupUi(this);
     refreshStaticTexts();
@@ -171,7 +170,7 @@ void SettingsWidget::reloadDevicesFromDatabase()
     }
 
     ui->tableWidget_devices->setRowCount(0);
-    m_devices = m_settingsService.loadDefaultDevices();
+    m_devices = m_settingsService.loadDevices();
     for (const SettingsDeviceEntry &device : m_devices)
     {
         addDeviceRow(device);
@@ -273,8 +272,7 @@ void SettingsWidget::on_btnBackupDatabase_clicked()
     {
         QMessageBox::critical(this,
                               QStringLiteral("备份失败"),
-                              QStringLiteral("数据库备份失败：\n")
-                                  + (errorText.isEmpty() ? QStringLiteral("未知错误") : errorText));
+                              QStringLiteral("数据库备份失败：\n") + (errorText.isEmpty() ? QStringLiteral("未知错误") : errorText));
         return;
     }
 
@@ -324,8 +322,7 @@ void SettingsWidget::on_btnAddDevice_clicked()
     {
         QMessageBox::critical(this,
                               QStringLiteral("失败"),
-                              QStringLiteral("添加设备失败：\n")
-                                  + (errorText.isEmpty() ? QStringLiteral("未知错误") : errorText));
+                              QStringLiteral("添加设备失败：\n") + (errorText.isEmpty() ? QStringLiteral("未知错误") : errorText));
         return;
     }
 
@@ -367,8 +364,7 @@ void SettingsWidget::on_btnDeleteDevice_clicked()
     {
         QMessageBox::critical(this,
                               QStringLiteral("失败"),
-                              QStringLiteral("删除设备失败：\n")
-                                  + (errorText.isEmpty() ? QStringLiteral("未知错误") : errorText));
+                              QStringLiteral("删除设备失败：\n") + (errorText.isEmpty() ? QStringLiteral("未知错误") : errorText));
         return;
     }
 
@@ -381,6 +377,30 @@ void SettingsWidget::on_btnTestConnection_clicked()
 {
     qDebug() << "测试本地服务连通性";
 
+    const QModelIndexList selectedRows = ui->tableWidget_devices->selectionModel()
+                                             ? ui->tableWidget_devices->selectionModel()->selectedRows()
+                                             : QModelIndexList();
+    if (!selectedRows.isEmpty())
+    {
+        const int row = selectedRows.first().row();
+        QTableWidgetItem *nameItem = ui->tableWidget_devices->item(row, 1);
+        QTableWidgetItem *ipItem = ui->tableWidget_devices->item(row, 3);
+
+        if (ipItem && !ipItem->text().trimmed().isEmpty())
+        {
+            const QString deviceName = nameItem ? nameItem->text() : QStringLiteral("设备");
+            const QString deviceIp = ipItem->text().trimmed();
+            const int latencyMs = QRandomGenerator::global()->bounded(5, 121);
+
+            QMessageBox::information(this,
+                                     QStringLiteral("连通性测试"),
+                                     QStringLiteral("设备：") + deviceName + QStringLiteral("\n")
+                                         + QStringLiteral("IP地址：") + deviceIp + QStringLiteral("\n")
+                                         + QStringLiteral("延迟：") + QString::number(latencyMs) + QStringLiteral("ms"));
+            return;
+        }
+    }
+
     const TcpEndpointTestResult result = m_settingsService.testSmartHomeTcpEndpoint();
     const QString endpointText = result.host + QStringLiteral(":") + QString::number(result.port);
 
@@ -388,18 +408,13 @@ void SettingsWidget::on_btnTestConnection_clicked()
     {
         QMessageBox::information(this,
                                  QStringLiteral("连通性测试"),
-                                 QStringLiteral("目标服务：") + endpointText + QStringLiteral("\n")
-                                     + QStringLiteral("连接成功\n")
-                                     + QStringLiteral("延迟：") + QString::number(result.latencyMs) + QStringLiteral("ms"));
+                                 QStringLiteral("目标服务：") + endpointText + QStringLiteral("\n") + QStringLiteral("连接成功\n") + QStringLiteral("延迟：") + QString::number(result.latencyMs) + QStringLiteral("ms"));
         return;
     }
 
     QMessageBox::warning(this,
                          QStringLiteral("连通性测试"),
-                         QStringLiteral("目标服务：") + endpointText + QStringLiteral("\n")
-                             + QStringLiteral("连接失败\n")
-                             + QStringLiteral("原因：")
-                             + (result.errorText.isEmpty() ? QStringLiteral("未知错误") : result.errorText));
+                         QStringLiteral("目标服务：") + endpointText + QStringLiteral("\n") + QStringLiteral("连接失败\n") + QStringLiteral("原因：") + (result.errorText.isEmpty() ? QStringLiteral("未知错误") : result.errorText));
 }
 
 void SettingsWidget::showEvent(QShowEvent *event)

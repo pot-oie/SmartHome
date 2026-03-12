@@ -42,7 +42,10 @@ public:
 
     // 统一执行接口：帮助 UI 屏蔽底层差异。UI 点击后直接调这个函数
     // 如果是设备，targetState 决定开关；如果是场景，targetState 会被忽略（直接触发）
-    bool executeShortcut(const QuickControlDisplayItem &item, bool targetState = true, QString *errorMessage = nullptr) const;
+    bool executeShortcut(const QuickControlDisplayItem &item,
+                         bool targetState = true,
+                         QString *errorMessage = nullptr,
+                         QString *warningMessage = nullptr) const;
 
     // 获取所有可用的设备和场景，并标记它们是否已被选中
     QList<QuickControlManageItem> getAllManageableItems() const;

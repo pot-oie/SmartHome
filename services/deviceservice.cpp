@@ -24,27 +24,6 @@ namespace
         return deviceType.contains(QStringLiteral("\u7a97\u5e18")) || deviceType.contains(QStringLiteral("\u906e\u9633"));
     }
 
-    QString paramNameForDevice(const DeviceDefinition &device)
-    {
-        if (isClimateType(device.type))
-        {
-            return QString("temperature");
-        }
-        if (isLightingType(device.type))
-        {
-            return QString("brightness");
-        }
-        if (isCurtainType(device.type))
-        {
-            return QString("open_level");
-        }
-        if (device.type.contains(QStringLiteral("\u5f71\u97f3")) || device.name.contains(QStringLiteral("\u7535\u89c6")))
-        {
-            return QString("volume");
-        }
-        return QString("value");
-    }
-
     QString modeTextForDevice(const DeviceDefinition &device, bool turnOn, int value)
     {
         if (!turnOn)
@@ -75,32 +54,6 @@ namespace
     {
         return QStringLiteral("\u8c03\u6574") + device.name + QStringLiteral("\u53c2\u6570\u4e3a ") + QString::number(value) + device.valueUnit;
     }
-
-    DeviceList builtInFallbackDevices()
-    {
-        return {
-            {"light_living", QStringLiteral("\u5ba2\u5385\u4e3b\u706f"), QStringLiteral("\u7167\u660e\u8bbe\u5907"), ":/icons/light.svg", true, true, 80, "%", true, 0, 100},
-            {"light_bedroom", QStringLiteral("\u5367\u5ba4\u706f"), QStringLiteral("\u7167\u660e\u8bbe\u5907"), ":/icons/light.svg", true, false, 60, "%", true, 0, 100},
-            {"light_kitchen", QStringLiteral("\u53a8\u623f\u706f"), QStringLiteral("\u7167\u660e\u8bbe\u5907"), ":/icons/light.svg", true, true, 100, "%", true, 0, 100},
-            {"ac_living", QStringLiteral("\u5ba2\u5385\u7a7a\u8c03"), QStringLiteral("\u7a7a\u8c03\u8bbe\u5907"), ":/icons/ac.svg", true, true, 24, "C", true, 16, 30},
-            {"ac_bedroom", QStringLiteral("\u5367\u5ba4\u7a7a\u8c03"), QStringLiteral("\u7a7a\u8c03\u8bbe\u5907"), ":/icons/ac.svg", true, false, 26, "C", true, 16, 30},
-            {"curtain_living", QStringLiteral("\u5ba2\u5385\u7a97\u5e18"), QStringLiteral("\u7a97\u5e18\u8bbe\u5907"), ":/icons/curtains.svg", true, true, 100, "%", true, 0, 100},
-            {"curtain_bedroom", QStringLiteral("\u5367\u5ba4\u7a97\u5e18"), QStringLiteral("\u7a97\u5e18\u8bbe\u5907"), ":/icons/curtains.svg", false, false, 0, "%", true, 0, 100},
-            {"lock_door", QStringLiteral("\u524d\u95e8\u667a\u80fd\u9501"), QStringLiteral("\u5b89\u9632\u8bbe\u5907"), ":/icons/lock.svg", true, true, 1, "", false, 0, 1},
-            {"camera_01", QStringLiteral("\u5ba2\u5385\u6444\u50cf\u5934"), QStringLiteral("\u5b89\u9632\u8bbe\u5907"), ":/icons/check.svg", true, true, 0, "", false, 0, 0},
-            {"tv_living", QStringLiteral("\u5ba2\u5385\u7535\u89c6"), QStringLiteral("\u5f71\u97f3\u8bbe\u5907"), ":/icons/tv.svg", true, false, 50, "%", true, 0, 100}};
-    }
-
-    QStringList builtInFallbackCategories()
-    {
-        return {
-            kAllDevices,
-            QStringLiteral("\u7167\u660e\u8bbe\u5907"),
-            QStringLiteral("\u7a7a\u8c03\u8bbe\u5907"),
-            QStringLiteral("\u7a97\u5e18\u8bbe\u5907"),
-            QStringLiteral("\u5b89\u9632\u8bbe\u5907"),
-            QStringLiteral("\u5f71\u97f3\u8bbe\u5907")};
-    }
 }
 
 QStringList DeviceService::categories() const
@@ -108,12 +61,7 @@ QStringList DeviceService::categories() const
     QStringList result = {kAllDevices};
 
     DeviceDao dao;
-    QList<DeviceDao::DeviceCategoryRow> categoriesFromDb = dao.listEnabledCategories();
-    if (categoriesFromDb.isEmpty())
-    {
-        dao.ensureDefaultDeviceData();
-        categoriesFromDb = dao.listEnabledCategories();
-    }
+    const QList<DeviceDao::DeviceCategoryRow> categoriesFromDb = dao.listEnabledCategories();
 
     for (const DeviceDao::DeviceCategoryRow &row : categoriesFromDb)
     {
@@ -124,30 +72,13 @@ QStringList DeviceService::categories() const
         }
     }
 
-    if (result.size() == 1)
-    {
-        return builtInFallbackCategories();
-    }
-
     return result;
 }
 
-DeviceList DeviceService::loadDefaultDevices() const
+DeviceList DeviceService::loadDevices() const
 {
     DeviceDao dao;
-    DeviceList devicesFromDb = dao.listDeviceDefinitions();
-    if (devicesFromDb.isEmpty())
-    {
-        dao.ensureDefaultDeviceData();
-        devicesFromDb = dao.listDeviceDefinitions();
-    }
-
-    if (!devicesFromDb.isEmpty())
-    {
-        return devicesFromDb;
-    }
-
-    return builtInFallbackDevices();
+    return dao.listDeviceDefinitions();
 }
 
 DeviceList DeviceService::filterDevices(const DeviceList &allDevices, int categoryIndex, const QStringList &categories) const
@@ -214,7 +145,7 @@ bool DeviceService::updateSwitchState(const QString &deviceId,
         warningMessage->clear();
     }
 
-    const DeviceList devices = loadDefaultDevices();
+    const DeviceList devices = loadDevices();
     for (const DeviceDefinition &device : devices)
     {
         if (device.id != deviceId)
@@ -239,7 +170,9 @@ bool DeviceService::updateSwitchState(const QString &deviceId,
         }
 
         HistoryService historyService;
-        const QJsonObject requestPayload = buildSwitchCommand(device.id, turnOn);
+        const QJsonObject requestPayload = {
+            {"device_id", device.id},
+            {"operation", turnOn ? "turn_on" : "turn_off"}};
         const QJsonObject responsePayload = {
             {"device_id", device.id},
             {"result", "success"},
@@ -308,7 +241,10 @@ bool DeviceService::updateDeviceValue(const DeviceDefinition &device,
     }
 
     HistoryService historyService;
-    const QJsonObject requestPayload = buildSetParamCommand(device, value);
+    const QJsonObject requestPayload = {
+        {"device_id", device.id},
+        {"operation", "set_param"},
+        {"param_value", value}};
     const QJsonObject responsePayload = {
         {"device_id", device.id},
         {"result", "success"},
@@ -337,82 +273,4 @@ bool DeviceService::updateDeviceValue(const DeviceDefinition &device,
         }
     }
     return true;
-}
-
-bool DeviceService::syncDeviceStatus(const QJsonObject &statusData) const
-{
-    const QString deviceId = statusData.value("device_id").toString().trimmed();
-    if (deviceId.isEmpty())
-    {
-        return false;
-    }
-
-    DeviceList devices = loadDefaultDevices();
-    for (const DeviceDefinition &device : devices)
-    {
-        if (device.id != deviceId)
-        {
-            continue;
-        }
-
-        QString onlineStatus = device.isOnline ? QString("online") : QString("offline");
-        QString switchStatus = device.isOn ? QString("on") : QString("off");
-        int value = device.value;
-
-        const QString status = statusData.value("status").toString().trimmed();
-        if (status == "online" || status == "offline" || status == "error")
-        {
-            onlineStatus = status;
-        }
-
-        const QString currentState = statusData.value("current_state").toString().trimmed();
-        if (currentState == "on" || currentState == "off")
-        {
-            switchStatus = currentState;
-        }
-
-        if (statusData.contains("current_value"))
-        {
-            value = statusData.value("current_value").toInt();
-        }
-
-        DeviceDao dao;
-        return dao.updateDeviceState(
-            deviceId,
-            onlineStatus,
-            switchStatus,
-            value,
-            device.valueUnit,
-            modeTextForDevice(device, switchStatus == "on", value));
-    }
-
-    return false;
-}
-
-QJsonObject DeviceService::buildSwitchCommand(const QString &deviceId, bool turnOn) const
-{
-    QJsonObject controlCmd;
-    controlCmd["action"] = "control_single_device";
-
-    QJsonObject dataObj;
-    dataObj["device_id"] = deviceId;
-    dataObj["command"] = turnOn ? "turn_on" : "turn_off";
-
-    controlCmd["data"] = dataObj;
-    return controlCmd;
-}
-
-QJsonObject DeviceService::buildSetParamCommand(const DeviceDefinition &device, int value) const
-{
-    QJsonObject controlCmd;
-    controlCmd["action"] = "control_single_device";
-
-    QJsonObject dataObj;
-    dataObj["device_id"] = device.id;
-    dataObj["command"] = "set_param";
-    dataObj["param_name"] = paramNameForDevice(device);
-    dataObj["param_value"] = value;
-
-    controlCmd["data"] = dataObj;
-    return controlCmd;
 }

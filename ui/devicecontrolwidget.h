@@ -1,7 +1,7 @@
 #pragma once
 
-#include <QJsonObject>
 #include <QWidget>
+#include <QTimer>
 
 #include "services/deviceservice.h"
 
@@ -17,17 +17,16 @@ class DeviceControlWidget : public QWidget
 public:
     explicit DeviceControlWidget(QWidget *parent = nullptr);
     ~DeviceControlWidget();
-    void applyLanguage(const QString &languageKey);
-
-signals:
-    void requestControlDevice(const QJsonObject &controlCmd);
 
 public slots:
-    void updateDeviceStatus(const QJsonObject &statusData);
     void refreshDevices();
 
 protected:
     void changeEvent(QEvent *event) override;
+
+protected:
+    void showEvent(QShowEvent *event) override;
+    void hideEvent(QHideEvent *event) override;
 
 private slots:
     void on_listCategory_currentRowChanged(int currentRow);
@@ -47,4 +46,5 @@ private:
     QStringList m_categories;
     QString m_languageKey = QStringLiteral("zh_CN");
     bool m_themeRefreshScheduled = false;
+    QTimer *m_refreshTimer = nullptr;
 };

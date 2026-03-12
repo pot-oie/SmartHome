@@ -1,12 +1,10 @@
 #include "quickcontrolservice.h"
 #include "database/databasemanager.h"
 #include "services/deviceservice.h"
-#include "services/sceneservice.h" // 假设你有这个
+#include "services/sceneservice.h"
 #include "database/dao/SceneDao.h"
 #include <QSqlQuery>
-#include <QSqlError>
 #include <QDebug>
-#include <QHash>
 
 namespace
 {
@@ -31,25 +29,6 @@ namespace
         return QString(":/icons/devices.svg");
     }
 
-    bool isTurnOnAction(const QString &actionText)
-    {
-        const QString trimmed = actionText.trimmed();
-        const QString lower = trimmed.toLower();
-        return trimmed == QStringLiteral("开启") || trimmed == QStringLiteral("打开") || trimmed == QStringLiteral("解锁") || lower == "on" || lower == "open" || lower == "unlock" || lower == "true";
-    }
-
-    int parseParamValue(const QString &paramText)
-    {
-        QString digits;
-        for (const QChar ch : paramText)
-        {
-            if (ch.isDigit() || (ch == '-' && digits.isEmpty()))
-            {
-                digits.append(ch);
-            }
-        }
-        return digits.toInt();
-    }
 }
 
 QList<QuickControlDisplayItem> QuickControlService::getHomeShortcuts() const
@@ -67,11 +46,12 @@ QList<QuickControlDisplayItem> QuickControlService::getHomeShortcuts() const
             d.device_id AS string_id, 
             d.device_name AS display_name, 
             d.device_type AS device_type,
-            d.online_status, 
-            d.switch_status,
+            COALESCE(s.online_status, d.online_status) AS online_status, 
+            COALESCE(s.switch_status, d.switch_status) AS switch_status,
             '' AS icon_path
         FROM quick_controls q
         INNER JOIN devices d ON q.target_id = d.id AND q.target_type = 'device'
+        LEFT JOIN device_state_snapshots s ON s.device_id = d.id
         UNION ALL
         SELECT 
             q.id AS mapping_id, 
@@ -144,13 +124,25 @@ bool QuickControlService::removeShortcut(const QString &targetType, long long ta
     return true;
 }
 
-bool QuickControlService::executeShortcut(const QuickControlDisplayItem &item, bool targetState, QString *errorMessage) const
+bool QuickControlService::executeShortcut(const QuickControlDisplayItem &item,
+                                          bool targetState,
+                                          QString *errorMessage,
+                                          QString *warningMessage) const
 {
+    if (errorMessage)
+    {
+        errorMessage->clear();
+    }
+    if (warningMessage)
+    {
+        warningMessage->clear();
+    }
+
     // 门面模式 (Facade)：向 UI 屏蔽底层的 DeviceService 和 SceneService 差异
     if (item.targetType == "device")
     {
         DeviceService deviceService;
-        return deviceService.updateSwitchState(item.targetStringId, targetState, errorMessage);
+        return deviceService.updateSwitchState(item.targetStringId, targetState, errorMessage, warningMessage);
     }
     else if (item.targetType == "scene")
     {
@@ -176,40 +168,36 @@ bool QuickControlService::executeShortcut(const QuickControlDisplayItem &item, b
             return false;
         }
 
-        DeviceService deviceService;
-        const DeviceList devices = deviceService.loadDefaultDevices();
-        QHash<QString, DeviceDefinition> deviceIndex;
-        for (const DeviceDefinition &device : devices)
+        SceneService sceneService;
+        const SceneExecutionResult executionResult = sceneService.executeScene(targetScene);
+        if (executionResult.successCount == 0)
         {
-            deviceIndex.insert(device.id, device);
+            if (errorMessage)
+            {
+                *errorMessage = QStringLiteral("场景执行失败，所有设备均未成功执行。");
+            }
+            return false;
         }
 
-        for (const SceneDeviceAction &action : targetScene.actions)
+        if (executionResult.isPartialSuccess() && warningMessage)
         {
-            QString actionError;
-            bool ok = false;
-            if (!action.paramText.trimmed().isEmpty() && deviceIndex.contains(action.deviceId))
+            QStringList failedDevices;
+            for (const SceneActionExecutionResult &actionResult : executionResult.actionResults)
             {
-                DeviceDefinition targetDevice = deviceIndex.value(action.deviceId);
-                targetDevice.value = parseParamValue(action.paramText);
-                ok = deviceService.updateDeviceValue(targetDevice, targetDevice.value, &actionError);
-            }
-            else
-            {
-                ok = deviceService.updateSwitchState(action.deviceId, isTurnOnAction(action.actionText), &actionError);
-            }
-
-            if (!ok)
-            {
-                if (errorMessage)
+                if (!actionResult.success)
                 {
-                    *errorMessage = QStringLiteral("场景执行失败：") + action.deviceName + QStringLiteral("，") + actionError;
+                    failedDevices << (actionResult.deviceName + QStringLiteral("：") + actionResult.message);
                 }
-                return false;
             }
+            *warningMessage = QStringLiteral("场景部分成功，成功 %1 项，失败 %2 项。\n%3")
+                                  .arg(executionResult.successCount)
+                                  .arg(executionResult.failureCount)
+                                  .arg(failedDevices.join(QStringLiteral("\n")));
         }
 
-        qInfo() << "[QuickControl] 场景执行完成:" << targetScene.name;
+        qInfo() << "[QuickControl] 场景执行完成:" << targetScene.name
+                << "success:" << executionResult.successCount
+                << "failure:" << executionResult.failureCount;
         Q_UNUSED(targetState);
         return true;
     }

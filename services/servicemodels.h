@@ -66,6 +66,33 @@ struct SceneDefinition
 
 using SceneList = QVector<SceneDefinition>;
 
+struct SceneActionExecutionResult
+{
+    QString deviceId;
+    QString deviceName;
+    bool success = false;
+    QString message;
+};
+
+struct SceneExecutionResult
+{
+    QString sceneId;
+    QString sceneName;
+    int successCount = 0;
+    int failureCount = 0;
+    QVector<SceneActionExecutionResult> actionResults;
+
+    bool isSuccess() const
+    {
+        return failureCount == 0 && successCount > 0;
+    }
+
+    bool isPartialSuccess() const
+    {
+        return successCount > 0 && failureCount > 0;
+    }
+};
+
 struct DeviceDefinition
 {
     QString id;

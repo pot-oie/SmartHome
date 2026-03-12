@@ -11,8 +11,8 @@
 
 namespace
 {
-const QString kSmartHomeTcpHost = QStringLiteral("127.0.0.1");
-const quint16 kSmartHomeTcpPort = 9090;
+    const QString kSmartHomeTcpHost = QStringLiteral("127.0.0.1");
+    const quint16 kSmartHomeTcpPort = 9090;
 }
 
 QStringList SettingsService::themeOptions() const
@@ -58,7 +58,7 @@ QString SettingsService::languageKeyByIndex(int index) const
 DeviceStatusSummary SettingsService::loadDeviceStatusSummary() const
 {
     DeviceStatusSummary summary;
-    const SettingsDeviceList devices = loadDefaultDevices();
+    const SettingsDeviceList devices = loadDevices();
     summary.totalCount = devices.size();
     for (const SettingsDeviceEntry &device : devices)
     {
@@ -71,30 +71,10 @@ DeviceStatusSummary SettingsService::loadDeviceStatusSummary() const
     return summary;
 }
 
-SettingsDeviceList SettingsService::loadDefaultDevices() const
+SettingsDeviceList SettingsService::loadDevices() const
 {
     DeviceDao dao;
-    SettingsDeviceList devicesFromDb = dao.listSettingsDevices();
-    if (devicesFromDb.isEmpty())
-    {
-        dao.ensureDefaultDeviceData();
-        devicesFromDb = dao.listSettingsDevices();
-    }
-
-    if (!devicesFromDb.isEmpty())
-    {
-        return devicesFromDb;
-    }
-
-    return {
-        {QStringLiteral("light_living"), QStringLiteral("\u5ba2\u5385\u4e3b\u706f"), QStringLiteral("\u7167\u660e\u8bbe\u5907"), QStringLiteral("192.168.1.101"), QStringLiteral("online")},
-        {QStringLiteral("light_bedroom"), QStringLiteral("\u5367\u5ba4\u706f"), QStringLiteral("\u7167\u660e\u8bbe\u5907"), QStringLiteral("192.168.1.102"), QStringLiteral("online")},
-        {QStringLiteral("ac_living"), QStringLiteral("\u5ba2\u5385\u7a7a\u8c03"), QStringLiteral("\u7a7a\u8c03\u8bbe\u5907"), QStringLiteral("192.168.1.103"), QStringLiteral("online")},
-        {QStringLiteral("curtain_living"), QStringLiteral("\u5ba2\u5385\u7a97\u5e18"), QStringLiteral("\u7a97\u5e18\u8bbe\u5907"), QStringLiteral("192.168.1.104"), QStringLiteral("online")},
-        {QStringLiteral("lock_door"), QStringLiteral("\u524d\u95e8\u667a\u80fd\u9501"), QStringLiteral("\u5b89\u9632\u8bbe\u5907"), QStringLiteral("192.168.1.105"), QStringLiteral("online")},
-        {QStringLiteral("camera_01"), QStringLiteral("\u5ba2\u5385\u6444\u50cf\u5934"), QStringLiteral("\u5b89\u9632\u8bbe\u5907"), QStringLiteral("192.168.1.106"), QStringLiteral("offline")},
-        {QStringLiteral("tv_living"), QStringLiteral("\u5ba2\u5385\u7535\u89c6"), QStringLiteral("\u5f71\u97f3\u8bbe\u5907"), QStringLiteral("192.168.1.107"), QStringLiteral("online")}
-    };
+    return dao.listSettingsDevices();
 }
 
 SettingsDeviceEntry SettingsService::createNewDevice(const QString &deviceName, int currentCount) const
