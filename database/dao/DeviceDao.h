@@ -4,6 +4,7 @@
 
 #include <QList>
 #include <QString>
+#include <QVariantMap>
 #include <QVariantList>
 
 class DeviceDao
@@ -28,6 +29,12 @@ public:
                            double currentValue,
                            const QString &valueUnit,
                            const QString &modeText = QString());
+    QVariantMap loadDeviceExtraParams(const QString &deviceId);
+    bool upsertDeviceExtraParam(const QString &deviceId,
+                                const QString &paramCode,
+                                const QVariant &paramValue,
+                                const QString &paramName = QString(),
+                                const QString &paramUnit = QString());
     bool deleteDeviceById(const QString &deviceId);
     QString lastErrorText() const;
 

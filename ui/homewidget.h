@@ -63,15 +63,19 @@ private slots:
 
 private:
     Ui::HomeWidget *ui;
-    QPushButton *m_editQuickControlButton;
+    QPushButton *m_editQuickControlButton = nullptr;
     AlarmService m_alarmService;
     EnvironmentService m_environmentService;
     SettingsService m_settingsService;
     QuickControlService m_quickControlService;
     EnvRecordDao m_envRecordDao;
-    QTimer *m_environmentRefreshTimer;
+    QTimer *m_environmentRefreshTimer = nullptr;
     QString m_selectedSceneId;
     QString m_languageKey = QStringLiteral("zh_CN");
+    QFutureWatcher<HomeEnvironmentRefreshResult> *m_environmentWatcher = nullptr;
+    QFutureWatcher<DeviceStatusSummary> *m_deviceStatusWatcher = nullptr;
+    int m_environmentRequestId = 0;
+    int m_deviceStatusRequestId = 0;
 
     void initConnections();
     void refreshStaticTexts();
@@ -81,16 +85,4 @@ private:
     void refreshEnvironmentSnapshot();
     void refreshDeviceStatusAsync();
     void loadQuickControls();
-
-private:
-    Ui::HomeWidget *ui;
-    QPushButton *m_editQuickControlButton = nullptr;
-    EnvironmentService m_environmentService;
-    QuickControlService m_quickControlService;
-    QTimer *m_environmentRefreshTimer = nullptr;
-    QString m_selectedSceneId;
-    QFutureWatcher<HomeEnvironmentRefreshResult> *m_environmentWatcher = nullptr;
-    QFutureWatcher<DeviceStatusSummary> *m_deviceStatusWatcher = nullptr;
-    int m_environmentRequestId = 0;
-    int m_deviceStatusRequestId = 0;
 };

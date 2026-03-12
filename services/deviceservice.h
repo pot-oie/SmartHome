@@ -2,6 +2,9 @@
 
 #include "services/servicemodels.h"
 
+#include <QJsonObject>
+#include <QVariant>
+#include <QVariantMap>
 #include <QStringList>
 
 class DeviceService
@@ -23,4 +26,15 @@ public:
                            int value,
                            QString *errorMessage = nullptr,
                            QString *warningMessage = nullptr) const;
+    QVariantMap loadExtraParams(const QString &deviceId) const;
+    bool updateExtraParam(const QString &deviceId,
+                          const QString &paramCode,
+                          const QVariant &paramValue,
+                          const QString &paramName = QString(),
+                          const QString &paramUnit = QString(),
+                          QString *errorMessage = nullptr,
+                          QString *warningMessage = nullptr) const;
+
+    QJsonObject buildSwitchCommand(const QString &deviceId, bool turnOn) const;
+    QJsonObject buildSetParamCommand(const DeviceDefinition &device, int value) const;
 };

@@ -101,6 +101,42 @@ ON DUPLICATE KEY UPDATE
     extra_payload = VALUES(extra_payload),
     updated_at = VALUES(updated_at);
 
+INSERT INTO device_control_params (
+    id, device_id, param_code, param_name, param_type,
+    param_value_int, param_value_decimal, param_value_text, param_unit,
+    min_value, max_value, options_json, is_realtime, is_enabled, created_at, updated_at
+)
+VALUES
+    (1, 3, 'ac_mode', '空调模式', 'text', null, null, 'cool', null, null, null,
+     JSON_ARRAY('cool', 'heat', 'dry', 'fan'), 1, 1, now(), now()),
+    (2, 3, 'fan_speed', '空调风速', 'text', null, null, 'medium', null, null, null,
+     JSON_ARRAY('low', 'medium', 'high'), 1, 1, now(), now()),
+    (3, 3, 'timer_minutes', '空调定时', 'int', 30, null, '30', 'min', 0, 120,
+     null, 1, 1, now(), now()),
+    (4, 10, 'ac_mode', '空调模式', 'text', null, null, 'heat', null, null, null,
+     JSON_ARRAY('cool', 'heat', 'dry', 'fan'), 1, 1, now(), now()),
+    (5, 10, 'fan_speed', '空调风速', 'text', null, null, 'low', null, null, null,
+     JSON_ARRAY('low', 'medium', 'high'), 1, 1, now(), now()),
+    (6, 10, 'timer_minutes', '空调定时', 'int', 0, null, '0', 'min', 0, 120,
+     null, 1, 1, now(), now()),
+    (7, 1, 'color_temp', '色温', 'int', 4200, null, '4200', 'K', 2700, 6500,
+     null, 1, 1, now(), now()),
+    (8, 2, 'color_temp', '色温', 'int', 3500, null, '3500', 'K', 2700, 6500,
+     null, 1, 1, now(), now())
+ON DUPLICATE KEY UPDATE
+    param_name = VALUES(param_name),
+    param_type = VALUES(param_type),
+    param_value_int = VALUES(param_value_int),
+    param_value_decimal = VALUES(param_value_decimal),
+    param_value_text = VALUES(param_value_text),
+    param_unit = VALUES(param_unit),
+    min_value = VALUES(min_value),
+    max_value = VALUES(max_value),
+    options_json = VALUES(options_json),
+    is_realtime = VALUES(is_realtime),
+    is_enabled = VALUES(is_enabled),
+    updated_at = VALUES(updated_at);
+
 INSERT INTO scenes (
     id, scene_code, scene_name, scene_description, scene_icon, welcome_text, trigger_key,
     is_default, is_enabled, display_order, created_at, updated_at

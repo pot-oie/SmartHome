@@ -3,6 +3,7 @@
 #include "../databasemanager.h"
 
 #include <QDebug>
+#include <QMetaType>
 #include <QRegularExpression>
 #include <QSqlQuery>
 #include <QUuid>
@@ -507,6 +508,140 @@ bool DeviceDao::updateDeviceState(const QString &deviceId,
     {
         setLastError(databaseManager.lastErrorText());
         databaseManager.rollback();
+        return false;
+    }
+
+    clearLastError();
+    return true;
+}
+
+QVariantMap DeviceDao::loadDeviceExtraParams(const QString &deviceId)
+{
+    QVariantMap params;
+
+    DatabaseManager &databaseManager = DatabaseManager::instance();
+    if (!databaseManager.isOpen() && !databaseManager.open())
+    {
+        setLastError(databaseManager.lastErrorText());
+        qWarning().noquote() << LOG_PREFIX << "Failed to open database before loading extra params:" << m_lastErrorText;
+        return params;
+    }
+
+    static const QString sql =
+        "SELECT p.param_code, p.param_type, p.param_value_int, p.param_value_decimal, p.param_value_text "
+        "FROM device_control_params p "
+        "INNER JOIN devices d ON d.id = p.device_id "
+        "WHERE d.device_id = ? AND p.is_enabled = 1";
+
+    QSqlQuery query = databaseManager.query(sql, {deviceId});
+    if (!query.isActive())
+    {
+        setLastError(databaseManager.lastErrorText());
+        qWarning().noquote() << LOG_PREFIX << "Load extra params query failed:" << m_lastErrorText << "| device_id:" << deviceId;
+        return params;
+    }
+
+    while (query.next())
+    {
+        const QString code = query.value("param_code").toString().trimmed();
+        if (code.isEmpty())
+        {
+            continue;
+        }
+
+        const QString type = query.value("param_type").toString().trimmed().toLower();
+        if (type == QStringLiteral("int") || type == QStringLiteral("bool"))
+        {
+            params.insert(code, query.value("param_value_int").toInt());
+        }
+        else if (type == QStringLiteral("decimal"))
+        {
+            params.insert(code, query.value("param_value_decimal").toDouble());
+        }
+        else
+        {
+            params.insert(code, query.value("param_value_text").toString());
+        }
+    }
+
+    clearLastError();
+    return params;
+}
+
+bool DeviceDao::upsertDeviceExtraParam(const QString &deviceId,
+                                       const QString &paramCode,
+                                       const QVariant &paramValue,
+                                       const QString &paramName,
+                                       const QString &paramUnit)
+{
+    DatabaseManager &databaseManager = DatabaseManager::instance();
+    if (!databaseManager.isOpen() && !databaseManager.open())
+    {
+        setLastError(databaseManager.lastErrorText());
+        qWarning().noquote() << LOG_PREFIX << "Failed to open database before upsert extra param:" << m_lastErrorText;
+        return false;
+    }
+
+    QSqlQuery deviceQuery = databaseManager.query("SELECT id FROM devices WHERE device_id = ? LIMIT 1", {deviceId});
+    if (!deviceQuery.isActive() || !deviceQuery.next())
+    {
+        setLastError(databaseManager.lastErrorText().isEmpty()
+                         ? QStringLiteral("未找到要更新参数的设备。")
+                         : databaseManager.lastErrorText());
+        return false;
+    }
+
+    const qlonglong devicePk = deviceQuery.value(0).toLongLong();
+    const QString finalCode = paramCode.trimmed();
+    if (finalCode.isEmpty())
+    {
+        setLastError(QStringLiteral("参数编码不能为空。"));
+        return false;
+    }
+
+    QString paramType = QStringLiteral("text");
+    QVariant valueInt;
+    QVariant valueDecimal;
+    QVariant valueText;
+    if (paramValue.userType() == QMetaType::Int
+        || paramValue.userType() == QMetaType::UInt
+        || paramValue.userType() == QMetaType::LongLong
+        || paramValue.userType() == QMetaType::ULongLong
+        || paramValue.userType() == QMetaType::Bool)
+    {
+        paramType = (paramValue.userType() == QMetaType::Bool) ? QStringLiteral("bool") : QStringLiteral("int");
+        valueInt = paramValue.toInt();
+        valueText = QString::number(paramValue.toInt());
+    }
+    else if (paramValue.userType() == QMetaType::Double || paramValue.userType() == QMetaType::Float)
+    {
+        paramType = QStringLiteral("decimal");
+        valueDecimal = paramValue.toDouble();
+        valueText = QString::number(paramValue.toDouble(), 'f', 2);
+    }
+    else
+    {
+        valueText = paramValue.toString();
+    }
+
+    if (!databaseManager.exec(
+            "INSERT INTO device_control_params ("
+            "device_id, param_code, param_name, param_type, param_value_int, param_value_decimal, param_value_text, param_unit, is_realtime, is_enabled, updated_at"
+            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, NOW()) "
+            "ON DUPLICATE KEY UPDATE param_name = VALUES(param_name), param_type = VALUES(param_type), "
+            "param_value_int = VALUES(param_value_int), param_value_decimal = VALUES(param_value_decimal), "
+            "param_value_text = VALUES(param_value_text), param_unit = VALUES(param_unit), is_realtime = 1, is_enabled = 1, updated_at = NOW()",
+            {devicePk,
+             finalCode,
+             paramName.trimmed().isEmpty() ? finalCode : paramName,
+             paramType,
+             valueInt,
+             valueDecimal,
+             valueText,
+             paramUnit}))
+    {
+        setLastError(databaseManager.lastErrorText());
+        qWarning().noquote() << LOG_PREFIX << "Upsert extra param failed:" << m_lastErrorText << "| device_id:" << deviceId << "| param:" << finalCode;
         return false;
     }
 

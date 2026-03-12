@@ -27,9 +27,6 @@ public:
 public slots:
     void refreshData();
 
-public slots:
-    void refreshData();
-
 protected:
     void showEvent(QShowEvent *event) override;
 

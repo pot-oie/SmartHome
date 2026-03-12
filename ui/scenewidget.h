@@ -18,6 +18,7 @@ class SceneWidget : public QWidget
 public:
     explicit SceneWidget(QWidget *parent = nullptr);
     ~SceneWidget();
+    void applyLanguage(const QString &languageKey);
 
 public slots:
     void refreshScenes();

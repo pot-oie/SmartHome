@@ -1,5 +1,8 @@
 #pragma once
 
+#include <QHideEvent>
+#include <QJsonObject>
+#include <QShowEvent>
 #include <QWidget>
 #include <QTimer>
 
@@ -17,6 +20,10 @@ class DeviceControlWidget : public QWidget
 public:
     explicit DeviceControlWidget(QWidget *parent = nullptr);
     ~DeviceControlWidget();
+    void applyLanguage(const QString &languageKey);
+
+signals:
+    void requestControlDevice(const QJsonObject &controlCmd);
 
 public slots:
     void refreshDevices();

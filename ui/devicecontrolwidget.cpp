@@ -1,6 +1,8 @@
 #include "devicecontrolwidget.h"
 #include "ui_devicecontrolwidget.h"
 
+#include "database/dao/EnvRecordDao.h"
+
 #include <QApplication>
 #include <QColor>
 #include <QMetaObject>
@@ -8,14 +10,16 @@
 #include <QIcon>
 #include <QHash>
 #include <QLabel>
+#include <QInputDialog>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QEvent>
 #include <QPalette>
+#include <QScrollBar>
 #include <QSlider>
+#include <QToolButton>
 #include <QVBoxLayout>
 #include <QComboBox>
-#include <QSpinBox>
 
 namespace
 {
@@ -78,6 +82,35 @@ namespace
     {
         return QStringLiteral("font-size: 10pt; font-weight: 600; color: %1;")
             .arg(colorCss(palette.color(QPalette::WindowText)));
+    }
+
+    QString timerValueButtonStyle(const QPalette &palette)
+    {
+        const bool dark = isDarkTheme(palette);
+        const QColor window = palette.color(QPalette::Window);
+        const QColor text = palette.color(QPalette::WindowText);
+        const QColor muted = dark ? blendColor(text, window, 0.30) : blendColor(text, window, 0.48);
+        return QStringLiteral(
+            "QPushButton { border: none; background: transparent; color: %1; font-size: 10pt; font-weight: 400; padding: 0 2px 0 0; text-align: left; }"
+            "QPushButton:hover { color: %2; }"
+            "QPushButton:pressed { color: %2; }")
+            .arg(colorCss(text), colorCss(muted));
+    }
+
+    QString timerArrowButtonStyle(const QPalette &palette)
+    {
+        const bool dark = isDarkTheme(palette);
+        const QColor window = palette.color(QPalette::Window);
+        const QColor text = palette.color(QPalette::WindowText);
+        const QColor blue = QColor("#007AFF");
+        const QColor hoverBg = dark ? blendColor(window, QColor("#FFFFFF"), 0.12) : QColor("#E0E0E0");
+        const QColor pressedBg = dark ? blendColor(window, QColor("#FFFFFF"), 0.18) : QColor("#D0D0D0");
+        const QColor normalText = dark ? blendColor(text, window, 0.12) : QColor("#444444");
+        return QStringLiteral(
+            "QToolButton { border: none; border-radius: 6px; background: transparent; color: %1; }"
+            "QToolButton:hover { background: %2; color: %3; }"
+            "QToolButton:pressed { background: %4; color: %3; }")
+            .arg(colorCss(normalText), colorCss(hoverBg), colorCss(blue), colorCss(pressedBg));
     }
 
     QString panelStyle(const QPalette &palette)
@@ -277,6 +310,107 @@ namespace
             {QStringLiteral("传感设备"), QStringLiteral("Sensors")}};
         return map.value(category, category);
     }
+
+    int indexForAcMode(const QString &modeCode)
+    {
+        const QString mode = modeCode.trimmed().toLower();
+        if (mode == QStringLiteral("heat"))
+        {
+            return 1;
+        }
+        if (mode == QStringLiteral("dry"))
+        {
+            return 2;
+        }
+        if (mode == QStringLiteral("fan"))
+        {
+            return 3;
+        }
+        return 0;
+    }
+
+    QString acModeCodeByIndex(int index)
+    {
+        switch (index)
+        {
+        case 1:
+            return QStringLiteral("heat");
+        case 2:
+            return QStringLiteral("dry");
+        case 3:
+            return QStringLiteral("fan");
+        default:
+            return QStringLiteral("cool");
+        }
+    }
+
+    int indexForFanSpeed(const QString &speedCode)
+    {
+        const QString speed = speedCode.trimmed().toLower();
+        if (speed == QStringLiteral("medium"))
+        {
+            return 1;
+        }
+        if (speed == QStringLiteral("high"))
+        {
+            return 2;
+        }
+        return 0;
+    }
+
+    QString fanSpeedCodeByIndex(int index)
+    {
+        switch (index)
+        {
+        case 1:
+            return QStringLiteral("medium");
+        case 2:
+            return QStringLiteral("high");
+        default:
+            return QStringLiteral("low");
+        }
+    }
+
+    int indexForLightMode(const QVariantMap &extraParams)
+    {
+        const QString mode = extraParams.value(QStringLiteral("light_mode")).toString().trimmed().toLower();
+        if (mode == QStringLiteral("warm"))
+        {
+            return 1;
+        }
+        if (mode == QStringLiteral("mixed"))
+        {
+            return 2;
+        }
+        if (mode == QStringLiteral("bright"))
+        {
+            return 0;
+        }
+
+        const int colorTemp = extraParams.value(QStringLiteral("color_temp"), 4500).toInt();
+        if (colorTemp <= 3600)
+        {
+            return 1;
+        }
+        if (colorTemp >= 5000)
+        {
+            return 0;
+        }
+        return 2;
+    }
+
+    QString lightModeCodeByIndex(int index)
+    {
+        switch (index)
+        {
+        case 1:
+            return QStringLiteral("warm");
+        case 2:
+            return QStringLiteral("mixed");
+        default:
+            return QStringLiteral("bright");
+        }
+    }
 }
 
 DeviceControlWidget::DeviceControlWidget(QWidget *parent)
@@ -349,6 +483,12 @@ void DeviceControlWidget::reloadDevices(bool reloadCategories)
 
 void DeviceControlWidget::updateDeviceListUI(int category)
 {
+    int preservedScrollValue = 0;
+    if (ui && ui->scrollArea && ui->scrollArea->verticalScrollBar())
+    {
+        preservedScrollValue = ui->scrollArea->verticalScrollBar()->value();
+    }
+
     QWidget *contentWidget = new QWidget();
     contentWidget->setAttribute(Qt::WA_StyledBackground, true);
     contentWidget->setStyleSheet(transparentWidgetStyle());
@@ -359,10 +499,34 @@ void DeviceControlWidget::updateDeviceListUI(int category)
     const DeviceList filteredDevices = m_deviceService.filterDevices(m_allDevices, category, m_categories);
     const QPalette palette = this->palette();
     const bool isEnglish = (m_languageKey == QStringLiteral("en_US"));
+    EnvRecordDao envRecordDao;
+    const std::optional<EnvRealtimeSnapshot> envSnapshot = envRecordDao.getLatestRealtimeSnapshot();
 
     auto refreshCurrentCategory = [this]() {
         reloadDevices(false);
         updateDeviceListUI(ui->listCategory->currentRow());
+    };
+
+    auto deferAutoRefresh = [this]() {
+        if (!m_refreshTimer)
+        {
+            return;
+        }
+
+        m_refreshTimer->stop();
+        const int seq = this->property("interactionSeq").toInt() + 1;
+        this->setProperty("interactionSeq", seq);
+        QTimer::singleShot(1400, this, [this, seq]() {
+            if (this->property("interactionSeq").toInt() != seq)
+            {
+                return;
+            }
+
+            if (isVisible() && m_refreshTimer && !m_refreshTimer->isActive())
+            {
+                m_refreshTimer->start();
+            }
+        });
     };
 
     auto createSwitchButton = [this, &refreshCurrentCategory, palette, isEnglish](const DeviceDefinition &device) {
@@ -520,8 +684,20 @@ void DeviceControlWidget::updateDeviceListUI(int category)
 
         if (isReadOnlySensor)
         {
+            QString readingText = localizedValueText(device, device.value, isEnglish);
+            const bool useHomeSnapshot = envSnapshot.has_value()
+                                         && (device.id.contains(QStringLiteral("living"), Qt::CaseInsensitive)
+                                             || device.name.contains(QStringLiteral("客厅")));
+            if (useHomeSnapshot)
+            {
+                const int displayTemp = qRound(envSnapshot->temperature);
+                readingText = isEnglish
+                                  ? QStringLiteral("%1 °C").arg(displayTemp)
+                                  : QStringLiteral("%1°C").arg(displayTemp);
+            }
+
             QLabel *readingLabel = new QLabel((isEnglish ? QStringLiteral("Current reading: ") : QStringLiteral("当前读数："))
-                                              + localizedValueText(device, device.value, isEnglish));
+                                              + readingText);
             readingLabel->setStyleSheet(metricTextStyle(palette));
             cardLayout->addWidget(readingLabel);
             mainLayout->addWidget(deviceCard);
@@ -567,6 +743,7 @@ void DeviceControlWidget::updateDeviceListUI(int category)
 
             if (!shouldHideExtraSettings(device) && device.type.contains(QStringLiteral("空调")))
             {
+                const QVariantMap extraParams = m_deviceService.loadExtraParams(device.id);
                 QWidget *extraPanel = new QWidget();
                 extraPanel->setAttribute(Qt::WA_StyledBackground, true);
                 extraPanel->setStyleSheet(panelStyle(palette));
@@ -583,6 +760,7 @@ void DeviceControlWidget::updateDeviceListUI(int category)
                 modeBox->addItems(isEnglish
                                       ? QStringList{QStringLiteral("Cool"), QStringLiteral("Heat"), QStringLiteral("Dry"), QStringLiteral("Fan")}
                                       : QStringList{QStringLiteral("制冷"), QStringLiteral("制热"), QStringLiteral("除湿"), QStringLiteral("送风")});
+                modeBox->setCurrentIndex(indexForAcMode(extraParams.value(QStringLiteral("ac_mode"), QStringLiteral("cool")).toString()));
 
                 QLabel *fanLabel = new QLabel(QStringLiteral("风速"));
                 fanLabel->setText(isEnglish ? QStringLiteral("Fan") : QStringLiteral("风速"));
@@ -593,27 +771,176 @@ void DeviceControlWidget::updateDeviceListUI(int category)
                 fanBox->addItems(isEnglish
                                      ? QStringList{QStringLiteral("Low"), QStringLiteral("Medium"), QStringLiteral("High")}
                                      : QStringList{QStringLiteral("低"), QStringLiteral("中"), QStringLiteral("高")});
+                fanBox->setCurrentIndex(indexForFanSpeed(extraParams.value(QStringLiteral("fan_speed"), QStringLiteral("low")).toString()));
 
                 QLabel *timerLabel = new QLabel(QStringLiteral("定时"));
                 timerLabel->setText(isEnglish ? QStringLiteral("Timer") : QStringLiteral("定时"));
                 timerLabel->setStyleSheet(mutedTextStyle(palette));
                 timerLabel->setMinimumWidth(44);
-                QSpinBox *timerSpin = new QSpinBox();
-                timerSpin->setMinimumWidth(88);
-                timerSpin->setRange(0, 120);
-                timerSpin->setSuffix(isEnglish ? QStringLiteral(" min") : QStringLiteral(" 分钟"));
+                QWidget *timerEditor = new QWidget();
+                timerEditor->setAttribute(Qt::WA_StyledBackground, true);
+                timerEditor->setStyleSheet(panelStyle(palette));
+                timerEditor->setMinimumWidth(126);
+                timerEditor->setMinimumHeight(44);
+                QHBoxLayout *timerLayout = new QHBoxLayout(timerEditor);
+                timerLayout->setContentsMargins(10, 4, 6, 4);
+                timerLayout->setSpacing(3);
+
+                QPushButton *timerValueButton = new QPushButton();
+                timerValueButton->setCursor(Qt::PointingHandCursor);
+                timerValueButton->setStyleSheet(timerValueButtonStyle(palette));
+
+                QWidget *arrowColumn = new QWidget();
+                arrowColumn->setAttribute(Qt::WA_StyledBackground, true);
+                arrowColumn->setStyleSheet(transparentWidgetStyle());
+                QVBoxLayout *arrowLayout = new QVBoxLayout(arrowColumn);
+                arrowLayout->setContentsMargins(0, 0, 0, 0);
+                arrowLayout->setSpacing(2);
+
+                QToolButton *upButton = new QToolButton();
+                upButton->setArrowType(Qt::UpArrow);
+                upButton->setFixedSize(24, 18);
+                upButton->setAutoRepeat(true);
+                upButton->setAutoRepeatInterval(90);
+                upButton->setCursor(Qt::PointingHandCursor);
+                upButton->setAutoRaise(true);
+                upButton->setStyleSheet(timerArrowButtonStyle(palette));
+
+                QToolButton *downButton = new QToolButton();
+                downButton->setArrowType(Qt::DownArrow);
+                downButton->setFixedSize(24, 18);
+                downButton->setAutoRepeat(true);
+                downButton->setAutoRepeatInterval(90);
+                downButton->setCursor(Qt::PointingHandCursor);
+                downButton->setAutoRaise(true);
+                downButton->setStyleSheet(timerArrowButtonStyle(palette));
+
+                arrowLayout->addWidget(upButton);
+                arrowLayout->addWidget(downButton);
+
+                const int timerInit = qBound(0, extraParams.value(QStringLiteral("timer_minutes"), 0).toInt(), 120);
+                timerEditor->setProperty("timerMinutes", timerInit);
+                timerValueButton->setText(isEnglish ? QStringLiteral("%1 min").arg(timerInit) : QStringLiteral("%1 分钟").arg(timerInit));
+
+                auto persistTimerMinutes = [this, device, deferAutoRefresh](int minutes) {
+                    deferAutoRefresh();
+                    QString errorMessage;
+                    QString warningMessage;
+                    if (!m_deviceService.updateExtraParam(device.id,
+                                                          QStringLiteral("timer_minutes"),
+                                                          minutes,
+                                                          QStringLiteral("空调定时"),
+                                                          QStringLiteral("min"),
+                                                          &errorMessage,
+                                                          &warningMessage))
+                    {
+                        QMessageBox::critical(this, kFailed, errorMessage.trimmed().isEmpty() ? QStringLiteral("空调定时写入数据库失败。") : errorMessage);
+                        return;
+                    }
+                    if (!warningMessage.trimmed().isEmpty())
+                    {
+                        QMessageBox::warning(this, kWarning, warningMessage);
+                    }
+                };
+                auto updateTimerValue = [timerEditor, timerValueButton, isEnglish, persistTimerMinutes](int delta) {
+                    const int current = timerEditor->property("timerMinutes").toInt();
+                    const int next = qBound(0, current + delta, 120);
+                    if (next == current)
+                    {
+                        return;
+                    }
+                    timerEditor->setProperty("timerMinutes", next);
+                    timerValueButton->setText(isEnglish ? QStringLiteral("%1 min").arg(next) : QStringLiteral("%1 分钟").arg(next));
+                    persistTimerMinutes(next);
+                };
+
+                connect(upButton, &QToolButton::clicked, this, [updateTimerValue]() {
+                    updateTimerValue(1);
+                });
+                connect(downButton, &QToolButton::clicked, this, [updateTimerValue]() {
+                    updateTimerValue(-1);
+                });
+
+                connect(timerValueButton, &QPushButton::clicked, this, [this, timerEditor, timerValueButton, isEnglish, persistTimerMinutes]() {
+                    const int current = timerEditor->property("timerMinutes").toInt();
+                    bool ok = false;
+                    const int value = QInputDialog::getInt(this,
+                                                           isEnglish ? QStringLiteral("Set Timer") : QStringLiteral("设置定时"),
+                                                           isEnglish ? QStringLiteral("Minutes") : QStringLiteral("分钟"),
+                                                           current,
+                                                           0,
+                                                           120,
+                                                           1,
+                                                           &ok);
+                    if (!ok)
+                    {
+                        return;
+                    }
+
+                    timerEditor->setProperty("timerMinutes", value);
+                    timerValueButton->setText(isEnglish ? QStringLiteral("%1 min").arg(value) : QStringLiteral("%1 分钟").arg(value));
+                    persistTimerMinutes(value);
+                });
+
+                timerLayout->addWidget(timerValueButton, 1);
+                timerLayout->addWidget(arrowColumn, 0, Qt::AlignRight | Qt::AlignVCenter);
+
+                connect(modeBox, qOverload<int>(&QComboBox::currentIndexChanged), this, [this, device, modeBox, deferAutoRefresh]() {
+                    deferAutoRefresh();
+                    QString errorMessage;
+                    QString warningMessage;
+                    const QString modeCode = acModeCodeByIndex(modeBox->currentIndex());
+                    if (!m_deviceService.updateExtraParam(device.id,
+                                                          QStringLiteral("ac_mode"),
+                                                          modeCode,
+                                                          QStringLiteral("空调模式"),
+                                                          QString(),
+                                                          &errorMessage,
+                                                          &warningMessage))
+                    {
+                        QMessageBox::critical(this, kFailed, errorMessage.trimmed().isEmpty() ? QStringLiteral("空调模式写入数据库失败。") : errorMessage);
+                        return;
+                    }
+                    if (!warningMessage.trimmed().isEmpty())
+                    {
+                        QMessageBox::warning(this, kWarning, warningMessage);
+                    }
+                });
+
+                connect(fanBox, qOverload<int>(&QComboBox::currentIndexChanged), this, [this, device, fanBox, deferAutoRefresh]() {
+                    deferAutoRefresh();
+                    QString errorMessage;
+                    QString warningMessage;
+                    const QString speedCode = fanSpeedCodeByIndex(fanBox->currentIndex());
+                    if (!m_deviceService.updateExtraParam(device.id,
+                                                          QStringLiteral("fan_speed"),
+                                                          speedCode,
+                                                          QStringLiteral("空调风速"),
+                                                          QString(),
+                                                          &errorMessage,
+                                                          &warningMessage))
+                    {
+                        QMessageBox::critical(this, kFailed, errorMessage.trimmed().isEmpty() ? QStringLiteral("空调风速写入数据库失败。") : errorMessage);
+                        return;
+                    }
+                    if (!warningMessage.trimmed().isEmpty())
+                    {
+                        QMessageBox::warning(this, kWarning, warningMessage);
+                    }
+                });
 
                 extraLayout->addWidget(modeLabel);
                 extraLayout->addWidget(modeBox);
                 extraLayout->addWidget(fanLabel);
                 extraLayout->addWidget(fanBox);
                 extraLayout->addWidget(timerLabel);
-                extraLayout->addWidget(timerSpin);
+                extraLayout->addWidget(timerEditor);
                 extraLayout->addStretch();
                 bodyLayout->addWidget(extraPanel);
             }
             else if (!shouldHideExtraSettings(device) && device.type.contains(QStringLiteral("照明")))
             {
+                const QVariantMap extraParams = m_deviceService.loadExtraParams(device.id);
                 QWidget *modePanel = new QWidget();
                 modePanel->setAttribute(Qt::WA_StyledBackground, true);
                 modePanel->setStyleSheet(panelStyle(palette));
@@ -621,15 +948,40 @@ void DeviceControlWidget::updateDeviceListUI(int category)
                 modeLayout->setContentsMargins(12, 8, 12, 8);
                 modeLayout->setSpacing(10);
 
-                QLabel *modeLabel = new QLabel(QStringLiteral("灯光模式"));
-                modeLabel->setText(isEnglish ? QStringLiteral("Light Mode") : QStringLiteral("灯光模式"));
+                QLabel *modeLabel = new QLabel(isEnglish ? QStringLiteral("Light Mode") : QStringLiteral("灯光模式"));
                 modeLabel->setStyleSheet(mutedTextStyle(palette));
                 modeLabel->setMinimumWidth(84);
+
                 QComboBox *modeBox = new QComboBox();
-                modeBox->setMinimumWidth(92);
+                modeBox->setMinimumWidth(96);
                 modeBox->addItems(isEnglish
                                       ? QStringList{QStringLiteral("Bright"), QStringLiteral("Warm"), QStringLiteral("Mixed")}
                                       : QStringList{QStringLiteral("亮色"), QStringLiteral("暖色"), QStringLiteral("混合")});
+                modeBox->setCurrentIndex(indexForLightMode(extraParams));
+
+                connect(modeBox, qOverload<int>(&QComboBox::currentIndexChanged), this, [this, device, modeBox, deferAutoRefresh]() {
+                    deferAutoRefresh();
+                    QString errorMessage;
+                    QString warningMessage;
+
+                    const QString modeCode = lightModeCodeByIndex(modeBox->currentIndex());
+                    if (!m_deviceService.updateExtraParam(device.id,
+                                                          QStringLiteral("light_mode"),
+                                                          modeCode,
+                                                          QStringLiteral("灯光模式"),
+                                                          QString(),
+                                                          &errorMessage,
+                                                          &warningMessage))
+                    {
+                        QMessageBox::critical(this, kFailed, errorMessage.trimmed().isEmpty() ? QStringLiteral("灯光模式写入数据库失败。") : errorMessage);
+                        return;
+                    }
+                    if (!warningMessage.trimmed().isEmpty())
+                    {
+                        QMessageBox::warning(this, kWarning, warningMessage);
+                    }
+                });
+
                 modeLayout->addWidget(modeLabel);
                 modeLayout->addWidget(modeBox);
                 modeLayout->addStretch();
@@ -652,6 +1004,16 @@ void DeviceControlWidget::updateDeviceListUI(int category)
         delete ui->scrollArea->widget();
     }
     ui->scrollArea->setWidget(contentWidget);
+    if (ui->scrollArea->verticalScrollBar())
+    {
+        QScrollBar *scrollBar = ui->scrollArea->verticalScrollBar();
+        QTimer::singleShot(0, this, [scrollBar, preservedScrollValue]() {
+            if (scrollBar)
+            {
+                scrollBar->setValue(preservedScrollValue);
+            }
+        });
+    }
 }
 
 void DeviceControlWidget::refreshDevices()

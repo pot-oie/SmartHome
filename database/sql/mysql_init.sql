@@ -109,6 +109,34 @@ CREATE TABLE IF NOT EXISTS device_state_snapshots (
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+-- 设备扩展控制参数表：用于空调风速/定时、灯光色温等“非主滑杆参数”的实时读写
+CREATE TABLE IF NOT EXISTS device_control_params (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    device_id BIGINT NOT NULL,
+    param_code VARCHAR(50) NOT NULL,
+    param_name VARCHAR(100) NOT NULL,
+    param_type ENUM('int', 'decimal', 'text', 'bool') NOT NULL DEFAULT 'text',
+    param_value_int INT DEFAULT NULL,
+    param_value_decimal DECIMAL(12,2) DEFAULT NULL,
+    param_value_text VARCHAR(100) DEFAULT NULL,
+    param_unit VARCHAR(20) DEFAULT NULL,
+    min_value DECIMAL(12,2) DEFAULT NULL,
+    max_value DECIMAL(12,2) DEFAULT NULL,
+    options_json JSON DEFAULT NULL,
+    is_realtime TINYINT(1) NOT NULL DEFAULT 1,
+    is_enabled TINYINT(1) NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_device_control_params_device_code (device_id, param_code),
+    KEY idx_device_control_params_device_enabled (device_id, is_enabled),
+    KEY idx_device_control_params_code (param_code),
+    CONSTRAINT fk_device_control_params_device
+        FOREIGN KEY (device_id) REFERENCES devices (id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 -- 设备遥测历史表：保存亮度、温度设定值、窗帘开合度、在线状态等时序数据
 CREATE TABLE IF NOT EXISTS device_telemetry_records (
     id BIGINT NOT NULL AUTO_INCREMENT,
