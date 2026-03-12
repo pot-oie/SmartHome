@@ -15,6 +15,8 @@
 #include <QPushButton>
 #include <QEvent>
 #include <QPalette>
+#include <QPainter>
+#include <QPixmap>
 #include <QScrollBar>
 #include <QSlider>
 #include <QToolButton>
@@ -121,6 +123,63 @@ namespace
         const QColor borderColor = dark ? blendColor(window, QColor("#FFFFFF"), 0.20) : blendColor(window, QColor("#000000"), 0.09);
         return QStringLiteral("background: %1; border: 1px solid %2; border-radius: 10px;")
             .arg(colorCss(panelBackground), colorCss(borderColor));
+    }
+
+    QString optionTagStyle(const QPalette &palette)
+    {
+        const bool dark = isDarkTheme(palette);
+        const QColor window = palette.color(QPalette::Window);
+        const QColor text = palette.color(QPalette::WindowText);
+        const QColor bg = dark ? blendColor(window, QColor("#FFFFFF"), 0.12) : QColor("#EEF4FB");
+        const QColor border = dark ? blendColor(window, QColor("#FFFFFF"), 0.24) : QColor("#C7D9EC");
+        const QColor fg = dark ? blendColor(text, QColor("#FFFFFF"), 0.10) : QColor("#385B82");
+        return QStringLiteral("color: %1; background: %2; border: 1px solid %3; border-radius: 10px; padding: 3px 10px; font-size: 9pt; font-weight: 600;")
+            .arg(colorCss(fg), colorCss(bg), colorCss(border));
+    }
+
+    QString optionComboStyle(const QPalette &palette)
+    {
+        const bool dark = isDarkTheme(palette);
+        const QColor window = palette.color(QPalette::Window);
+        const QColor text = palette.color(QPalette::WindowText);
+        const QColor accent = palette.color(QPalette::Highlight);
+        const QColor bg = dark ? blendColor(window, QColor("#FFFFFF"), 0.10) : QColor("#FFFFFF");
+        const QColor border = dark ? blendColor(window, QColor("#FFFFFF"), 0.24) : QColor("#BFD4EA");
+        const QColor hoverBorder = dark ? blendColor(accent, QColor("#FFFFFF"), 0.18) : blendColor(accent, QColor("#000000"), 0.12);
+        const QColor viewBg = dark ? blendColor(window, QColor("#FFFFFF"), 0.08) : QColor("#FFFFFF");
+        const QColor downArrow = dark ? blendColor(text, QColor("#FFFFFF"), 0.06) : QColor("#4C6278");
+        return QStringLiteral(
+                   "QComboBox { background: %1; color: %2; border: 1px solid %3; border-radius: 11px; padding: 5px 30px 5px 12px; min-height: 30px; font-size: 9pt; font-weight: 600; }"
+                   "QComboBox:hover { border-color: %4; }"
+                   "QComboBox:focus { border-color: %4; }"
+                   "QComboBox::drop-down { border: none; width: 24px; }"
+                   "QComboBox::down-arrow { image: none; width: 0px; height: 0px; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid %5; margin-right: 8px; }"
+                   "QComboBox QAbstractItemView { background: %6; color: %2; border: 1px solid %3; selection-background-color: %4; selection-color: #FFFFFF; outline: none; }")
+            .arg(colorCss(bg), colorCss(text), colorCss(border), colorCss(hoverBorder), colorCss(downArrow), colorCss(viewBg));
+    }
+
+    QPixmap themedDeviceIconPixmap(const QString &iconPath, const QPalette &palette)
+    {
+        const QIcon baseIcon(iconPath);
+        QPixmap source = baseIcon.pixmap(28, 28);
+        if (source.isNull())
+        {
+            return source;
+        }
+
+        if (!isDarkTheme(palette))
+        {
+            return source;
+        }
+
+        QPixmap tinted(source.size());
+        tinted.fill(Qt::transparent);
+        QPainter painter(&tinted);
+        painter.drawPixmap(0, 0, source);
+        painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+        painter.fillRect(tinted.rect(), QColor("#DCE7F8"));
+        painter.end();
+        return tinted;
     }
 
     bool isSwitchOnlySecurityDevice(const DeviceDefinition &device)
@@ -614,7 +673,7 @@ void DeviceControlWidget::updateDeviceListUI(int category)
         headerLayout->setContentsMargins(0, 0, 0, 0);
 
         QLabel *iconLabel = new QLabel();
-        iconLabel->setPixmap(QIcon(device.icon).pixmap(28, 28));
+        iconLabel->setPixmap(themedDeviceIconPixmap(device.icon, palette));
         iconLabel->setFixedSize(32, 32);
         headerLayout->addWidget(iconLabel, 0, Qt::AlignTop);
 
@@ -740,9 +799,10 @@ void DeviceControlWidget::updateDeviceListUI(int category)
 
                 QLabel *modeLabel = new QLabel(QStringLiteral("模式"));
                 modeLabel->setText(isEnglish ? QStringLiteral("Mode") : QStringLiteral("模式"));
-                modeLabel->setStyleSheet(mutedTextStyle(palette));
+                modeLabel->setStyleSheet(optionTagStyle(palette));
                 modeLabel->setMinimumWidth(44);
                 QComboBox *modeBox = new QComboBox();
+                modeBox->setStyleSheet(optionComboStyle(palette));
                 modeBox->setMinimumWidth(84);
                 modeBox->addItems(isEnglish
                                       ? QStringList{QStringLiteral("Cool"), QStringLiteral("Heat"), QStringLiteral("Dry"), QStringLiteral("Fan")}
@@ -751,9 +811,10 @@ void DeviceControlWidget::updateDeviceListUI(int category)
 
                 QLabel *fanLabel = new QLabel(QStringLiteral("风速"));
                 fanLabel->setText(isEnglish ? QStringLiteral("Fan") : QStringLiteral("风速"));
-                fanLabel->setStyleSheet(mutedTextStyle(palette));
+                fanLabel->setStyleSheet(optionTagStyle(palette));
                 fanLabel->setMinimumWidth(36);
                 QComboBox *fanBox = new QComboBox();
+                fanBox->setStyleSheet(optionComboStyle(palette));
                 fanBox->setMinimumWidth(72);
                 fanBox->addItems(isEnglish
                                      ? QStringList{QStringLiteral("Low"), QStringLiteral("Medium"), QStringLiteral("High")}
@@ -762,7 +823,7 @@ void DeviceControlWidget::updateDeviceListUI(int category)
 
                 QLabel *timerLabel = new QLabel(QStringLiteral("定时"));
                 timerLabel->setText(isEnglish ? QStringLiteral("Timer") : QStringLiteral("定时"));
-                timerLabel->setStyleSheet(mutedTextStyle(palette));
+                timerLabel->setStyleSheet(optionTagStyle(palette));
                 timerLabel->setMinimumWidth(44);
                 QWidget *timerEditor = new QWidget();
                 timerEditor->setAttribute(Qt::WA_StyledBackground, true);
@@ -936,10 +997,11 @@ void DeviceControlWidget::updateDeviceListUI(int category)
                 modeLayout->setSpacing(10);
 
                 QLabel *modeLabel = new QLabel(isEnglish ? QStringLiteral("Light Mode") : QStringLiteral("灯光模式"));
-                modeLabel->setStyleSheet(mutedTextStyle(palette));
+                modeLabel->setStyleSheet(optionTagStyle(palette));
                 modeLabel->setMinimumWidth(84);
 
                 QComboBox *modeBox = new QComboBox();
+                modeBox->setStyleSheet(optionComboStyle(palette));
                 modeBox->setMinimumWidth(96);
                 modeBox->addItems(isEnglish
                                       ? QStringList{QStringLiteral("Bright"), QStringLiteral("Warm"), QStringLiteral("Mixed")}

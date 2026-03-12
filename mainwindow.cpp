@@ -17,25 +17,25 @@
 
 namespace
 {
-QIcon tintedIcon(const QString &path, const QColor &color)
-{
-    const QIcon baseIcon(path);
-    const QSize iconSize(24, 24);
-    const QPixmap src = baseIcon.pixmap(iconSize);
-    if (src.isNull())
+    QIcon tintedIcon(const QString &path, const QColor &color)
     {
-        return baseIcon;
-    }
+        const QIcon baseIcon(path);
+        const QSize iconSize(24, 24);
+        const QPixmap src = baseIcon.pixmap(iconSize);
+        if (src.isNull())
+        {
+            return baseIcon;
+        }
 
-    QPixmap tinted(src.size());
-    tinted.fill(Qt::transparent);
-    QPainter painter(&tinted);
-    painter.drawPixmap(0, 0, src);
-    painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
-    painter.fillRect(tinted.rect(), color);
-    painter.end();
-    return QIcon(tinted);
-}
+        QPixmap tinted(src.size());
+        tinted.fill(Qt::transparent);
+        QPainter painter(&tinted);
+        painter.drawPixmap(0, 0, src);
+        painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+        painter.fillRect(tinted.rect(), color);
+        painter.end();
+        return QIcon(tinted);
+    }
 }
 
 MainWindow::MainWindow(QWidget *parent)
@@ -56,12 +56,15 @@ void MainWindow::initUI()
     resize(1024, 768);
 
     ui->navBar->setIconSize(QSize(24, 24));
+    ui->navBar->setSpacing(2);
     ui->navBar->setFocusPolicy(Qt::NoFocus);
 
     auto addNavItem = [this](const QString &icon, const QString &text)
     {
         QListWidgetItem *item = new QListWidgetItem(QIcon(icon), text);
         item->setData(Qt::UserRole, icon);
+        item->setSizeHint(QSize(160, 44));
+        item->setTextAlignment(Qt::AlignVCenter | Qt::AlignLeft);
         ui->navBar->addItem(item);
     };
 

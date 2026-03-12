@@ -34,7 +34,8 @@ QListWidget#navBar {
 
 QListWidget#navBar::item {
     color: #cfd6e4;
-    padding: 14px 18px;
+    padding: 0 14px;
+    min-height: 42px;
     border-left: 4px solid transparent;
     outline: none;
     font-size: 11pt;
@@ -61,8 +62,33 @@ QPushButton {
     font-weight: bold;
 }
 
+QPushButton#btnEditQuickControl {
+    background-color: #27384a;
+    color: #b8d7f7;
+    border: 1px solid #3d5a78;
+    border-radius: 7px;
+    padding: 4px 12px;
+    font-size: 9pt;
+    font-weight: 600;
+}
+
+QPushButton#btnEditQuickControl:hover {
+    background-color: #2d4257;
+}
+
+QPushButton#btnEditQuickControl:pressed {
+    background-color: #35506b;
+}
+
 QLabel {
     font-size: 10pt;
+    background-color: transparent;
+}
+
+QGroupBox#groupBox_temp,
+QGroupBox#groupBox_humidity,
+QGroupBox#groupBox_devices {
+    background-color: #1f232a;
 }
 
 QPushButton:hover {
@@ -201,4 +227,92 @@ QScrollBar::sub-line:horizontal {
 QScrollBar::add-page:horizontal,
 QScrollBar::sub-page:horizontal {
     background: transparent;
+}
+
+QCheckBox {
+    spacing: 8px;
+    color: #dbe4f2;
+}
+
+QCheckBox::indicator {
+    width: 18px;
+    height: 18px;
+    border: 1px solid #76869f;
+    border-radius: 4px;
+    background-color: #202634;
+}
+
+QCheckBox::indicator:hover {
+    border-color: #93b1d8;
+}
+
+QCheckBox::indicator:checked {
+    background-color: #4ea1ff;
+    border-color: #4ea1ff;
+    image: url(:/icons/check.svg);
+}
+
+/* ===== 场景页专项样式（暗色） ===== */
+QPushButton#btnAddScene,
+QPushButton#btnDeleteScene {
+    min-height: 30px;
+    padding: 6px 12px;
+    font-size: 9pt;
+}
+
+QPushButton#btnActivateScene {
+    min-height: 38px;
+    padding: 8px 16px;
+    font-size: 10pt;
+    border-radius: 10px;
+}
+
+QTableWidget#tableWidget_devices {
+    background-color: #141B24;
+    border: 1px solid #314253;
+    border-radius: 12px;
+    alternate-background-color: #192230;
+    gridline-color: #223244;
+    selection-background-color: #2D5F97;
+    selection-color: #EAF3FF;
+    outline: none;
+}
+
+QTableWidget#tableWidget_devices::item {
+    padding: 9px 10px;
+    border-bottom: 1px solid #223244;
+}
+
+QTableWidget#tableWidget_devices::item:selected {
+    background-color: #2D5F97;
+    color: #EAF3FF;
+}
+
+QTableWidget#tableWidget_devices QHeaderView::section {
+    background-color: #243444;
+    color: #DDEAF8;
+    border: none;
+    border-bottom: 1px solid #365068;
+    padding: 9px 10px;
+    font-size: 10pt;
+    font-weight: 700;
+}
+
+QDialog QLabel {
+    min-width: 84px;
+}
+
+QDialog QLineEdit,
+QDialog QComboBox,
+QDialog QSpinBox {
+    min-height: 34px;
+    padding: 7px 10px;
+    font-size: 10pt;
+}
+
+QDialog QDialogButtonBox QPushButton {
+    min-width: 92px;
+    min-height: 34px;
+    padding: 6px 14px;
+    font-size: 9pt;
 }

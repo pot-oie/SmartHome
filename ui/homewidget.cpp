@@ -4,9 +4,11 @@
 
 #include <QDebug>
 #include <QColor>
+#include <QEvent>
 #include <QGridLayout>
 #include <QHash>
 #include <QHBoxLayout>
+#include <QMetaObject>
 #include <QMessageBox>
 #include <QPainter>
 #include <QPalette>
@@ -384,6 +386,7 @@ void HomeWidget::onEnvironmentSnapshotLoaded(HomeEnvironmentRefreshResult result
     }
 
     updateDeviceStatusLabel(result.deviceStatus);
+    refreshQuickControls();
 
     for (const QJsonObject &alarmData : result.triggeredAlarms)
     {
@@ -435,11 +438,50 @@ void HomeWidget::refreshStaticTexts()
     ensureQuickControlEditButton();
 }
 
+void HomeWidget::scheduleThemeRefresh()
+{
+    if (!ui || m_themeRefreshScheduled)
+    {
+        return;
+    }
+
+    m_themeRefreshScheduled = true;
+    QMetaObject::invokeMethod(this, [this]()
+                              {
+        m_themeRefreshScheduled = false;
+        if (!ui)
+        {
+            return;
+        }
+
+        ensureQuickControlEditButton();
+        refreshQuickControls();
+        refreshDeviceStatus(); }, Qt::QueuedConnection);
+}
+
+void HomeWidget::changeEvent(QEvent *event)
+{
+    QWidget::changeEvent(event);
+
+    if (!ui)
+    {
+        return;
+    }
+
+    if (event->type() == QEvent::PaletteChange ||
+        event->type() == QEvent::ApplicationPaletteChange ||
+        event->type() == QEvent::StyleChange)
+    {
+        scheduleThemeRefresh();
+    }
+}
+
 void HomeWidget::showEvent(QShowEvent *event)
 {
     QWidget::showEvent(event);
     m_environmentService.startPolling(3000);
     refreshQuickControls();
+    refreshDeviceStatus();
 }
 
 void HomeWidget::hideEvent(QHideEvent *event)

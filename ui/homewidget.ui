@@ -62,31 +62,17 @@
      <property name="title"><string>快捷控制</string></property>
      <layout class="QVBoxLayout" name="verticalLayout_quick">
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_quickActions">
-        <item>
-         <spacer name="horizontalSpacer_quickActions">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item>
-         <widget class="QPushButton" name="btnEditQuickControl">
-          <property name="text">
-           <string>编辑快捷控制</string>
-          </property>
-          <property name="cursor">
-           <cursorShape>PointingHandCursor</cursorShape>
-          </property>
-         </widget>
-        </item>
-       </layout>
+             <spacer name="verticalSpacer_quickActionsTop">
+                <property name="orientation">
+                 <enum>Qt::Vertical</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                    <width>20</width>
+                    <height>1</height>
+                 </size>
+                </property>
+             </spacer>
       </item>
       <item>
        <widget class="QWidget" name="quickControlContainer" native="true">

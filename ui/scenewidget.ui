@@ -18,14 +18,23 @@
       </item>
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout_btns">
+            <property name="spacing">
+             <number>8</number>
+            </property>
         <item>
          <widget class="QPushButton" name="btnAddScene">
           <property name="text"><string>添加</string></property>
+               <property name="minimumSize"><size><width>0</width><height>34</height></size></property>
+               <property name="maximumSize"><size><width>16777215</width><height>36</height></size></property>
+               <property name="font"><font><pointsize>10</pointsize><weight>63</weight><bold>true</bold></font></property>
          </widget>
         </item>
         <item>
          <widget class="QPushButton" name="btnDeleteScene">
           <property name="text"><string>删除</string></property>
+               <property name="minimumSize"><size><width>0</width><height>34</height></size></property>
+               <property name="maximumSize"><size><width>16777215</width><height>36</height></size></property>
+               <property name="font"><font><pointsize>10</pointsize><weight>63</weight><bold>true</bold></font></property>
          </widget>
         </item>
        </layout>
@@ -103,8 +112,9 @@
       <item>
        <widget class="QPushButton" name="btnActivateScene">
         <property name="text"><string>一键激活场景</string></property>
-        <property name="minimumSize"><size><width>0</width><height>45</height></size></property>
-        <property name="font"><font><pointsize>11</pointsize><weight>75</weight><bold>true</bold></font></property>
+            <property name="minimumSize"><size><width>0</width><height>40</height></size></property>
+            <property name="maximumSize"><size><width>16777215</width><height>42</height></size></property>
+            <property name="font"><font><pointsize>10</pointsize><weight>75</weight><bold>true</bold></font></property>
        </widget>
       </item>
      </layout>

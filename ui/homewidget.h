@@ -35,6 +35,7 @@ public slots:
     void refreshDeviceStatus();
 
 protected:
+    void changeEvent(QEvent *event) override;
     void showEvent(QShowEvent *event) override;
     void hideEvent(QHideEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
@@ -52,9 +53,11 @@ private:
     QuickControlService m_quickControlService;
     QString m_selectedSceneId;
     QString m_languageKey = QStringLiteral("zh_CN");
+    bool m_themeRefreshScheduled = false;
 
     void initConnections();
     void refreshStaticTexts();
+    void scheduleThemeRefresh();
     void ensureQuickControlEditButton();
     void applyTemperatureColor(double temperature);
     void updateDeviceStatusLabel(const DeviceStatusSummary &summary);
