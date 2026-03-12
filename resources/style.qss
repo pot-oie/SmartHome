@@ -18,11 +18,18 @@ QListWidget#navBar {
 
 QListWidget#navBar::item {
     color: #2F4258;
-    padding: 0 14px;
-    min-height: 42px;
+    padding: 0 20px;
+    min-height: 75px;
     border-left: 4px solid transparent;
-    font-size: 11pt;
+    font-size: 15pt;
+    font-weight: 800;
     outline: none;
+}
+
+QListWidget#listCategory::item,
+QListWidget#listWidget_scenes::item {
+    min-height: 56px;
+    padding: 0 10px;
 }
 
 QListWidget#navBar::item:focus {
@@ -313,6 +320,62 @@ QScrollBar::handle:horizontal:hover {
 
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
     width: 0px;
+}
+
+QTableWidget QScrollBar:vertical,
+QTableView QScrollBar:vertical {
+    background-color: #EEF3F8;
+    width: 10px;
+    border: 1px solid #D3E0EE;
+    border-radius: 5px;
+    margin: 1px;
+}
+
+QTableWidget QScrollBar::handle:vertical,
+QTableView QScrollBar::handle:vertical {
+    background-color: #9EB8D4;
+    border-radius: 4px;
+    min-height: 28px;
+}
+
+QTableWidget QScrollBar::handle:vertical:hover,
+QTableView QScrollBar::handle:vertical:hover {
+    background-color: #7FA3C8;
+}
+
+QTableWidget QScrollBar:horizontal,
+QTableView QScrollBar:horizontal {
+    background-color: #EEF3F8;
+    height: 10px;
+    border: 1px solid #D3E0EE;
+    border-radius: 5px;
+    margin: 1px;
+}
+
+QTableWidget QScrollBar::handle:horizontal,
+QTableView QScrollBar::handle:horizontal {
+    background-color: #9EB8D4;
+    border-radius: 4px;
+    min-width: 28px;
+}
+
+QTableWidget QScrollBar::handle:horizontal:hover,
+QTableView QScrollBar::handle:horizontal:hover {
+    background-color: #7FA3C8;
+}
+
+QTableWidget QScrollBar::add-line:vertical,
+QTableWidget QScrollBar::sub-line:vertical,
+QTableWidget QScrollBar::add-line:horizontal,
+QTableWidget QScrollBar::sub-line:horizontal,
+QTableView QScrollBar::add-line:vertical,
+QTableView QScrollBar::sub-line:vertical,
+QTableView QScrollBar::add-line:horizontal,
+QTableView QScrollBar::sub-line:horizontal {
+    width: 0px;
+    height: 0px;
+    border: none;
+    background: transparent;
 }
 
 /* ===== 滑块样式 ===== */

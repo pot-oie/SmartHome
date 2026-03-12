@@ -24,6 +24,7 @@ public:
     DeviceList listDeviceDefinitions();
     SettingsDeviceList listSettingsDevices();
     bool insertDevice(const SettingsDeviceEntry &device);
+    bool updateDeviceById(const QString &originalDeviceId, const SettingsDeviceEntry &device);
     bool updateDeviceState(const QString &deviceId,
                            const QString &onlineStatus,
                            const QString &switchStatus,

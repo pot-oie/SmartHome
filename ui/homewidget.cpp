@@ -13,6 +13,7 @@
 #include <QPainter>
 #include <QPalette>
 #include <QPushButton>
+#include <QTimer>
 #include <QToolButton>
 
 namespace
@@ -36,21 +37,27 @@ namespace
         return color.name(QColor::HexRgb);
     }
 
-    QIcon tintedIcon(const QString &path, const QColor &color)
+    QIcon tintedIcon(const QString &path, const QColor &color, const QSize &targetSize)
     {
         const QIcon baseIcon(path);
-        const QPixmap source = baseIcon.pixmap(QSize(40, 40));
+        const QSize safeSize = targetSize.isValid() ? targetSize : QSize(40, 40);
+        const QPixmap source = baseIcon.pixmap(safeSize);
         if (source.isNull())
         {
             return baseIcon;
         }
 
-        QPixmap tinted(source.size());
+        QPixmap tinted(safeSize);
         tinted.fill(Qt::transparent);
         QPainter painter(&tinted);
-        painter.drawPixmap(0, 0, source);
+        const QRect targetRect(QPoint(0, 0), safeSize);
+        const QPixmap scaled = source.scaled(safeSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        const int iconShiftX = 8;
+        const QPoint offset((safeSize.width() - scaled.width()) / 2 + iconShiftX,
+                            (safeSize.height() - scaled.height()) / 2);
+        painter.drawPixmap(offset, scaled);
         painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
-        painter.fillRect(tinted.rect(), color);
+        painter.fillRect(targetRect, color);
         painter.end();
         return QIcon(tinted);
     }
@@ -66,30 +73,39 @@ namespace
         const QColor text = palette.color(QPalette::WindowText);
         const QColor accent = palette.color(QPalette::Highlight);
 
-        QColor background = dark ? mixColor(base, QColor("#FFFFFF"), 0.12) : QColor("#F7F9FC");
-        QColor border = dark ? mixColor(base, QColor("#FFFFFF"), 0.22) : QColor("#D7E3F1");
-        QColor hover = dark ? mixColor(background, QColor("#FFFFFF"), 0.08) : mixColor(background, QColor("#000000"), 0.04);
-        QColor textColor = dark ? mixColor(text, QColor("#FFFFFF"), 0.12) : QColor("#5E6A78");
+        QColor background = dark ? mixColor(base, QColor("#FFFFFF"), 0.13) : QColor("#F7FAFD");
+        QColor border = dark ? mixColor(base, QColor("#FFFFFF"), 0.28) : QColor("#DCE6F2");
+        QColor hover = dark ? mixColor(background, QColor("#FFFFFF"), 0.10) : QColor("#EAF3FF");
+        QColor textColor = dark ? QColor("#E4ECF7") : QColor("#2F4258");
 
         if (isSelected)
         {
-            background = dark ? mixColor(accent, base, 0.78) : mixColor(accent, QColor("#FFFFFF"), 0.90);
-            border = dark ? mixColor(accent, QColor("#FFFFFF"), 0.20) : mixColor(accent, QColor("#000000"), 0.08);
-            hover = dark ? mixColor(background, QColor("#FFFFFF"), 0.08) : mixColor(background, QColor("#000000"), 0.04);
-            textColor = dark ? mixColor(accent, QColor("#FFFFFF"), 0.24) : QColor("#1565C0");
+            background = dark ? mixColor(accent, base, 0.52) : QColor("#DDEEFF");
+            border = dark ? mixColor(accent, QColor("#FFFFFF"), 0.40) : QColor("#2D8CFF");
+            hover = dark ? mixColor(background, QColor("#FFFFFF"), 0.16) : mixColor(background, QColor("#000000"), 0.08);
+            textColor = dark ? QColor("#F1F7FF") : QColor("#1F5FA8");
         }
         else if (isOffline || !isEnabled)
         {
-            background = dark ? mixColor(base, QColor("#FFFFFF"), 0.06) : QColor("#F3F4F6");
-            border = dark ? mixColor(base, QColor("#FFFFFF"), 0.14) : QColor("#D8DCE2");
+            background = dark ? mixColor(base, QColor("#FFFFFF"), 0.06) : QColor("#F2F4F8");
+            border = dark ? mixColor(base, QColor("#FFFFFF"), 0.16) : QColor("#D2D9E2");
             hover = background;
             textColor = dark ? mixColor(text, base, 0.35) : QColor("#8F99A4");
         }
 
-        const QString paddingStyle = singleRowLayout ? QStringLiteral("padding: 16px 8px 12px 8px;") : QStringLiteral("padding: 14px 8px 10px 8px;");
-        return QStringLiteral("QToolButton { background: %1; border: 1px solid %2; border-radius: 12px; color: %3; font-weight: 600; %4 }"
-                              "QToolButton:hover { background: %5; }")
-            .arg(cssColor(background), cssColor(border), cssColor(textColor), paddingStyle, cssColor(hover));
+        const QString paddingStyle = singleRowLayout ? QStringLiteral("padding: 16px;") : QStringLiteral("padding: 8px;");
+        return QStringLiteral("QToolButton { background: %1; border: 1px solid %2; border-radius: 14px; color: %3; font-size: 11pt; font-weight: 800; text-align: center; outline: none; %4 }"
+                              "QToolButton:hover { background: %5; }"
+                              "QToolButton:focus { outline: none; border: 1px solid %2; }"
+                              "QToolButton:disabled { background: %6; border-color: %7; color: %8; }")
+            .arg(cssColor(background),
+                 cssColor(border),
+                 cssColor(textColor),
+                 paddingStyle,
+                 cssColor(hover),
+                 cssColor(dark ? mixColor(base, QColor("#FFFFFF"), 0.05) : QColor("#EEF1F5")),
+                 cssColor(dark ? mixColor(base, QColor("#FFFFFF"), 0.12) : QColor("#D3D9E1")),
+                 cssColor(dark ? mixColor(text, base, 0.42) : QColor("#98A2AD")));
     }
 
     QColor quickCardIconColor(const QPalette &palette, bool isSelected, bool isOffline, bool isEnabled)
@@ -99,13 +115,13 @@ namespace
         const QColor accent = palette.color(QPalette::Highlight);
         if (isSelected)
         {
-            return dark ? mixColor(accent, QColor("#FFFFFF"), 0.28) : QColor("#1565C0");
+            return dark ? mixColor(accent, QColor("#FFFFFF"), 0.28) : QColor("#1F73D1");
         }
         if (isOffline || !isEnabled)
         {
             return dark ? mixColor(text, QColor("#111827"), 0.55) : QColor("#9098A2");
         }
-        return dark ? mixColor(text, QColor("#FFFFFF"), 0.18) : QColor("#2F3D4D");
+        return dark ? mixColor(text, QColor("#FFFFFF"), 0.18) : QColor("#2F6FAF");
     }
 
     QString localizedQuickControlName(const QString &name, bool isEnglish)
@@ -145,6 +161,22 @@ HomeWidget::HomeWidget(QWidget *parent)
 
     connect(&m_environmentService, &EnvironmentService::snapshotRefreshed,
             this, &HomeWidget::onEnvironmentSnapshotLoaded);
+
+    m_quickControlResizeTimer = new QTimer(this);
+    m_quickControlResizeTimer->setSingleShot(true);
+    m_quickControlResizeTimer->setInterval(150);
+    connect(m_quickControlResizeTimer, &QTimer::timeout, this, [this]()
+            {
+        if (!isVisible())
+        {
+            return;
+        }
+
+        const int columnsNow = quickControlColumnsForWidth(ui->quickControlContainer ? ui->quickControlContainer->width() : width());
+        if (columnsNow != m_lastQuickControlColumns)
+        {
+            refreshQuickControls();
+        } });
 
     // 轮询由 showEvent 启动，hideEvent 停止
 }
@@ -217,6 +249,7 @@ void HomeWidget::loadQuickControls()
     const int preferredCardWidth = 220;
     const int containerWidth = qMax(1, ui->quickControlContainer->width());
     const int maxColumns = qBound(1, containerWidth / preferredCardWidth, 4);
+    m_lastQuickControlColumns = maxColumns;
     const bool singleRowLayout = !items.isEmpty() && items.size() <= maxColumns;
 
     QLayout *oldLayout = ui->quickControlContainer->layout();
@@ -238,10 +271,11 @@ void HomeWidget::loadQuickControls()
 
     QGridLayout *gridLayout = new QGridLayout(ui->quickControlContainer);
 
-    gridLayout->setContentsMargins(0, 0, 0, 0);
+    gridLayout->setContentsMargins(2, 2, 2, 8);
     gridLayout->setHorizontalSpacing(14);
     gridLayout->setVerticalSpacing(14);
     gridLayout->setAlignment(singleRowLayout ? Qt::AlignCenter : Qt::AlignTop);
+    gridLayout->setSizeConstraint(QLayout::SetMinimumSize);
 
     for (int i = 0; i < maxColumns; ++i)
     {
@@ -262,12 +296,14 @@ void HomeWidget::loadQuickControls()
                                      ? (item.targetType == "scene" ? QStringLiteral(":/icons/scene.svg")
                                                                    : QStringLiteral(":/icons/devices.svg"))
                                      : item.iconPath;
-        btn->setIconSize(singleRowLayout ? QSize(40, 40) : QSize(36, 36));
+        const QSize iconSize = singleRowLayout ? QSize(52, 52) : QSize(36, 36);
+        btn->setIconSize(iconSize);
         btn->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
         btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-        btn->setFixedHeight(singleRowLayout ? 138 : 130);
+        btn->setFixedHeight(singleRowLayout ? 140 : 90);
         btn->setCursor(Qt::PointingHandCursor);
         btn->setAutoRaise(false);
+        btn->setFocusPolicy(Qt::NoFocus);
 
         bool selectedStyle = false;
         bool offlineStyle = false;
@@ -302,7 +338,7 @@ void HomeWidget::loadQuickControls()
         }
 
         btn->setStyleSheet(quickControlCardStyle(palette, singleRowLayout, offlineStyle, selectedStyle, buttonEnabled));
-        btn->setIcon(tintedIcon(iconPath, quickCardIconColor(palette, selectedStyle, offlineStyle, buttonEnabled)));
+        btn->setIcon(tintedIcon(iconPath, quickCardIconColor(palette, selectedStyle, offlineStyle, buttonEnabled), iconSize));
 
         connect(btn, &QToolButton::clicked, this, [=](bool /*checked*/)
                 {
@@ -329,7 +365,6 @@ void HomeWidget::loadQuickControls()
             } });
 
         gridLayout->addWidget(btn, row, col);
-        gridLayout->setRowMinimumHeight(row, singleRowLayout ? 138 : 130);
 
         ++col;
         if (col >= maxCols)
@@ -339,10 +374,22 @@ void HomeWidget::loadQuickControls()
         }
     }
 
+    const int rowCount = items.isEmpty() ? 1 : ((items.size() + maxCols - 1) / maxCols);
+    const int cardHeight = singleRowLayout ? 140 : 90;
+    const int totalHeight = 2 + 8 + rowCount * cardHeight + qMax(0, rowCount - 1) * 14;
+    ui->quickControlContainer->setMinimumHeight(0);
+    ui->quickControlContainer->setFixedHeight(qMax(100, totalHeight));
+
     if (!selectedSceneExists)
     {
         m_selectedSceneId.clear();
     }
+}
+
+int HomeWidget::quickControlColumnsForWidth(int width) const
+{
+    const int preferredCardWidth = 220;
+    return qBound(1, qMax(1, width) / preferredCardWidth, 4);
 }
 
 void HomeWidget::updateEnvironmentData(double temp, double hum)
@@ -392,11 +439,6 @@ void HomeWidget::onEnvironmentSnapshotLoaded(HomeEnvironmentRefreshResult result
     {
         emit alarmTriggered(alarmData);
     }
-}
-
-void HomeWidget::on_btnGoHome_clicked()
-{
-    qDebug() << "返回首页按钮被点击";
 }
 
 void HomeWidget::applyTemperatureColor(double temperature)
@@ -496,6 +538,10 @@ void HomeWidget::resizeEvent(QResizeEvent *event)
 
     if (event->size().width() != event->oldSize().width())
     {
-        refreshQuickControls();
+        const int newColumns = quickControlColumnsForWidth(ui->quickControlContainer ? ui->quickControlContainer->width() : event->size().width());
+        if (newColumns != m_lastQuickControlColumns && m_quickControlResizeTimer)
+        {
+            m_quickControlResizeTimer->start();
+        }
     }
 }

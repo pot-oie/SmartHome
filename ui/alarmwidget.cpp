@@ -237,15 +237,21 @@ void AlarmWidget::triggerAlarm(const QJsonObject &alarmData)
     }
     m_lastAlarmDialogAt = now;
 
+    const bool isEnglish = (m_languageKey == QStringLiteral("en_US"));
+
     QMessageBox::critical(this,
-                          QStringLiteral("系统报警"),
-                          QStringLiteral("检测到异常情况！\n\n报警类型: %1\n详细信息: %2")
+                          isEnglish ? QStringLiteral("System Alarm") : QStringLiteral("系统报警"),
+                          (isEnglish
+                               ? QStringLiteral("Abnormal condition detected!\n\nType: %1\nDetails: %2")
+                               : QStringLiteral("检测到异常情况！\n\n报警类型: %1\n详细信息: %2"))
                               .arg(entry.type)
                               .arg(entry.detail));
 }
 
 void AlarmWidget::on_btnSaveThresholds_clicked()
 {
+    const bool isEnglish = (m_languageKey == QStringLiteral("en_US"));
+
     const AlarmThreshold threshold = {
         ui->doubleSpinBox_tempMin->value(),
         ui->doubleSpinBox_tempMax->value(),
@@ -255,16 +261,16 @@ void AlarmWidget::on_btnSaveThresholds_clicked()
     if (threshold.tempMin >= threshold.tempMax)
     {
         QMessageBox::warning(this,
-                             QStringLiteral("参数错误"),
-                             QStringLiteral("温度下限必须小于温度上限。"));
+                             isEnglish ? QStringLiteral("Invalid Parameters") : QStringLiteral("参数错误"),
+                             isEnglish ? QStringLiteral("Temperature minimum must be lower than maximum.") : QStringLiteral("温度下限必须小于温度上限。"));
         return;
     }
 
     if (threshold.humidityMin >= threshold.humidityMax)
     {
         QMessageBox::warning(this,
-                             QStringLiteral("参数错误"),
-                             QStringLiteral("湿度下限必须小于湿度上限。"));
+                             isEnglish ? QStringLiteral("Invalid Parameters") : QStringLiteral("参数错误"),
+                             isEnglish ? QStringLiteral("Humidity minimum must be lower than maximum.") : QStringLiteral("湿度下限必须小于湿度上限。"));
         return;
     }
 
@@ -272,8 +278,8 @@ void AlarmWidget::on_btnSaveThresholds_clicked()
     if (!m_alarmService.saveThresholds(threshold, &errorText))
     {
         QMessageBox::critical(this,
-                              QStringLiteral("保存失败"),
-                              QStringLiteral("报警阈值保存失败：\n") + (errorText.isEmpty() ? QStringLiteral("未知错误") : errorText));
+                              isEnglish ? QStringLiteral("Save Failed") : QStringLiteral("保存失败"),
+                              (isEnglish ? QStringLiteral("Failed to save alarm thresholds:\n") : QStringLiteral("报警阈值保存失败：\n")) + (errorText.isEmpty() ? (isEnglish ? QStringLiteral("Unknown error") : QStringLiteral("未知错误")) : errorText));
         return;
     }
 
@@ -281,8 +287,8 @@ void AlarmWidget::on_btnSaveThresholds_clicked()
     if (!errorText.isEmpty())
     {
         QMessageBox::warning(this,
-                             QStringLiteral("阈值已保存"),
-                             QStringLiteral("报警阈值已写入数据库，但立即重评估失败：\n") + errorText);
+                             isEnglish ? QStringLiteral("Threshold Saved") : QStringLiteral("阈值已保存"),
+                             (isEnglish ? QStringLiteral("Alarm thresholds were saved, but immediate re-evaluation failed:\n") : QStringLiteral("报警阈值已写入数据库，但立即重评估失败：\n")) + errorText);
         refreshData();
         return;
     }
@@ -294,16 +300,20 @@ void AlarmWidget::on_btnSaveThresholds_clicked()
     }
 
     QMessageBox::information(this,
-                             QStringLiteral("保存成功"),
-                             QStringLiteral("报警阈值已同步到数据库。\n\n") + QStringLiteral("温度范围：%1°C - %2°C\n").arg(threshold.tempMin, 0, 'f', 2).arg(threshold.tempMax, 0, 'f', 2) + QStringLiteral("湿度范围：%1%% - %2%%").arg(threshold.humidityMin, 0, 'f', 2).arg(threshold.humidityMax, 0, 'f', 2));
+                             isEnglish ? QStringLiteral("Saved") : QStringLiteral("保存成功"),
+                             (isEnglish
+                                  ? QStringLiteral("Alarm thresholds have been synchronized to the database.\n\n") + QStringLiteral("Temperature: %1°C - %2°C\n").arg(threshold.tempMin, 0, 'f', 2).arg(threshold.tempMax, 0, 'f', 2) + QStringLiteral("Humidity: %1% - %2%").arg(threshold.humidityMin, 0, 'f', 2).arg(threshold.humidityMax, 0, 'f', 2)
+                                  : QStringLiteral("报警阈值已同步到数据库。\n\n") + QStringLiteral("温度范围：%1°C - %2°C\n").arg(threshold.tempMin, 0, 'f', 2).arg(threshold.tempMax, 0, 'f', 2) + QStringLiteral("湿度范围：%1% - %2%").arg(threshold.humidityMin, 0, 'f', 2).arg(threshold.humidityMax, 0, 'f', 2)));
 }
 
 void AlarmWidget::on_btnClearLogs_clicked()
 {
+    const bool isEnglish = (m_languageKey == QStringLiteral("en_US"));
+
     const QMessageBox::StandardButton reply = QMessageBox::question(
         this,
-        QStringLiteral("确认清空"),
-        QStringLiteral("确定要清空所有报警记录吗？"),
+        isEnglish ? QStringLiteral("Confirm Clear") : QStringLiteral("确认清空"),
+        isEnglish ? QStringLiteral("Are you sure you want to clear all alarm records?") : QStringLiteral("确定要清空所有报警记录吗？"),
         QMessageBox::Yes | QMessageBox::No);
     if (reply != QMessageBox::Yes)
     {
@@ -314,13 +324,15 @@ void AlarmWidget::on_btnClearLogs_clicked()
     if (!m_alarmService.clearAlarmLogs(&errorText))
     {
         QMessageBox::critical(this,
-                              QStringLiteral("清空失败"),
-                              QStringLiteral("报警记录清空失败：\n") + (errorText.isEmpty() ? QStringLiteral("未知错误") : errorText));
+                              isEnglish ? QStringLiteral("Clear Failed") : QStringLiteral("清空失败"),
+                              (isEnglish ? QStringLiteral("Failed to clear alarm records:\n") : QStringLiteral("报警记录清空失败：\n")) + (errorText.isEmpty() ? (isEnglish ? QStringLiteral("Unknown error") : QStringLiteral("未知错误")) : errorText));
         return;
     }
 
     refreshData();
-    QMessageBox::information(this, QStringLiteral("成功"), QStringLiteral("报警记录已从数据库清空。"));
+    QMessageBox::information(this,
+                             isEnglish ? QStringLiteral("Success") : QStringLiteral("成功"),
+                             isEnglish ? QStringLiteral("Alarm records were cleared from the database.") : QStringLiteral("报警记录已从数据库清空。"));
 }
 
 void AlarmWidget::onAlarmRuntimeDataRefreshed(AlarmStatusSummary status, AlarmLogList logs)

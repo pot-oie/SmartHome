@@ -20,17 +20,27 @@ namespace
     QIcon tintedIcon(const QString &path, const QColor &color)
     {
         const QIcon baseIcon(path);
-        const QSize iconSize(24, 24);
-        const QPixmap src = baseIcon.pixmap(iconSize);
+        const QSize canvasSize(32, 32);
+        const int drawSize = 28;
+        const QPixmap src = baseIcon.pixmap(QSize(drawSize, drawSize));
+
         if (src.isNull())
         {
             return baseIcon;
         }
 
-        QPixmap tinted(src.size());
+        QPixmap tinted(canvasSize);
         tinted.fill(Qt::transparent);
         QPainter painter(&tinted);
-        painter.drawPixmap(0, 0, src);
+        painter.setRenderHint(QPainter::Antialiasing); // 开启抗锯齿让缩小后的 SVG 更平滑
+
+        int x = (canvasSize.width() - drawSize) / 2;
+
+        int yOffset = 1.4;
+        int y = (canvasSize.height() - drawSize) / 2 + yOffset;
+
+        // 带着偏移量绘制原始图标
+        painter.drawPixmap(x, y, src);
         painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
         painter.fillRect(tinted.rect(), color);
         painter.end();
@@ -55,7 +65,7 @@ void MainWindow::initUI()
     setWindowTitle(QStringLiteral("智能家居监控平台"));
     resize(1024, 768);
 
-    ui->navBar->setIconSize(QSize(24, 24));
+    ui->navBar->setIconSize(QSize(32, 32));
     ui->navBar->setSpacing(2);
     ui->navBar->setFocusPolicy(Qt::NoFocus);
 
@@ -63,8 +73,14 @@ void MainWindow::initUI()
     {
         QListWidgetItem *item = new QListWidgetItem(QIcon(icon), text);
         item->setData(Qt::UserRole, icon);
-        item->setSizeHint(QSize(160, 44));
+        item->setSizeHint(QSize(200, 80));
         item->setTextAlignment(Qt::AlignVCenter | Qt::AlignLeft);
+        QFont navFont = item->font();
+        navFont.setPointSize(11);
+
+        navFont.setWeight(QFont::DemiBold);
+
+        item->setFont(navFont);
         ui->navBar->addItem(item);
     };
 
@@ -165,8 +181,10 @@ void MainWindow::applyTheme(const QString &themeName)
     {
         qApp->setStyleSheet(styleSheet);
 
-        // 强制重新抛光，避免主题来回切换后个别控件保留旧样式状态
-        const QWidgetList widgets = qApp->allWidgets();
+        // 仅重抛光主窗口及其子树，避免全局遍历导致主题切换卡顿。
+        QWidgetList widgets;
+        widgets << this;
+        widgets.append(this->findChildren<QWidget *>());
         for (QWidget *widget : widgets)
         {
             if (!widget)

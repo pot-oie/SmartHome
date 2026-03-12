@@ -155,6 +155,16 @@ struct SettingsDeviceEntry
     QString type;
     QString ip;
     QString onlineStatus;
+    QString roomName;
+    QString protocolType;
+    QString manufacturer;
+    QString switchStatus;
+    QString valueUnit;
+    QString remarks;
+    bool hasSliderConfig = false;
+    bool supportsSlider = false;
+    double sliderMin = 0.0;
+    double sliderMax = 100.0;
 };
 
 using SettingsDeviceList = QVector<SettingsDeviceEntry>;

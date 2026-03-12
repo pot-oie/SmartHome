@@ -3,10 +3,43 @@
  <class>SettingsWidget</class>
  <widget class="QWidget" name="SettingsWidget">
   <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="spacing">
+        <number>12</number>
+   </property>
+   <property name="leftMargin">
+        <number>14</number>
+   </property>
+   <property name="topMargin">
+        <number>12</number>
+   </property>
+   <property name="rightMargin">
+        <number>14</number>
+   </property>
+   <property name="bottomMargin">
+        <number>12</number>
+   </property>
    <item>
     <widget class="QGroupBox" name="groupBox_system">
      <property name="title"><string>系统设置</string></property>
      <layout class="QGridLayout" name="gridLayout_system">
+          <property name="horizontalSpacing">
+           <number>14</number>
+          </property>
+          <property name="verticalSpacing">
+           <number>10</number>
+          </property>
+          <property name="leftMargin">
+           <number>14</number>
+          </property>
+          <property name="topMargin">
+           <number>18</number>
+          </property>
+          <property name="rightMargin">
+           <number>14</number>
+          </property>
+          <property name="bottomMargin">
+           <number>12</number>
+          </property>
       <item row="0" column="0">
        <widget class="QLabel" name="label_theme">
         <property name="text"><string>界面主题:</string></property>
@@ -43,6 +76,21 @@
     <widget class="QGroupBox" name="groupBox_deviceManagement">
      <property name="title"><string>设备管理</string></property>
      <layout class="QVBoxLayout" name="verticalLayout_device">
+                        <property name="spacing">
+                         <number>10</number>
+                        </property>
+                        <property name="leftMargin">
+                         <number>14</number>
+                        </property>
+                        <property name="topMargin">
+                         <number>18</number>
+                        </property>
+                        <property name="rightMargin">
+                         <number>14</number>
+                        </property>
+                        <property name="bottomMargin">
+                         <number>12</number>
+                        </property>
       <item>
        <widget class="QTableWidget" name="tableWidget_devices">
         <property name="alternatingRowColors"><bool>true</bool></property>
@@ -74,23 +122,38 @@
       </item>
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout_deviceBtns">
+                                <property name="spacing">
+                                 <number>10</number>
+                                </property>
         <item>
          <widget class="QPushButton" name="btnAddDevice">
+          <property name="class" stdset="0">
+                          <string>secondary</string>
+                         </property>
           <property name="text"><string>录入新设备</string></property>
          </widget>
         </item>
         <item>
          <widget class="QPushButton" name="btnDeleteDevice">
+          <property name="class" stdset="0">
+                          <string>danger</string>
+                         </property>
           <property name="text"><string>注销设备</string></property>
          </widget>
         </item>
         <item>
          <widget class="QPushButton" name="btnEditDevice">
+          <property name="class" stdset="0">
+                          <string>secondary</string>
+                         </property>
           <property name="text"><string>编辑设备</string></property>
          </widget>
         </item>
         <item>
          <widget class="QPushButton" name="btnTestConnection">
+          <property name="class" stdset="0">
+                          <string>secondary</string>
+                         </property>
           <property name="text"><string>测试连通性</string></property>
          </widget>
         </item>

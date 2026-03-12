@@ -320,7 +320,9 @@ SettingsDeviceList DeviceDao::listSettingsDevices()
 
     static const QString sql =
         "SELECT d.device_id, d.device_name, d.device_type, d.ip_address, "
-        "COALESCE(s.online_status, d.online_status) AS effective_online_status "
+        "d.room_name, d.protocol_type, d.manufacturer, d.remarks, d.value_unit, d.supports_slider, d.slider_min, d.slider_max, "
+        "COALESCE(s.online_status, d.online_status) AS effective_online_status, "
+        "COALESCE(s.switch_status, d.switch_status) AS effective_switch_status "
         "FROM devices d "
         "LEFT JOIN device_state_snapshots s ON s.device_id = d.id "
         "ORDER BY d.display_order ASC, d.id ASC";
@@ -340,7 +342,17 @@ SettingsDeviceList DeviceDao::listSettingsDevices()
         device.name = query.value("device_name").toString();
         device.type = query.value("device_type").toString();
         device.ip = query.value("ip_address").toString();
+        device.roomName = query.value("room_name").toString();
+        device.protocolType = query.value("protocol_type").toString();
+        device.manufacturer = query.value("manufacturer").toString();
+        device.remarks = query.value("remarks").toString();
+        device.valueUnit = query.value("value_unit").toString();
+        device.switchStatus = query.value("effective_switch_status").toString().trimmed().toLower();
         device.onlineStatus = query.value("effective_online_status").toString().trimmed().toLower();
+        device.hasSliderConfig = true;
+        device.supportsSlider = query.value("supports_slider").toInt() == 1;
+        device.sliderMin = query.value("slider_min").toDouble();
+        device.sliderMax = query.value("slider_max").toDouble();
         devices.push_back(device);
     }
 
@@ -366,10 +378,22 @@ bool DeviceDao::insertDevice(const SettingsDeviceEntry &device)
         return false;
     }
 
-    const bool supportsSlider = supportsSliderForType(device.type);
-    const QPair<double, double> range = sliderRangeForType(device.type);
-    const QString valueUnit = valueUnitForType(device.type);
+    const bool defaultSupportsSlider = supportsSliderForType(device.type);
+    bool supportsSlider = device.hasSliderConfig ? device.supportsSlider : defaultSupportsSlider;
+    QPair<double, double> range = sliderRangeForType(device.type);
+    if (device.hasSliderConfig && supportsSlider)
+    {
+        const double minValue = qMin(device.sliderMin, device.sliderMax);
+        const double maxValue = qMax(device.sliderMin, device.sliderMax);
+        if (maxValue > minValue)
+        {
+            range = {minValue, maxValue};
+        }
+    }
+
+    const QString valueUnit = device.valueUnit.trimmed().isEmpty() ? valueUnitForType(device.type) : device.valueUnit.trimmed();
     const bool isOnline = (device.onlineStatus == QStringLiteral("online"));
+    const QString switchStatus = (device.switchStatus.trimmed().toLower() == QStringLiteral("off")) ? QStringLiteral("off") : QStringLiteral("on");
     const double initialValue = supportsSlider ? range.first : (isOnline ? 1.0 : 0.0);
     const int nextOrder = executeCountQuery("SELECT COUNT(*) FROM devices") + 1;
 
@@ -384,22 +408,25 @@ bool DeviceDao::insertDevice(const SettingsDeviceEntry &device)
         categoryId,
         device.name,
         device.type,
+        device.roomName.trimmed().isEmpty() ? QVariant() : QVariant(device.roomName.trimmed()),
+        device.protocolType.trimmed().isEmpty() ? QStringLiteral("simulator") : device.protocolType.trimmed(),
+        device.manufacturer.trimmed().isEmpty() ? QStringLiteral("SmartHome Lab") : device.manufacturer.trimmed(),
         device.ip,
         isOnline ? "online" : "offline",
-        isOnline ? "on" : "off",
+        isOnline ? switchStatus : "off",
         initialValue,
         valueUnit,
         supportsSlider ? 1 : 0,
         supportsSlider ? QVariant(range.first) : QVariant(),
         supportsSlider ? QVariant(range.second) : QVariant(),
         nextOrder,
-        QStringLiteral("\u65b0\u589e\u8bbe\u5907")};
+        device.remarks.trimmed().isEmpty() ? QStringLiteral("新增设备") : device.remarks.trimmed()};
 
     if (!databaseManager.exec(
             "INSERT INTO devices ("
-            "device_id, category_id, device_name, device_type, ip_address, online_status, switch_status, "
+            "device_id, category_id, device_name, device_type, room_name, protocol_type, manufacturer, ip_address, online_status, switch_status, "
             "current_value, value_unit, supports_slider, slider_min, slider_max, display_order, remarks"
-            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             deviceParams))
     {
         setLastError(databaseManager.lastErrorText());
@@ -424,10 +451,150 @@ bool DeviceDao::insertDevice(const SettingsDeviceEntry &device)
             "VALUES (?, ?, ?, ?, ?, ?, NOW())",
             {devicePk,
              isOnline ? "online" : "offline",
-             isOnline ? "on" : "off",
+             isOnline ? switchStatus : "off",
              initialValue,
              valueUnit,
-             modeTextForState(device.type, isOnline ? "on" : "off", initialValue)}))
+             modeTextForState(device.type, isOnline ? switchStatus : "off", initialValue)}))
+    {
+        setLastError(databaseManager.lastErrorText());
+        databaseManager.rollback();
+        return false;
+    }
+
+    if (!databaseManager.commit())
+    {
+        setLastError(databaseManager.lastErrorText());
+        databaseManager.rollback();
+        return false;
+    }
+
+    clearLastError();
+    return true;
+}
+
+bool DeviceDao::updateDeviceById(const QString &originalDeviceId, const SettingsDeviceEntry &device)
+{
+    DatabaseManager &databaseManager = DatabaseManager::instance();
+    if (!databaseManager.isOpen() && !databaseManager.open())
+    {
+        setLastError(databaseManager.lastErrorText());
+        qWarning().noquote() << LOG_PREFIX << "Failed to open database before update device metadata:" << m_lastErrorText;
+        return false;
+    }
+
+    QSqlQuery existingQuery = databaseManager.query(
+        "SELECT id, switch_status, current_value, value_unit, supports_slider, slider_min, slider_max "
+        "FROM devices WHERE device_id = ? LIMIT 1",
+        {originalDeviceId});
+    if (!existingQuery.isActive() || !existingQuery.next())
+    {
+        setLastError(databaseManager.lastErrorText().isEmpty()
+                         ? QStringLiteral("未找到要编辑的设备。")
+                         : databaseManager.lastErrorText());
+        return false;
+    }
+
+    const qlonglong devicePk = existingQuery.value("id").toLongLong();
+    const QString existingSwitchStatus = existingQuery.value("switch_status").toString().trimmed().toLower();
+    const double existingCurrentValue = existingQuery.value("current_value").toDouble();
+    const QString existingValueUnit = existingQuery.value("value_unit").toString().trimmed();
+
+    qlonglong categoryId = 0;
+    QString categoryError;
+    if (!resolveCategoryId(databaseManager, device.type, &categoryId, &categoryError))
+    {
+        setLastError(categoryError);
+        return false;
+    }
+
+    const bool defaultSupportsSlider = supportsSliderForType(device.type);
+    const bool supportsSlider = device.hasSliderConfig ? device.supportsSlider : defaultSupportsSlider;
+    QPair<double, double> range = sliderRangeForType(device.type);
+    if (supportsSlider)
+    {
+        if (device.hasSliderConfig)
+        {
+            const double minValue = qMin(device.sliderMin, device.sliderMax);
+            const double maxValue = qMax(device.sliderMin, device.sliderMax);
+            if (maxValue > minValue)
+            {
+                range = {minValue, maxValue};
+            }
+        }
+    }
+
+    const QString onlineStatus = (device.onlineStatus.trimmed().toLower() == QStringLiteral("offline"))
+                                     ? QStringLiteral("offline")
+                                     : QStringLiteral("online");
+    QString switchStatus = device.switchStatus.trimmed().toLower();
+    if (switchStatus != QStringLiteral("on") && switchStatus != QStringLiteral("off"))
+    {
+        switchStatus = existingSwitchStatus == QStringLiteral("off") ? QStringLiteral("off") : QStringLiteral("on");
+    }
+    if (onlineStatus == QStringLiteral("offline"))
+    {
+        switchStatus = QStringLiteral("off");
+    }
+
+    const QString finalValueUnit = device.valueUnit.trimmed().isEmpty()
+                                       ? (existingValueUnit.isEmpty() ? valueUnitForType(device.type) : existingValueUnit)
+                                       : device.valueUnit.trimmed();
+
+    double currentValue = existingCurrentValue;
+    if (supportsSlider)
+    {
+        currentValue = qBound(range.first, currentValue, range.second);
+    }
+    else if (onlineStatus == QStringLiteral("offline"))
+    {
+        currentValue = 0.0;
+    }
+
+    if (!databaseManager.beginTransaction())
+    {
+        setLastError(databaseManager.lastErrorText());
+        return false;
+    }
+
+    if (!databaseManager.exec(
+            "UPDATE devices SET "
+            "device_id = ?, category_id = ?, device_name = ?, device_type = ?, room_name = ?, protocol_type = ?, manufacturer = ?, ip_address = ?, "
+            "online_status = ?, switch_status = ?, current_value = ?, value_unit = ?, supports_slider = ?, slider_min = ?, slider_max = ?, remarks = ?, updated_at = NOW() "
+            "WHERE id = ?",
+            {device.id,
+             categoryId,
+             device.name,
+             device.type,
+             device.roomName.trimmed().isEmpty() ? QVariant() : QVariant(device.roomName.trimmed()),
+             device.protocolType.trimmed().isEmpty() ? QStringLiteral("simulator") : device.protocolType.trimmed(),
+             device.manufacturer.trimmed().isEmpty() ? QStringLiteral("SmartHome Lab") : device.manufacturer.trimmed(),
+             device.ip,
+             onlineStatus,
+             switchStatus,
+             currentValue,
+             finalValueUnit,
+             supportsSlider ? 1 : 0,
+             supportsSlider ? QVariant(range.first) : QVariant(),
+             supportsSlider ? QVariant(range.second) : QVariant(),
+             device.remarks.trimmed().isEmpty() ? QStringLiteral("设备配置已更新") : device.remarks.trimmed(),
+             devicePk}))
+    {
+        setLastError(databaseManager.lastErrorText());
+        databaseManager.rollback();
+        return false;
+    }
+
+    if (!databaseManager.exec(
+            "INSERT INTO device_state_snapshots (device_id, online_status, switch_status, current_value, value_unit, mode_text, last_reported_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, NOW()) "
+            "ON DUPLICATE KEY UPDATE online_status = VALUES(online_status), switch_status = VALUES(switch_status), "
+            "current_value = VALUES(current_value), value_unit = VALUES(value_unit), mode_text = VALUES(mode_text), last_reported_at = NOW()",
+            {devicePk,
+             onlineStatus,
+             switchStatus,
+             currentValue,
+             finalValueUnit,
+             modeTextForState(device.type, switchStatus, currentValue)}))
     {
         setLastError(databaseManager.lastErrorText());
         databaseManager.rollback();
@@ -678,11 +845,7 @@ bool DeviceDao::upsertDeviceExtraParam(const QString &deviceId,
     QVariant valueInt;
     QVariant valueDecimal;
     QVariant valueText;
-    if (paramValue.userType() == QMetaType::Int
-        || paramValue.userType() == QMetaType::UInt
-        || paramValue.userType() == QMetaType::LongLong
-        || paramValue.userType() == QMetaType::ULongLong
-        || paramValue.userType() == QMetaType::Bool)
+    if (paramValue.userType() == QMetaType::Int || paramValue.userType() == QMetaType::UInt || paramValue.userType() == QMetaType::LongLong || paramValue.userType() == QMetaType::ULongLong || paramValue.userType() == QMetaType::Bool)
     {
         paramType = (paramValue.userType() == QMetaType::Bool) ? QStringLiteral("bool") : QStringLiteral("int");
         valueInt = paramValue.toInt();

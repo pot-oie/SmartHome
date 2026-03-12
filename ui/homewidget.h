@@ -15,6 +15,7 @@ namespace Ui
 }
 
 class QPushButton;
+class QTimer;
 
 class HomeWidget : public QWidget
 {
@@ -43,7 +44,6 @@ protected:
 private slots:
     void onQuickControlClicked();
     void on_btnEditQuickControl_clicked();
-    void on_btnGoHome_clicked();
     void onEnvironmentSnapshotLoaded(HomeEnvironmentRefreshResult result);
 
 private:
@@ -54,11 +54,14 @@ private:
     QString m_selectedSceneId;
     QString m_languageKey = QStringLiteral("zh_CN");
     bool m_themeRefreshScheduled = false;
+    QTimer *m_quickControlResizeTimer = nullptr;
+    int m_lastQuickControlColumns = -1;
 
     void initConnections();
     void refreshStaticTexts();
     void scheduleThemeRefresh();
     void ensureQuickControlEditButton();
+    int quickControlColumnsForWidth(int width) const;
     void applyTemperatureColor(double temperature);
     void updateDeviceStatusLabel(const DeviceStatusSummary &summary);
     void loadQuickControls();

@@ -74,6 +74,29 @@ namespace
         return QIcon(tinted);
     }
 
+    QIcon themedSceneDialogIcon(const QString &iconPath, const QPalette &palette)
+    {
+        QPixmap source(iconPath);
+        if (source.isNull())
+        {
+            return QIcon(iconPath);
+        }
+
+        if (!isDarkPalette(palette))
+        {
+            return QIcon(source);
+        }
+
+        QPixmap tinted(source.size());
+        tinted.fill(Qt::transparent);
+        QPainter painter(&tinted);
+        painter.drawPixmap(0, 0, source);
+        painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+        painter.fillRect(tinted.rect(), QColor(221, 233, 248));
+        painter.end();
+        return QIcon(tinted);
+    }
+
     QString localizedDeviceName(const QString &name, bool isEnglish)
     {
         if (!isEnglish)
@@ -115,6 +138,155 @@ namespace
         return map.value(action, action);
     }
 
+    QString actionCodeFromStoredText(const QString &actionText)
+    {
+        const QString trimmed = actionText.trimmed();
+        const QString lower = trimmed.toLower();
+
+        if (trimmed == QStringLiteral("开启") || lower == QStringLiteral("on"))
+        {
+            return QStringLiteral("switch_on");
+        }
+        if (trimmed == QStringLiteral("关闭") || lower == QStringLiteral("off"))
+        {
+            return QStringLiteral("switch_off");
+        }
+        if (trimmed == QStringLiteral("打开") || lower == QStringLiteral("open"))
+        {
+            return QStringLiteral("open");
+        }
+        if (trimmed == QStringLiteral("解锁") || lower == QStringLiteral("unlock"))
+        {
+            return QStringLiteral("unlock");
+        }
+        if (trimmed == QStringLiteral("上锁") || lower == QStringLiteral("lock"))
+        {
+            return QStringLiteral("lock");
+        }
+        if (trimmed == QStringLiteral("调节亮度"))
+        {
+            return QStringLiteral("set_brightness");
+        }
+        if (lower == QStringLiteral("set brightness"))
+        {
+            return QStringLiteral("set_brightness");
+        }
+        if (trimmed == QStringLiteral("设置色温"))
+        {
+            return QStringLiteral("set_color_temp");
+        }
+        if (lower == QStringLiteral("set color temp") || lower == QStringLiteral("set color temperature"))
+        {
+            return QStringLiteral("set_color_temp");
+        }
+        if (trimmed == QStringLiteral("设置温度"))
+        {
+            return QStringLiteral("set_temperature");
+        }
+        if (lower == QStringLiteral("set temperature"))
+        {
+            return QStringLiteral("set_temperature");
+        }
+        if (trimmed == QStringLiteral("设置开合度"))
+        {
+            return QStringLiteral("set_openness");
+        }
+        if (lower == QStringLiteral("set openness"))
+        {
+            return QStringLiteral("set_openness");
+        }
+        if (trimmed == QStringLiteral("设置音量"))
+        {
+            return QStringLiteral("set_volume");
+        }
+        if (lower == QStringLiteral("set volume"))
+        {
+            return QStringLiteral("set_volume");
+        }
+
+        return QStringLiteral("switch_on");
+    }
+
+    QString storedActionTextByCode(const QString &actionCode)
+    {
+        if (actionCode == QStringLiteral("switch_off"))
+        {
+            return QStringLiteral("关闭");
+        }
+        if (actionCode == QStringLiteral("open"))
+        {
+            return QStringLiteral("打开");
+        }
+        if (actionCode == QStringLiteral("unlock"))
+        {
+            return QStringLiteral("解锁");
+        }
+        if (actionCode == QStringLiteral("lock"))
+        {
+            return QStringLiteral("上锁");
+        }
+        if (actionCode == QStringLiteral("set_brightness"))
+        {
+            return QStringLiteral("调节亮度");
+        }
+        if (actionCode == QStringLiteral("set_color_temp"))
+        {
+            return QStringLiteral("设置色温");
+        }
+        if (actionCode == QStringLiteral("set_temperature"))
+        {
+            return QStringLiteral("设置温度");
+        }
+        if (actionCode == QStringLiteral("set_openness"))
+        {
+            return QStringLiteral("设置开合度");
+        }
+        if (actionCode == QStringLiteral("set_volume"))
+        {
+            return QStringLiteral("设置音量");
+        }
+        return QStringLiteral("开启");
+    }
+
+    QString actionDisplayTextByCode(const QString &actionCode, bool isEnglish)
+    {
+        const QString stored = storedActionTextByCode(actionCode);
+        return localizedActionText(stored, isEnglish);
+    }
+
+    QString canonicalActionParam(const QString &actionCode, int spinValue, const QString &comboLabel, const QString &comboValue, const QString &freeText)
+    {
+        if (actionCode == QStringLiteral("set_brightness") ||
+            actionCode == QStringLiteral("set_openness") ||
+            actionCode == QStringLiteral("set_volume"))
+        {
+            return QString::number(qBound(0, spinValue, 100));
+        }
+
+        if (actionCode == QStringLiteral("set_temperature"))
+        {
+            return QString::number(qBound(16, spinValue, 30));
+        }
+
+        if (actionCode == QStringLiteral("set_color_temp"))
+        {
+            const QString label = comboLabel.trimmed();
+            const QString value = comboValue.trimmed();
+            if (value.isEmpty())
+            {
+                return label;
+            }
+            return label + QStringLiteral("(") + value + QStringLiteral(")");
+        }
+
+        return freeText.trimmed();
+    }
+
+    void addActionItem(QComboBox *comboBox, const QString &actionCode, bool isEnglish)
+    {
+        comboBox->addItem(actionDisplayTextByCode(actionCode, isEnglish), actionCode);
+    }
+
     QString buildSceneExecutionMessage(const SceneExecutionResult &result)
     {
         QString summary;
@@ -151,30 +323,21 @@ namespace
         return summary;
     }
 
-    void populateSceneIconCombo(QComboBox *comboBox)
+    void populateSceneIconCombo(QComboBox *comboBox, const QPalette &palette)
     {
-        comboBox->addItem(QIcon(":/icons/home.svg"), QStringLiteral("\u56de\u5bb6"), ":/icons/home.svg");
-        comboBox->addItem(QIcon(":/icons/bedtime.svg"), QStringLiteral("\u7761\u7720"), ":/icons/bedtime.svg");
-        comboBox->addItem(QIcon(":/icons/movie.svg"), QStringLiteral("\u89c2\u5f71"), ":/icons/movie.svg");
-        comboBox->addItem(QIcon(":/icons/flight_takeoff.svg"), QStringLiteral("\u79bb\u5bb6"), ":/icons/flight_takeoff.svg");
-        comboBox->addItem(QIcon(":/icons/celebration.svg"), QStringLiteral("\u6d3e\u5bf9"), ":/icons/celebration.svg");
-        comboBox->addItem(QIcon(":/icons/wb_sunny.svg"), QStringLiteral("\u8d77\u5e8a"), ":/icons/wb_sunny.svg");
-        comboBox->addItem(QIcon(":/icons/restaurant.svg"), QStringLiteral("\u7528\u9910"), ":/icons/restaurant.svg");
-        comboBox->addItem(QIcon(":/icons/self_improvement.svg"), QStringLiteral("\u51a5\u60f3"), ":/icons/self_improvement.svg");
-        comboBox->addItem(QIcon(":/icons/sports_esports.svg"), QStringLiteral("\u6e38\u620f"), ":/icons/sports_esports.svg");
-        comboBox->addItem(QIcon(":/icons/cleaning_services.svg"), QStringLiteral("\u6e05\u6d01"), ":/icons/cleaning_services.svg");
-        comboBox->addItem(QIcon(":/icons/pets.svg"), QStringLiteral("\u5ba0\u7269"), ":/icons/pets.svg");
-        comboBox->addItem(QIcon(":/icons/music.svg"), QStringLiteral("\u97f3\u4e50"), ":/icons/music.svg");
-        comboBox->addItem(QIcon(":/icons/scene.svg"), QStringLiteral("\u901a\u7528"), ":/icons/scene.svg");
-    }
-
-    void populateActionCombo(QComboBox *comboBox)
-    {
-        comboBox->addItem(QStringLiteral("\u5f00\u542f"));
-        comboBox->addItem(QStringLiteral("\u5173\u95ed"));
-        comboBox->addItem(QStringLiteral("\u6253\u5f00"));
-        comboBox->addItem(QStringLiteral("\u89e3\u9501"));
-        comboBox->addItem(QStringLiteral("\u4e0a\u9501"));
+        comboBox->addItem(themedSceneDialogIcon(QStringLiteral(":/icons/home.svg"), palette), QStringLiteral("\u56de\u5bb6"), ":/icons/home.svg");
+        comboBox->addItem(themedSceneDialogIcon(QStringLiteral(":/icons/bedtime.svg"), palette), QStringLiteral("\u7761\u7720"), ":/icons/bedtime.svg");
+        comboBox->addItem(themedSceneDialogIcon(QStringLiteral(":/icons/movie.svg"), palette), QStringLiteral("\u89c2\u5f71"), ":/icons/movie.svg");
+        comboBox->addItem(themedSceneDialogIcon(QStringLiteral(":/icons/flight_takeoff.svg"), palette), QStringLiteral("\u79bb\u5bb6"), ":/icons/flight_takeoff.svg");
+        comboBox->addItem(themedSceneDialogIcon(QStringLiteral(":/icons/celebration.svg"), palette), QStringLiteral("\u6d3e\u5bf9"), ":/icons/celebration.svg");
+        comboBox->addItem(themedSceneDialogIcon(QStringLiteral(":/icons/wb_sunny.svg"), palette), QStringLiteral("\u8d77\u5e8a"), ":/icons/wb_sunny.svg");
+        comboBox->addItem(themedSceneDialogIcon(QStringLiteral(":/icons/restaurant.svg"), palette), QStringLiteral("\u7528\u9910"), ":/icons/restaurant.svg");
+        comboBox->addItem(themedSceneDialogIcon(QStringLiteral(":/icons/self_improvement.svg"), palette), QStringLiteral("\u51a5\u60f3"), ":/icons/self_improvement.svg");
+        comboBox->addItem(themedSceneDialogIcon(QStringLiteral(":/icons/sports_esports.svg"), palette), QStringLiteral("\u6e38\u620f"), ":/icons/sports_esports.svg");
+        comboBox->addItem(themedSceneDialogIcon(QStringLiteral(":/icons/cleaning_services.svg"), palette), QStringLiteral("\u6e05\u6d01"), ":/icons/cleaning_services.svg");
+        comboBox->addItem(themedSceneDialogIcon(QStringLiteral(":/icons/pets.svg"), palette), QStringLiteral("\u5ba0\u7269"), ":/icons/pets.svg");
+        comboBox->addItem(themedSceneDialogIcon(QStringLiteral(":/icons/music.svg"), palette), QStringLiteral("\u97f3\u4e50"), ":/icons/music.svg");
+        comboBox->addItem(themedSceneDialogIcon(QStringLiteral(":/icons/scene.svg"), palette), QStringLiteral("\u901a\u7528"), ":/icons/scene.svg");
     }
 }
 
@@ -195,8 +358,8 @@ SceneWidget::SceneWidget(QWidget *parent)
     ui->label_sceneDesc->setStyleSheet(QStringLiteral("font-size: 10pt; color: #7D8A99;"));
 
     // 场景列表区域提升可用性与视觉一致性。
-    ui->listWidget_scenes->setIconSize(QSize(18, 18));
-    ui->listWidget_scenes->setSpacing(2);
+    ui->listWidget_scenes->setIconSize(QSize(22, 22));
+    ui->listWidget_scenes->setSpacing(6);
 
     connect(ui->listWidget_scenes, &QListWidget::currentRowChanged, this, &SceneWidget::updateSceneDetails);
     connect(ui->listWidget_scenes, &QListWidget::itemDoubleClicked, this, [this](QListWidgetItem *)
@@ -321,6 +484,8 @@ void SceneWidget::renderSceneList()
     {
         QListWidgetItem *item = new QListWidgetItem(localizedSceneName(scene.name, isEnglish));
         item->setIcon(sceneListIcon(scene.icon, pal));
+        item->setSizeHint(QSize(item->sizeHint().width(), 56));
+        item->setTextAlignment(Qt::AlignVCenter | Qt::AlignLeft);
         ui->listWidget_scenes->addItem(item);
     }
 }
@@ -356,7 +521,7 @@ void SceneWidget::renderSceneDetails(const SceneDefinition &scene)
 {
     const bool isEnglish = (m_languageKey == QStringLiteral("en_US"));
     ui->label_sceneName->setText((isEnglish ? QStringLiteral("Scene: ") : kTextSceneNamePrefix) + localizedSceneName(scene.name, isEnglish));
-    ui->label_sceneDesc->setText(scene.description);
+    ui->label_sceneDesc->setText((isEnglish ? QStringLiteral("Description: ") : QStringLiteral("描述：")) + scene.description);
 
     ui->tableWidget_devices->clearContents();
     ui->tableWidget_devices->setRowCount(0);
@@ -414,7 +579,7 @@ bool SceneWidget::openSceneDialog(SceneDefinition *scene, const QString &title)
     form->addRow(QStringLiteral("\u573a\u666f\u63cf\u8ff0:"), editDesc);
 
     QComboBox *cmbIcon = new QComboBox(&dialog);
-    populateSceneIconCombo(cmbIcon);
+    populateSceneIconCombo(cmbIcon, this->palette());
     const int iconIndex = cmbIcon->findData(scene->icon);
     cmbIcon->setCurrentIndex(iconIndex >= 0 ? iconIndex : cmbIcon->count() - 1);
     form->addRow(QStringLiteral("\u573a\u666f\u56fe\u6807:"), cmbIcon);
@@ -460,26 +625,27 @@ bool SceneWidget::openActionDialog(SceneDeviceAction *action, const QString &tit
 
     QDialog dialog(this);
     dialog.setWindowTitle(title);
-    dialog.resize(380, 240);
-    dialog.setMinimumSize(360, 220);
+    dialog.resize(520, 360);
+    dialog.setMinimumSize(480, 340);
 
     QFormLayout *form = new QFormLayout(&dialog);
     form->setFieldGrowthPolicy(QFormLayout::ExpandingFieldsGrow);
     form->setVerticalSpacing(10);
+    form->setContentsMargins(14, 14, 14, 14);
 
     const bool isEnglish = (m_languageKey == QStringLiteral("en_US"));
     const QString textDevice = isEnglish ? QStringLiteral("Device:") : QStringLiteral("选择设备:");
     const QString textAction = isEnglish ? QStringLiteral("Action:") : QStringLiteral("执行动作:");
     const QString textParam = isEnglish ? QStringLiteral("Parameter:") : QStringLiteral("动作参数:");
     const QString textNoParam = isEnglish ? QStringLiteral("This action does not need a parameter") : QStringLiteral("该动作无需参数");
-    const QString textParamHint = isEnglish ? QStringLiteral("e.g. 24C or 80%") : QStringLiteral("例如：24C 或 80%");
+    const QString textParamHint = isEnglish ? QStringLiteral("e.g. 24 or 80") : QStringLiteral("例如：24 或 80");
 
-    const QStringList defaultActions = {
-        QStringLiteral("开启"),
-        QStringLiteral("关闭"),
-        QStringLiteral("打开"),
-        QStringLiteral("解锁"),
-        QStringLiteral("上锁")};
+    const QStringList defaultActionCodes = {
+        QStringLiteral("switch_on"),
+        QStringLiteral("switch_off"),
+        QStringLiteral("open"),
+        QStringLiteral("unlock"),
+        QStringLiteral("lock")};
 
     QComboBox *cmbDevice = new QComboBox(&dialog);
     cmbDevice->setMaxVisibleItems(8);
@@ -528,16 +694,17 @@ bool SceneWidget::openActionDialog(SceneDeviceAction *action, const QString &tit
 
     QComboBox *cmbParam = new QComboBox(paramEditor);
     cmbParam->setVisible(false);
-    cmbParam->addItem(isEnglish ? QStringLiteral("Cool") : QStringLiteral("亮色"), QStringLiteral("6500K"));
-    cmbParam->addItem(isEnglish ? QStringLiteral("Warm") : QStringLiteral("暖色"), QStringLiteral("3000K"));
-    cmbParam->addItem(isEnglish ? QStringLiteral("Mixed") : QStringLiteral("混合"), QStringLiteral("4500K"));
+    cmbParam->addItem(isEnglish ? QStringLiteral("Cool") : QStringLiteral("亮色"), QStringLiteral("6500"));
+    cmbParam->addItem(isEnglish ? QStringLiteral("Warm") : QStringLiteral("暖色"), QStringLiteral("3000"));
+    cmbParam->addItem(isEnglish ? QStringLiteral("Mixed") : QStringLiteral("混合"), QStringLiteral("4500"));
 
     paramLayout->addWidget(editParam, 1);
     paramLayout->addWidget(spinParam, 1);
     paramLayout->addWidget(cmbParam, 1);
     form->addRow(textParam, paramEditor);
 
-    auto selectedDeviceType = [=]() {
+    auto selectedDeviceType = [=]()
+    {
         const QString deviceId = cmbDevice->currentData().toString();
         const QString deviceName = cmbDevice->currentText();
         const QString typeById = deviceTypeById.value(deviceId);
@@ -548,51 +715,53 @@ bool SceneWidget::openActionDialog(SceneDeviceAction *action, const QString &tit
         return deviceTypeByName.value(deviceName);
     };
 
-    auto actionsForCurrentDevice = [=]() {
+    auto actionCodesForCurrentDevice = [=]()
+    {
         const QString typeText = selectedDeviceType();
         const QString deviceName = cmbDevice->currentText();
         if (typeText.contains(QStringLiteral("照明")) || deviceName.contains(QStringLiteral("灯")))
         {
-            return QStringList{QStringLiteral("开启"), QStringLiteral("关闭"), QStringLiteral("调节亮度"), QStringLiteral("设置色温")};
+            return QStringList{QStringLiteral("switch_on"), QStringLiteral("switch_off"), QStringLiteral("set_brightness"), QStringLiteral("set_color_temp")};
         }
         if (typeText.contains(QStringLiteral("空调")))
         {
-            return QStringList{QStringLiteral("开启"), QStringLiteral("关闭"), QStringLiteral("设置温度")};
+            return QStringList{QStringLiteral("switch_on"), QStringLiteral("switch_off"), QStringLiteral("set_temperature")};
         }
         if (typeText.contains(QStringLiteral("窗帘")))
         {
-            return QStringList{QStringLiteral("打开"), QStringLiteral("关闭"), QStringLiteral("设置开合度")};
+            return QStringList{QStringLiteral("open"), QStringLiteral("switch_off"), QStringLiteral("set_openness")};
         }
         if (typeText.contains(QStringLiteral("影音")) || deviceName.contains(QStringLiteral("电视")))
         {
-            return QStringList{QStringLiteral("开启"), QStringLiteral("关闭"), QStringLiteral("设置音量")};
+            return QStringList{QStringLiteral("switch_on"), QStringLiteral("switch_off"), QStringLiteral("set_volume")};
         }
         if (typeText.contains(QStringLiteral("安防")) && deviceName.contains(QStringLiteral("锁")))
         {
-            return QStringList{QStringLiteral("解锁"), QStringLiteral("上锁")};
+            return QStringList{QStringLiteral("unlock"), QStringLiteral("lock")};
         }
         if (typeText.contains(QStringLiteral("安防")) && deviceName.contains(QStringLiteral("摄像头")))
         {
-            return QStringList{QStringLiteral("开启"), QStringLiteral("关闭")};
+            return QStringList{QStringLiteral("switch_on"), QStringLiteral("switch_off")};
         }
         if (typeText.contains(QStringLiteral("传感")) || deviceName.contains(QStringLiteral("传感器")))
         {
-            return QStringList{QStringLiteral("开启"), QStringLiteral("关闭")};
+            return QStringList{QStringLiteral("switch_on"), QStringLiteral("switch_off")};
         }
-        return defaultActions;
+        return defaultActionCodes;
     };
 
-    auto applyParamEditorForAction = [=]() {
-        const QString actionText = cmbAction->currentText().trimmed();
+    auto applyParamEditorForAction = [=]()
+    {
+        const QString actionCode = cmbAction->currentData().toString().trimmed();
 
         editParam->setVisible(false);
         spinParam->setVisible(false);
         cmbParam->setVisible(false);
 
-        if (actionText == QStringLiteral("调节亮度") || actionText == QStringLiteral("设置开合度") || actionText == QStringLiteral("设置音量"))
+        if (actionCode == QStringLiteral("set_brightness") || actionCode == QStringLiteral("set_openness") || actionCode == QStringLiteral("set_volume"))
         {
             spinParam->setRange(0, 100);
-            spinParam->setSuffix(QStringLiteral("%"));
+            spinParam->setSuffix(QString());
             int value = 0;
             const QRegularExpression re(QStringLiteral("(-?\\d+)"));
             const QRegularExpressionMatch match = re.match(action->paramText);
@@ -606,10 +775,10 @@ bool SceneWidget::openActionDialog(SceneDeviceAction *action, const QString &tit
             return;
         }
 
-        if (actionText == QStringLiteral("设置温度"))
+        if (actionCode == QStringLiteral("set_temperature"))
         {
             spinParam->setRange(16, 30);
-            spinParam->setSuffix(QStringLiteral("C"));
+            spinParam->setSuffix(QString());
             int value = 24;
             const QRegularExpression re(QStringLiteral("(-?\\d+)"));
             const QRegularExpressionMatch match = re.match(action->paramText);
@@ -623,7 +792,7 @@ bool SceneWidget::openActionDialog(SceneDeviceAction *action, const QString &tit
             return;
         }
 
-        if (actionText == QStringLiteral("设置色温"))
+        if (actionCode == QStringLiteral("set_color_temp"))
         {
             int index = 2;
             const QString currentParam = action->paramText;
@@ -640,16 +809,11 @@ bool SceneWidget::openActionDialog(SceneDeviceAction *action, const QString &tit
             return;
         }
 
-        const bool needParam = !(actionText == QStringLiteral("开启") ||
-                                 actionText == QStringLiteral("关闭") ||
-                                 actionText == QStringLiteral("打开") ||
-                                 actionText == QStringLiteral("解锁") ||
-                                 actionText == QStringLiteral("上锁") ||
-                                 actionText.compare(QStringLiteral("on"), Qt::CaseInsensitive) == 0 ||
-                                 actionText.compare(QStringLiteral("off"), Qt::CaseInsensitive) == 0 ||
-                                 actionText.compare(QStringLiteral("open"), Qt::CaseInsensitive) == 0 ||
-                                 actionText.compare(QStringLiteral("unlock"), Qt::CaseInsensitive) == 0 ||
-                                 actionText.compare(QStringLiteral("lock"), Qt::CaseInsensitive) == 0);
+        const bool needParam = (actionCode == QStringLiteral("set_brightness") ||
+                                actionCode == QStringLiteral("set_color_temp") ||
+                                actionCode == QStringLiteral("set_temperature") ||
+                                actionCode == QStringLiteral("set_openness") ||
+                                actionCode == QStringLiteral("set_volume"));
 
         editParam->setEnabled(needParam);
         editParam->setPlaceholderText(needParam ? textParamHint : textNoParam);
@@ -660,18 +824,21 @@ bool SceneWidget::openActionDialog(SceneDeviceAction *action, const QString &tit
         editParam->setVisible(true);
     };
 
-    auto repopulateActionsByDevice = [=]() {
-        const QString currentAction = cmbAction->currentText().trimmed().isEmpty() ? action->actionText.trimmed() : cmbAction->currentText().trimmed();
-        const QStringList actions = actionsForCurrentDevice();
+    auto repopulateActionsByDevice = [=]()
+    {
+        const QString currentActionCode = cmbAction->currentData().toString().trimmed().isEmpty()
+                                              ? actionCodeFromStoredText(action->actionText)
+                                              : cmbAction->currentData().toString().trimmed();
+        const QStringList actionCodes = actionCodesForCurrentDevice();
 
         QSignalBlocker blocker(cmbAction);
         cmbAction->clear();
-        for (const QString &actionText : actions)
+        for (const QString &actionCode : actionCodes)
         {
-            cmbAction->addItem(actionText);
+            addActionItem(cmbAction, actionCode, isEnglish);
         }
 
-        int index = cmbAction->findText(currentAction);
+        int index = cmbAction->findData(currentActionCode);
         if (index < 0)
         {
             index = 0;
@@ -680,12 +847,10 @@ bool SceneWidget::openActionDialog(SceneDeviceAction *action, const QString &tit
         applyParamEditorForAction();
     };
 
-    connect(cmbDevice, &QComboBox::currentIndexChanged, &dialog, [=](int) {
-        repopulateActionsByDevice();
-    });
-    connect(cmbAction, &QComboBox::currentTextChanged, &dialog, [=](const QString &) {
-        applyParamEditorForAction();
-    });
+    connect(cmbDevice, &QComboBox::currentIndexChanged, &dialog, [=](int)
+            { repopulateActionsByDevice(); });
+    connect(cmbAction, qOverload<int>(&QComboBox::currentIndexChanged), &dialog, [=](int)
+            { applyParamEditorForAction(); });
     repopulateActionsByDevice();
 
     QDialogButtonBox *btnBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
@@ -693,6 +858,7 @@ bool SceneWidget::openActionDialog(SceneDeviceAction *action, const QString &tit
 
     connect(btnBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
     connect(btnBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    dialog.layout()->setSizeConstraint(QLayout::SetMinimumSize);
 
     if (dialog.exec() != QDialog::Accepted)
     {
@@ -707,21 +873,13 @@ bool SceneWidget::openActionDialog(SceneDeviceAction *action, const QString &tit
 
     action->deviceName = cmbDevice->currentText();
     action->deviceId = cmbDevice->currentData().toString();
-    action->actionText = cmbAction->currentText().trimmed();
-    if (cmbParam->isVisible())
-    {
-        const QString label = cmbParam->currentText().trimmed();
-        const QString value = cmbParam->currentData().toString();
-        action->paramText = label + QStringLiteral("(") + value + QStringLiteral(")");
-    }
-    else if (spinParam->isVisible())
-    {
-        action->paramText = QString::number(spinParam->value()) + spinParam->suffix();
-    }
-    else
-    {
-        action->paramText = editParam->text().trimmed();
-    }
+    action->actionText = storedActionTextByCode(cmbAction->currentData().toString().trimmed());
+    const QString currentActionCode = cmbAction->currentData().toString().trimmed();
+    action->paramText = canonicalActionParam(currentActionCode,
+                                             spinParam->value(),
+                                             cmbParam->currentText(),
+                                             cmbParam->currentData().toString(),
+                                             editParam->text());
     return true;
 }
 

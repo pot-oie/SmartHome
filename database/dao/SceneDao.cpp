@@ -92,7 +92,7 @@ namespace
             "INNER JOIN scenes s ON s.id = a.scene_id "
             "INNER JOIN devices d ON d.id = a.device_id "
             "WHERE s.scene_code = ? AND d.device_name = ? AND a.action_name = ? "
-            "AND COALESCE(a.action_param, '') = COALESCE(?, '') "
+            "AND COALESCE(NULLIF(TRIM(a.action_param), ''), NULLIF(TRIM(a.param_value), ''), '') = COALESCE(?, '') "
             "ORDER BY a.action_order ASC, a.id ASC LIMIT 1";
 
         QSqlQuery query = databaseManager.query(sql, {sceneCode, action.deviceName, action.actionText, action.paramText});
@@ -149,7 +149,8 @@ SceneList SceneDao::listScenesWithActions()
     }
 
     static const QString actionSql =
-        "SELECT a.id AS action_id, s.scene_code, d.device_id, d.device_name, a.action_name, a.action_param "
+        "SELECT a.id AS action_id, s.scene_code, d.device_id, d.device_name, a.action_name, "
+        "COALESCE(NULLIF(TRIM(a.action_param), ''), NULLIF(TRIM(a.param_value), ''), '') AS action_param "
         "FROM scene_actions a "
         "INNER JOIN scenes s ON s.id = a.scene_id "
         "INNER JOIN devices d ON d.id = a.device_id "
@@ -318,11 +319,11 @@ bool SceneDao::insertSceneAction(const QString &sceneCode, const SceneDeviceActi
     }
 
     static const QString insertActionSql =
-        "INSERT INTO scene_actions (scene_id, device_id, action_name, action_param, action_order) "
-        "SELECT s.id, ?, ?, ?, COALESCE((SELECT MAX(action_order) FROM scene_actions WHERE scene_id = s.id), 0) + 1 "
+        "INSERT INTO scene_actions (scene_id, device_id, action_name, action_param, param_value, action_order) "
+        "SELECT s.id, ?, ?, ?, ?, COALESCE((SELECT MAX(action_order) FROM scene_actions WHERE scene_id = s.id), 0) + 1 "
         "FROM scenes s WHERE s.scene_code = ? LIMIT 1";
 
-    if (!databaseManager.exec(insertActionSql, {devicePk, action.actionText, action.paramText, sceneCode}))
+    if (!databaseManager.exec(insertActionSql, {devicePk, action.actionText, action.paramText, action.paramText, sceneCode}))
     {
         setLastError(databaseManager.lastErrorText());
         qWarning().noquote() << LOG_PREFIX << "Insert scene action failed:" << m_lastErrorText
@@ -362,10 +363,10 @@ bool SceneDao::updateSceneAction(const QString &sceneCode, const SceneDeviceActi
     }
 
     static const QString updateSql =
-        "UPDATE scene_actions SET device_id = ?, action_name = ?, action_param = ? "
+        "UPDATE scene_actions SET device_id = ?, action_name = ?, action_param = ?, param_value = ? "
         "WHERE id = ? AND scene_id = (SELECT id FROM scenes WHERE scene_code = ? LIMIT 1)";
 
-    if (!databaseManager.exec(updateSql, {devicePk, newAction.actionText, newAction.paramText, actionId, sceneCode}))
+    if (!databaseManager.exec(updateSql, {devicePk, newAction.actionText, newAction.paramText, newAction.paramText, actionId, sceneCode}))
     {
         setLastError(databaseManager.lastErrorText());
         qWarning().noquote() << LOG_PREFIX << "Update scene action failed:" << m_lastErrorText

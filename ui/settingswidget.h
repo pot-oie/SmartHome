@@ -32,6 +32,7 @@ private slots:
     void on_btnBackupDatabase_clicked();
     void on_btnAddDevice_clicked();
     void on_btnDeleteDevice_clicked();
+    void on_btnEditDevice_clicked();
     void on_btnTestConnection_clicked();
     void onDevicesRefreshed(SettingsDeviceList devices);
 

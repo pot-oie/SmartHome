@@ -34,11 +34,18 @@ QListWidget#navBar {
 
 QListWidget#navBar::item {
     color: #cfd6e4;
-    padding: 0 14px;
-    min-height: 42px;
+    padding: 0 20px;
+    min-height: 75px;
     border-left: 4px solid transparent;
     outline: none;
-    font-size: 11pt;
+    font-size: 15pt;
+    font-weight: 800;
+}
+
+QListWidget#listCategory::item,
+QListWidget#listWidget_scenes::item {
+    min-height: 56px;
+    padding: 0 10px;
 }
 
 QListWidget#navBar::item:focus {
@@ -226,6 +233,62 @@ QScrollBar::sub-line:horizontal {
 
 QScrollBar::add-page:horizontal,
 QScrollBar::sub-page:horizontal {
+    background: transparent;
+}
+
+QTableWidget QScrollBar:vertical,
+QTableView QScrollBar:vertical {
+    background: #141B24;
+    width: 10px;
+    border: 1px solid #2D3A4B;
+    border-radius: 5px;
+    margin: 1px;
+}
+
+QTableWidget QScrollBar::handle:vertical,
+QTableView QScrollBar::handle:vertical {
+    background: #5A6F8A;
+    min-height: 28px;
+    border-radius: 4px;
+}
+
+QTableWidget QScrollBar::handle:vertical:hover,
+QTableView QScrollBar::handle:vertical:hover {
+    background: #7390B2;
+}
+
+QTableWidget QScrollBar:horizontal,
+QTableView QScrollBar:horizontal {
+    background: #141B24;
+    height: 10px;
+    border: 1px solid #2D3A4B;
+    border-radius: 5px;
+    margin: 1px;
+}
+
+QTableWidget QScrollBar::handle:horizontal,
+QTableView QScrollBar::handle:horizontal {
+    background: #5A6F8A;
+    min-width: 28px;
+    border-radius: 4px;
+}
+
+QTableWidget QScrollBar::handle:horizontal:hover,
+QTableView QScrollBar::handle:horizontal:hover {
+    background: #7390B2;
+}
+
+QTableWidget QScrollBar::add-line:vertical,
+QTableWidget QScrollBar::sub-line:vertical,
+QTableWidget QScrollBar::add-line:horizontal,
+QTableWidget QScrollBar::sub-line:horizontal,
+QTableView QScrollBar::add-line:vertical,
+QTableView QScrollBar::sub-line:vertical,
+QTableView QScrollBar::add-line:horizontal,
+QTableView QScrollBar::sub-line:horizontal {
+    width: 0px;
+    height: 0px;
+    border: none;
     background: transparent;
 }
 

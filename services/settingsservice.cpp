@@ -8,12 +8,33 @@
 #include <QIODevice>
 #include <QProcess>
 #include <QTcpSocket>
+#include <QDateTime>
 #include <QtConcurrent>
 
 namespace
 {
     const QString kSmartHomeTcpHost = QStringLiteral("127.0.0.1");
     const quint16 kSmartHomeTcpPort = 9090;
+
+    QString sanitizeCodeSegment(QString text)
+    {
+        QString code = text.trimmed().toLower();
+        for (int i = 0; i < code.size(); ++i)
+        {
+            const QChar ch = code.at(i);
+            const bool allowed = (ch >= QLatin1Char('a') && ch <= QLatin1Char('z')) || (ch >= QLatin1Char('0') && ch <= QLatin1Char('9')) || ch == QLatin1Char('_');
+            if (!allowed)
+            {
+                code[i] = QLatin1Char('_');
+            }
+        }
+
+        while (code.contains(QStringLiteral("__")))
+        {
+            code.replace(QStringLiteral("__"), QStringLiteral("_"));
+        }
+        return code.trimmed().isEmpty() ? QStringLiteral("device") : code;
+    }
 }
 
 QStringList SettingsService::themeOptions() const
@@ -78,20 +99,56 @@ SettingsDeviceList SettingsService::loadDevices() const
     return dao.listSettingsDevices();
 }
 
-SettingsDeviceEntry SettingsService::createNewDevice(const QString &deviceName, int currentCount) const
+SettingsDeviceEntry SettingsService::createNewDevice(const SettingsDeviceEntry &draftDevice, int currentCount) const
 {
-    SettingsDeviceEntry device;
-    device.id = QStringLiteral("device_") + QString::number(currentCount + 100);
-    device.name = deviceName.trimmed();
-    device.type = QStringLiteral("\u65b0\u8bbe\u5907");
-    device.ip = QStringLiteral("192.168.1.") + QString::number(108 + currentCount);
-    device.onlineStatus = QStringLiteral("online");
+    SettingsDeviceEntry device = draftDevice;
+
+    device.name = device.name.trimmed();
+    device.type = device.type.trimmed().isEmpty() ? QStringLiteral("新设备") : device.type.trimmed();
+    device.roomName = device.roomName.trimmed();
+    device.protocolType = device.protocolType.trimmed().isEmpty() ? QStringLiteral("simulator") : device.protocolType.trimmed();
+    device.manufacturer = device.manufacturer.trimmed().isEmpty() ? QStringLiteral("SmartHome Lab") : device.manufacturer.trimmed();
+    device.remarks = device.remarks.trimmed().isEmpty() ? QStringLiteral("新增设备") : device.remarks.trimmed();
+
+    const QString onlineStatus = device.onlineStatus.trimmed().toLower();
+    device.onlineStatus = (onlineStatus == QStringLiteral("offline") || onlineStatus == QStringLiteral("error")) ? onlineStatus : QStringLiteral("online");
+
+    const QString switchStatus = device.switchStatus.trimmed().toLower();
+    device.switchStatus = (switchStatus == QStringLiteral("on") || switchStatus == QStringLiteral("off"))
+                              ? switchStatus
+                              : (device.onlineStatus == QStringLiteral("online") ? QStringLiteral("on") : QStringLiteral("off"));
+
+    if (device.id.trimmed().isEmpty())
+    {
+        const QString typeCode = sanitizeCodeSegment(device.type);
+        const qint64 suffix = QDateTime::currentMSecsSinceEpoch() % 1000000;
+        device.id = QStringLiteral("%1_%2").arg(typeCode, QString::number(suffix));
+    }
+    else
+    {
+        device.id = sanitizeCodeSegment(device.id);
+    }
+
+    if (device.ip.trimmed().isEmpty())
+    {
+        device.ip = QStringLiteral("192.168.1.") + QString::number(108 + currentCount);
+    }
+    else
+    {
+        device.ip = device.ip.trimmed();
+    }
+
+    if (device.hasSliderConfig && device.sliderMax < device.sliderMin)
+    {
+        qSwap(device.sliderMin, device.sliderMax);
+    }
+
     return device;
 }
 
-bool SettingsService::addDevice(const QString &deviceName, int currentCount, SettingsDeviceEntry *createdDevice, QString *errorText) const
+bool SettingsService::addDevice(const SettingsDeviceEntry &draftDevice, int currentCount, SettingsDeviceEntry *createdDevice, QString *errorText) const
 {
-    SettingsDeviceEntry newDevice = createNewDevice(deviceName, currentCount);
+    SettingsDeviceEntry newDevice = createNewDevice(draftDevice, currentCount);
 
     DeviceDao dao;
     if (!dao.insertDevice(newDevice))
@@ -106,6 +163,71 @@ bool SettingsService::addDevice(const QString &deviceName, int currentCount, Set
     if (createdDevice)
     {
         *createdDevice = newDevice;
+    }
+    return true;
+}
+
+bool SettingsService::updateDevice(const QString &originalDeviceId,
+                                   const SettingsDeviceEntry &draftDevice,
+                                   SettingsDeviceEntry *updatedDevice,
+                                   QString *errorText) const
+{
+    if (originalDeviceId.trimmed().isEmpty())
+    {
+        if (errorText)
+        {
+            *errorText = QStringLiteral("待编辑设备编号不能为空。");
+        }
+        return false;
+    }
+
+    SettingsDeviceEntry normalized = draftDevice;
+    normalized.id = sanitizeCodeSegment(normalized.id.trimmed().isEmpty() ? originalDeviceId : normalized.id);
+    normalized.name = normalized.name.trimmed();
+    normalized.type = normalized.type.trimmed().isEmpty() ? QStringLiteral("新设备") : normalized.type.trimmed();
+    normalized.ip = normalized.ip.trimmed();
+    normalized.roomName = normalized.roomName.trimmed();
+    normalized.protocolType = normalized.protocolType.trimmed().isEmpty() ? QStringLiteral("simulator") : normalized.protocolType.trimmed();
+    normalized.manufacturer = normalized.manufacturer.trimmed().isEmpty() ? QStringLiteral("SmartHome Lab") : normalized.manufacturer.trimmed();
+    normalized.remarks = normalized.remarks.trimmed();
+    if (normalized.remarks.isEmpty())
+    {
+        normalized.remarks = QStringLiteral("设备配置已更新");
+    }
+
+    const QString onlineStatus = normalized.onlineStatus.trimmed().toLower();
+    normalized.onlineStatus = (onlineStatus == QStringLiteral("offline") || onlineStatus == QStringLiteral("error"))
+                                  ? onlineStatus
+                                  : QStringLiteral("online");
+
+    const QString switchStatus = normalized.switchStatus.trimmed().toLower();
+    normalized.switchStatus = (switchStatus == QStringLiteral("on") || switchStatus == QStringLiteral("off"))
+                                  ? switchStatus
+                                  : QStringLiteral("on");
+
+    if (normalized.onlineStatus == QStringLiteral("offline"))
+    {
+        normalized.switchStatus = QStringLiteral("off");
+    }
+
+    if (normalized.hasSliderConfig && normalized.sliderMax < normalized.sliderMin)
+    {
+        qSwap(normalized.sliderMin, normalized.sliderMax);
+    }
+
+    DeviceDao dao;
+    if (!dao.updateDeviceById(originalDeviceId, normalized))
+    {
+        if (errorText)
+        {
+            *errorText = dao.lastErrorText();
+        }
+        return false;
+    }
+
+    if (updatedDevice)
+    {
+        *updatedDevice = normalized;
     }
     return true;
 }

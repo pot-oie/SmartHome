@@ -30,8 +30,9 @@ public:
 
     DeviceStatusSummary loadDeviceStatusSummary() const;
     SettingsDeviceList loadDevices() const;
-    SettingsDeviceEntry createNewDevice(const QString &deviceName, int currentCount) const;
-    bool addDevice(const QString &deviceName, int currentCount, SettingsDeviceEntry *createdDevice, QString *errorText = nullptr) const;
+    SettingsDeviceEntry createNewDevice(const SettingsDeviceEntry &draftDevice, int currentCount) const;
+    bool addDevice(const SettingsDeviceEntry &draftDevice, int currentCount, SettingsDeviceEntry *createdDevice, QString *errorText = nullptr) const;
+    bool updateDevice(const QString &originalDeviceId, const SettingsDeviceEntry &draftDevice, SettingsDeviceEntry *updatedDevice = nullptr, QString *errorText = nullptr) const;
     bool deleteDeviceById(const QString &deviceId, QString *errorText = nullptr) const;
     bool backupDatabase(const QString &sqlFilePath, QString *errorText = nullptr) const;
     TcpEndpointTestResult testSmartHomeTcpEndpoint(int timeoutMs = 3000) const;

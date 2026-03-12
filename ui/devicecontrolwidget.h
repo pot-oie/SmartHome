@@ -50,4 +50,6 @@ private:
     QStringList m_categories;
     QString m_languageKey = QStringLiteral("zh_CN");
     bool m_themeRefreshScheduled = false;
+    QString m_lastDeviceRenderSignature;
+    int m_lastRenderedCategory = -1;
 };
