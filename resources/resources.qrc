@@ -43,5 +43,7 @@
         <file>icons/person.svg</file>
         <file>icons/check.svg</file>
         <file>icons/warning.svg</file>
+        <file>icons/dropdown_arrow_dark.svg</file>
+        <file>icons/dropdown_arrow_light.svg</file>
     </qresource>
 </RCC>

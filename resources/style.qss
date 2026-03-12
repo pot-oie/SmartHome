@@ -137,9 +137,10 @@ QComboBox::drop-down {
     width: 30px;
 }
 QComboBox::down-arrow {
-    border-left: 5px solid transparent;
-    border-right: 5px solid transparent;
-    border-top: 5px solid #666;
+    image: url(:/icons/dropdown_arrow_dark.svg);
+    width: 12px;
+    height: 8px;
+    margin-right: 10px;
 }
 
 QGroupBox {
@@ -231,10 +232,9 @@ QComboBox::drop-down {
 }
 
 QComboBox::down-arrow {
-    image: none;
-    border-left: 5px solid transparent;
-    border-right: 5px solid transparent;
-    border-top: 5px solid #666;
+    image: url(:/icons/dropdown_arrow_dark.svg);
+    width: 12px;
+    height: 8px;
     margin-right: 10px;
 }
 
@@ -517,6 +517,13 @@ QDateEdit::drop-down {
     width: 30px;
 }
 
+QDateEdit::down-arrow {
+    image: url(:/icons/dropdown_arrow_dark.svg);
+    width: 12px;
+    height: 8px;
+    margin-right: 10px;
+}
+
 /* ===== 数字选择器样式 ===== */
 QSpinBox, QDoubleSpinBox {
     padding: 8px 12px;
@@ -701,12 +708,10 @@ QDateTimeEdit::drop-down {
 }
 
 QDateTimeEdit::down-arrow {
-    image: none;
-    width: 0;
-    height: 0;
-    border-left: 5px solid transparent;
-    border-right: 5px solid transparent;
-    border-top: 6px solid #5C7692;
+    image: url(:/icons/dropdown_arrow_dark.svg);
+    width: 12px;
+    height: 8px;
+    margin-right: 8px;
 }
 
 QCalendarWidget {
@@ -731,6 +736,15 @@ QCalendarWidget QToolButton {
     padding: 4px 8px;
     border-radius: 8px;
     font-weight: 600;
+}
+
+QCalendarWidget QToolButton::menu-indicator {
+    image: url(:/icons/dropdown_arrow_dark.svg);
+    width: 12px;
+    height: 8px;
+    subcontrol-origin: padding;
+    subcontrol-position: center right;
+    right: 6px;
 }
 
 QCalendarWidget QToolButton:hover {
