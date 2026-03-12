@@ -39,5 +39,6 @@ private:
     void loadThresholds();
     void loadAlarmStatus();
     void loadAlarmLogs();
+    void refreshRuntimeData();
     void appendAlarmLogRow(int row, const AlarmLogEntry &entry);
 };
