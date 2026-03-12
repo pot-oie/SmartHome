@@ -3,12 +3,18 @@
 #include "services/servicemodels.h"
 
 #include <QDateTime>
+#include <QFutureWatcher>
 #include <QJsonObject>
+#include <QObject>
 #include <QString>
 
-class HistoryService
+class HistoryService : public QObject
 {
+    Q_OBJECT
 public:
+    explicit HistoryService(QObject *parent = nullptr);
+
+    // 同步方法（保持不变）
     OperationLogList queryOperationLogs(const QDateTime &startTime, const QDateTime &endTime, const QString &deviceType = QString()) const;
     EnvironmentSeries queryEnvironmentSeries(int hours) const;
     bool addOperationLog(const QString &moduleName,
@@ -28,4 +34,20 @@ public:
                                   QString *errorMessage = nullptr) const;
     bool deleteOperationLog(qint64 logId, QString *errorMessage = nullptr) const;
     bool exportOperationLogsToExcel(const QString &filePath, const OperationLogList &logs, QString *errorMessage = nullptr) const;
+
+    // 异步按需加载（由 UI 主动调用）
+    void asyncQueryOperationLogs(const QDateTime &startTime, const QDateTime &endTime, const QString &deviceType = QString());
+    void asyncQueryEnvironmentSeries(int hours = 24);
+
+signals:
+    void operationLogsReady(OperationLogList logs);
+    void environmentSeriesReady(EnvironmentSeries series);
+
+private slots:
+    void onLogWatcherFinished();
+    void onEnvWatcherFinished();
+
+private:
+    QFutureWatcher<OperationLogList> *m_logWatcher = nullptr;
+    QFutureWatcher<EnvironmentSeries> *m_envWatcher = nullptr;
 };

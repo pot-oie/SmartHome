@@ -2,7 +2,6 @@
 #include "quickcontrolmanagedialog.h"
 #include "ui_homewidget.h"
 
-#include <QtConcurrent>
 #include <QDebug>
 #include <QColor>
 #include <QGridLayout>
@@ -16,123 +15,123 @@
 
 namespace
 {
-bool isDarkTheme(const QPalette &palette)
-{
-    return palette.color(QPalette::Window).lightness() < 128;
-}
-
-QColor mixColor(const QColor &a, const QColor &b, qreal ratio)
-{
-    const qreal r = qBound<qreal>(0.0, ratio, 1.0);
-    return QColor::fromRgbF(a.redF() * (1.0 - r) + b.redF() * r,
-                            a.greenF() * (1.0 - r) + b.greenF() * r,
-                            a.blueF() * (1.0 - r) + b.blueF() * r,
-                            1.0);
-}
-
-QString cssColor(const QColor &color)
-{
-    return color.name(QColor::HexRgb);
-}
-
-QIcon tintedIcon(const QString &path, const QColor &color)
-{
-    const QIcon baseIcon(path);
-    const QPixmap source = baseIcon.pixmap(QSize(40, 40));
-    if (source.isNull())
+    bool isDarkTheme(const QPalette &palette)
     {
-        return baseIcon;
+        return palette.color(QPalette::Window).lightness() < 128;
     }
 
-    QPixmap tinted(source.size());
-    tinted.fill(Qt::transparent);
-    QPainter painter(&tinted);
-    painter.drawPixmap(0, 0, source);
-    painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
-    painter.fillRect(tinted.rect(), color);
-    painter.end();
-    return QIcon(tinted);
-}
-
-QString quickControlCardStyle(const QPalette &palette,
-                              bool singleRowLayout,
-                              bool isOffline,
-                              bool isSelected,
-                              bool isEnabled)
-{
-    const bool dark = isDarkTheme(palette);
-    const QColor base = palette.color(QPalette::Base);
-    const QColor text = palette.color(QPalette::WindowText);
-    const QColor accent = palette.color(QPalette::Highlight);
-
-    QColor background = dark ? mixColor(base, QColor("#FFFFFF"), 0.12) : QColor("#F7F9FC");
-    QColor border = dark ? mixColor(base, QColor("#FFFFFF"), 0.22) : QColor("#D7E3F1");
-    QColor hover = dark ? mixColor(background, QColor("#FFFFFF"), 0.08) : mixColor(background, QColor("#000000"), 0.04);
-    QColor textColor = dark ? mixColor(text, QColor("#FFFFFF"), 0.12) : QColor("#5E6A78");
-
-    if (isSelected)
+    QColor mixColor(const QColor &a, const QColor &b, qreal ratio)
     {
-        background = dark ? mixColor(accent, base, 0.78) : mixColor(accent, QColor("#FFFFFF"), 0.90);
-        border = dark ? mixColor(accent, QColor("#FFFFFF"), 0.20) : mixColor(accent, QColor("#000000"), 0.08);
-        hover = dark ? mixColor(background, QColor("#FFFFFF"), 0.08) : mixColor(background, QColor("#000000"), 0.04);
-        textColor = dark ? mixColor(accent, QColor("#FFFFFF"), 0.24) : QColor("#1565C0");
-    }
-    else if (isOffline || !isEnabled)
-    {
-        background = dark ? mixColor(base, QColor("#FFFFFF"), 0.06) : QColor("#F3F4F6");
-        border = dark ? mixColor(base, QColor("#FFFFFF"), 0.14) : QColor("#D8DCE2");
-        hover = background;
-        textColor = dark ? mixColor(text, base, 0.35) : QColor("#8F99A4");
+        const qreal r = qBound<qreal>(0.0, ratio, 1.0);
+        return QColor::fromRgbF(a.redF() * (1.0 - r) + b.redF() * r,
+                                a.greenF() * (1.0 - r) + b.greenF() * r,
+                                a.blueF() * (1.0 - r) + b.blueF() * r,
+                                1.0);
     }
 
-    const QString paddingStyle = singleRowLayout ? QStringLiteral("padding: 16px 8px 12px 8px;") : QStringLiteral("padding: 14px 8px 10px 8px;");
-    return QStringLiteral("QToolButton { background: %1; border: 1px solid %2; border-radius: 12px; color: %3; font-weight: 600; %4 }"
-                          "QToolButton:hover { background: %5; }")
-        .arg(cssColor(background), cssColor(border), cssColor(textColor), paddingStyle, cssColor(hover));
-}
-
-QColor quickCardIconColor(const QPalette &palette, bool isSelected, bool isOffline, bool isEnabled)
-{
-    const bool dark = isDarkTheme(palette);
-    const QColor text = palette.color(QPalette::WindowText);
-    const QColor accent = palette.color(QPalette::Highlight);
-    if (isSelected)
+    QString cssColor(const QColor &color)
     {
-        return dark ? mixColor(accent, QColor("#FFFFFF"), 0.28) : QColor("#1565C0");
-    }
-    if (isOffline || !isEnabled)
-    {
-        return dark ? mixColor(text, QColor("#111827"), 0.55) : QColor("#9098A2");
-    }
-    return dark ? mixColor(text, QColor("#FFFFFF"), 0.18) : QColor("#2F3D4D");
-}
-
-QString localizedQuickControlName(const QString &name, bool isEnglish)
-{
-    if (!isEnglish)
-    {
-        return name;
+        return color.name(QColor::HexRgb);
     }
 
-    static const QHash<QString, QString> map = {
-        {QStringLiteral("客厅主灯"), QStringLiteral("Living Room Light")},
-        {QStringLiteral("卧室灯"), QStringLiteral("Bedroom Light")},
-        {QStringLiteral("客厅空调"), QStringLiteral("Living Room AC")},
-        {QStringLiteral("客厅窗帘"), QStringLiteral("Living Room Curtain")},
-        {QStringLiteral("前门智能锁"), QStringLiteral("Front Door Lock")},
-        {QStringLiteral("客厅摄像头"), QStringLiteral("Living Room Camera")},
-        {QStringLiteral("客厅电视"), QStringLiteral("Living Room TV")},
-        {QStringLiteral("客厅环境传感器"), QStringLiteral("Living Room Sensor")},
-        {QStringLiteral("回家模式"), QStringLiteral("Home Mode")},
-        {QStringLiteral("睡眠模式"), QStringLiteral("Sleep Mode")},
-        {QStringLiteral("观影模式"), QStringLiteral("Movie Mode")},
-        {QStringLiteral("离家模式"), QStringLiteral("Away Mode")}};
-    return map.value(name, name);
-}
+    QIcon tintedIcon(const QString &path, const QColor &color)
+    {
+        const QIcon baseIcon(path);
+        const QPixmap source = baseIcon.pixmap(QSize(40, 40));
+        if (source.isNull())
+        {
+            return baseIcon;
+        }
+
+        QPixmap tinted(source.size());
+        tinted.fill(Qt::transparent);
+        QPainter painter(&tinted);
+        painter.drawPixmap(0, 0, source);
+        painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+        painter.fillRect(tinted.rect(), color);
+        painter.end();
+        return QIcon(tinted);
+    }
+
+    QString quickControlCardStyle(const QPalette &palette,
+                                  bool singleRowLayout,
+                                  bool isOffline,
+                                  bool isSelected,
+                                  bool isEnabled)
+    {
+        const bool dark = isDarkTheme(palette);
+        const QColor base = palette.color(QPalette::Base);
+        const QColor text = palette.color(QPalette::WindowText);
+        const QColor accent = palette.color(QPalette::Highlight);
+
+        QColor background = dark ? mixColor(base, QColor("#FFFFFF"), 0.12) : QColor("#F7F9FC");
+        QColor border = dark ? mixColor(base, QColor("#FFFFFF"), 0.22) : QColor("#D7E3F1");
+        QColor hover = dark ? mixColor(background, QColor("#FFFFFF"), 0.08) : mixColor(background, QColor("#000000"), 0.04);
+        QColor textColor = dark ? mixColor(text, QColor("#FFFFFF"), 0.12) : QColor("#5E6A78");
+
+        if (isSelected)
+        {
+            background = dark ? mixColor(accent, base, 0.78) : mixColor(accent, QColor("#FFFFFF"), 0.90);
+            border = dark ? mixColor(accent, QColor("#FFFFFF"), 0.20) : mixColor(accent, QColor("#000000"), 0.08);
+            hover = dark ? mixColor(background, QColor("#FFFFFF"), 0.08) : mixColor(background, QColor("#000000"), 0.04);
+            textColor = dark ? mixColor(accent, QColor("#FFFFFF"), 0.24) : QColor("#1565C0");
+        }
+        else if (isOffline || !isEnabled)
+        {
+            background = dark ? mixColor(base, QColor("#FFFFFF"), 0.06) : QColor("#F3F4F6");
+            border = dark ? mixColor(base, QColor("#FFFFFF"), 0.14) : QColor("#D8DCE2");
+            hover = background;
+            textColor = dark ? mixColor(text, base, 0.35) : QColor("#8F99A4");
+        }
+
+        const QString paddingStyle = singleRowLayout ? QStringLiteral("padding: 16px 8px 12px 8px;") : QStringLiteral("padding: 14px 8px 10px 8px;");
+        return QStringLiteral("QToolButton { background: %1; border: 1px solid %2; border-radius: 12px; color: %3; font-weight: 600; %4 }"
+                              "QToolButton:hover { background: %5; }")
+            .arg(cssColor(background), cssColor(border), cssColor(textColor), paddingStyle, cssColor(hover));
+    }
+
+    QColor quickCardIconColor(const QPalette &palette, bool isSelected, bool isOffline, bool isEnabled)
+    {
+        const bool dark = isDarkTheme(palette);
+        const QColor text = palette.color(QPalette::WindowText);
+        const QColor accent = palette.color(QPalette::Highlight);
+        if (isSelected)
+        {
+            return dark ? mixColor(accent, QColor("#FFFFFF"), 0.28) : QColor("#1565C0");
+        }
+        if (isOffline || !isEnabled)
+        {
+            return dark ? mixColor(text, QColor("#111827"), 0.55) : QColor("#9098A2");
+        }
+        return dark ? mixColor(text, QColor("#FFFFFF"), 0.18) : QColor("#2F3D4D");
+    }
+
+    QString localizedQuickControlName(const QString &name, bool isEnglish)
+    {
+        if (!isEnglish)
+        {
+            return name;
+        }
+
+        static const QHash<QString, QString> map = {
+            {QStringLiteral("客厅主灯"), QStringLiteral("Living Room Light")},
+            {QStringLiteral("卧室灯"), QStringLiteral("Bedroom Light")},
+            {QStringLiteral("客厅空调"), QStringLiteral("Living Room AC")},
+            {QStringLiteral("客厅窗帘"), QStringLiteral("Living Room Curtain")},
+            {QStringLiteral("前门智能锁"), QStringLiteral("Front Door Lock")},
+            {QStringLiteral("客厅摄像头"), QStringLiteral("Living Room Camera")},
+            {QStringLiteral("客厅电视"), QStringLiteral("Living Room TV")},
+            {QStringLiteral("客厅环境传感器"), QStringLiteral("Living Room Sensor")},
+            {QStringLiteral("回家模式"), QStringLiteral("Home Mode")},
+            {QStringLiteral("睡眠模式"), QStringLiteral("Sleep Mode")},
+            {QStringLiteral("观影模式"), QStringLiteral("Movie Mode")},
+            {QStringLiteral("离家模式"), QStringLiteral("Away Mode")}};
+        return map.value(name, name);
+    }
 }
 
 HomeWidget::HomeWidget(QWidget *parent)
-    : QWidget(parent), ui(new Ui::HomeWidget), m_environmentRefreshTimer(new QTimer(this)), m_environmentWatcher(new QFutureWatcher<HomeEnvironmentRefreshResult>(this)), m_deviceStatusWatcher(new QFutureWatcher<DeviceStatusSummary>(this))
+    : QWidget(parent), ui(new Ui::HomeWidget)
 {
     ui->setupUi(this);
     ui->label_title->setStyleSheet(QStringLiteral("font-size: 18pt; font-weight: 700;"));
@@ -142,18 +141,10 @@ HomeWidget::HomeWidget(QWidget *parent)
     ensureQuickControlEditButton();
     applyLanguage(QStringLiteral("zh_CN"));
 
-    connect(m_environmentWatcher, &QFutureWatcher<HomeEnvironmentRefreshResult>::finished, this, &HomeWidget::onEnvironmentSnapshotLoaded);
-    connect(m_deviceStatusWatcher, &QFutureWatcher<DeviceStatusSummary>::finished, this, &HomeWidget::onDeviceStatusLoaded);
-    connect(m_environmentRefreshTimer, &QTimer::timeout, this, [this]()
-            {
-        refreshEnvironmentSnapshot();
-        refreshDeviceStatus();
-        refreshQuickControls(); });
+    connect(&m_environmentService, &EnvironmentService::snapshotRefreshed,
+            this, &HomeWidget::onEnvironmentSnapshotLoaded);
 
-    refreshDeviceStatus();
-    refreshEnvironmentSnapshot();
-    loadQuickControls();
-    m_environmentRefreshTimer->start(3000);
+    // 轮询由 showEvent 启动，hideEvent 停止
 }
 
 HomeWidget::~HomeWidget()
@@ -379,64 +370,8 @@ void HomeWidget::refreshQuickControls()
     loadQuickControls();
 }
 
-void HomeWidget::refreshEnvironmentSnapshot()
+void HomeWidget::onEnvironmentSnapshotLoaded(HomeEnvironmentRefreshResult result)
 {
-    if (m_environmentWatcher->isRunning())
-    {
-        return;
-    }
-
-    m_environmentWatcher->setProperty("requestId", ++m_environmentRequestId);
-    m_environmentWatcher->setFuture(QtConcurrent::run([]()
-                                                      {
-        HomeEnvironmentRefreshResult result;
-
-        EnvRecordDao envRecordDao;
-        const std::optional<EnvRealtimeSnapshot> snapshot = envRecordDao.getLatestRealtimeSnapshot();
-        if (!snapshot.has_value())
-        {
-            result.success = envRecordDao.lastErrorText().trimmed().isEmpty();
-            result.errorText = envRecordDao.lastErrorText();
-            return result;
-        }
-
-        result.snapshot = snapshot;
-
-        AlarmService alarmService;
-        QString errorText;
-        result.triggeredAlarms = alarmService.evaluateEnvironmentSnapshot(snapshot.value(), &errorText);
-        if (!errorText.isEmpty())
-        {
-            result.errorText = errorText;
-            return result;
-        }
-
-        result.success = true;
-        return result; }));
-}
-
-void HomeWidget::refreshDeviceStatusAsync()
-{
-    if (m_deviceStatusWatcher->isRunning())
-    {
-        return;
-    }
-
-    m_deviceStatusWatcher->setProperty("requestId", ++m_deviceStatusRequestId);
-    m_deviceStatusWatcher->setFuture(QtConcurrent::run([]()
-                                                       {
-        SettingsService settingsService;
-        return settingsService.loadDeviceStatusSummary(); }));
-}
-
-void HomeWidget::onEnvironmentSnapshotLoaded()
-{
-    if (m_environmentWatcher->property("requestId").toInt() != m_environmentRequestId)
-    {
-        return;
-    }
-
-    const HomeEnvironmentRefreshResult result = m_environmentWatcher->result();
     if (!result.errorText.trimmed().isEmpty())
     {
         qWarning() << "读取环境快照或评估环境报警失败:" << result.errorText;
@@ -448,20 +383,12 @@ void HomeWidget::onEnvironmentSnapshotLoaded()
         updateEnvironmentData(result.snapshot->temperature, result.snapshot->humidity);
     }
 
+    updateDeviceStatusLabel(result.deviceStatus);
+
     for (const QJsonObject &alarmData : result.triggeredAlarms)
     {
         emit alarmTriggered(alarmData);
     }
-}
-
-void HomeWidget::onDeviceStatusLoaded()
-{
-    if (m_deviceStatusWatcher->property("requestId").toInt() != m_deviceStatusRequestId)
-    {
-        return;
-    }
-
-    updateDeviceStatusLabel(m_deviceStatusWatcher->result());
 }
 
 void HomeWidget::on_btnGoHome_clicked()
@@ -477,7 +404,7 @@ void HomeWidget::applyTemperatureColor(double temperature)
 
 void HomeWidget::refreshDeviceStatus()
 {
-    refreshDeviceStatusAsync();
+    m_environmentService.refreshNow();
 }
 
 void HomeWidget::updateDeviceStatusLabel(const DeviceStatusSummary &summary)
@@ -499,9 +426,7 @@ void HomeWidget::refreshStaticTexts()
     ui->groupBox_devices->setTitle(isEnglish ? QStringLiteral("Device Status") : QStringLiteral("设备状态"));
     ui->groupBox_quickControl->setTitle(isEnglish ? QStringLiteral("Quick Controls") : QStringLiteral("快捷控制"));
     ui->groupBox_alarm->setTitle(isEnglish ? QStringLiteral("Recent Alarms") : QStringLiteral("最近报警"));
-    if (ui->textEdit_alarmLog->toPlainText().trimmed().isEmpty()
-        || ui->textEdit_alarmLog->toPlainText().contains(QStringLiteral("暂无报警"))
-        || ui->textEdit_alarmLog->toPlainText().contains(QStringLiteral("No alarms")))
+    if (ui->textEdit_alarmLog->toPlainText().trimmed().isEmpty() || ui->textEdit_alarmLog->toPlainText().contains(QStringLiteral("暂无报警")) || ui->textEdit_alarmLog->toPlainText().contains(QStringLiteral("No alarms")))
     {
         ui->textEdit_alarmLog->setHtml(isEnglish
                                            ? QStringLiteral("<!DOCTYPE HTML><html><body><p style=\"color:green;\">System running normally, no alarms.</p></body></html>")
@@ -513,9 +438,14 @@ void HomeWidget::refreshStaticTexts()
 void HomeWidget::showEvent(QShowEvent *event)
 {
     QWidget::showEvent(event);
-    refreshEnvironmentSnapshot();
-    refreshDeviceStatus();
+    m_environmentService.startPolling(3000);
     refreshQuickControls();
+}
+
+void HomeWidget::hideEvent(QHideEvent *event)
+{
+    QWidget::hideEvent(event);
+    m_environmentService.stopPolling();
 }
 
 void HomeWidget::resizeEvent(QResizeEvent *event)

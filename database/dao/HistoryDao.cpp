@@ -45,8 +45,7 @@ namespace
 
     bool isBinaryJsonError(const QString &errorText)
     {
-        return errorText.contains(QStringLiteral("CHARACTER SET 'binary'"), Qt::CaseInsensitive)
-               || errorText.contains(QStringLiteral("Cannot create a JSON value"), Qt::CaseInsensitive);
+        return errorText.contains(QStringLiteral("CHARACTER SET 'binary'"), Qt::CaseInsensitive) || errorText.contains(QStringLiteral("Cannot create a JSON value"), Qt::CaseInsensitive);
     }
 }
 
@@ -89,7 +88,7 @@ OperationLogList HistoryDao::queryOperationLogs(const QDateTime &startTime, cons
         params.push_back(trimmedType);
     }
 
-    sql += "ORDER BY l.created_at DESC, l.id DESC";
+    sql += "ORDER BY l.created_at DESC, l.id DESC LIMIT 500";
 
     QSqlQuery query = databaseManager.query(sql, params);
     if (!query.isActive())
@@ -266,8 +265,7 @@ bool HistoryDao::updateOperationLogResult(qint64 logId,
     if (!databaseManager.exec(sql, {result, resultCode, jsonVariant(responsePayload), logId}))
     {
         const QString firstError = databaseManager.lastErrorText();
-        if (!isBinaryJsonError(firstError)
-            || !databaseManager.exec(fallbackSql, {result, resultCode, logId}))
+        if (!isBinaryJsonError(firstError) || !databaseManager.exec(fallbackSql, {result, resultCode, logId}))
         {
             setLastError(databaseManager.lastErrorText().isEmpty() ? firstError : databaseManager.lastErrorText());
             qWarning().noquote() << LOG_PREFIX << "Update operation log failed:" << m_lastErrorText << "| log_id:" << logId;

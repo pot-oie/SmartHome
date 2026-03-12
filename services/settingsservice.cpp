@@ -8,6 +8,7 @@
 #include <QIODevice>
 #include <QProcess>
 #include <QTcpSocket>
+#include <QtConcurrent>
 
 namespace
 {
@@ -221,4 +222,57 @@ TcpEndpointTestResult SettingsService::testSmartHomeTcpEndpoint(int timeoutMs) c
     }
 
     return result;
+}
+
+// ── 异步轮询（构造/startPolling/stopPolling/refreshNow/onWatcherFinished） ──────
+
+SettingsService::SettingsService(QObject *parent)
+    : QObject(parent)
+{
+}
+
+void SettingsService::startPolling(int intervalMs)
+{
+    if (!m_pollTimer)
+    {
+        m_pollTimer = new QTimer(this);
+        m_watcher = new QFutureWatcher<SettingsDeviceList>(this);
+        m_pollTimer->setSingleShot(false);
+        connect(m_pollTimer, &QTimer::timeout, this, &SettingsService::refreshNow);
+        connect(m_watcher, &QFutureWatcher<SettingsDeviceList>::finished,
+                this, &SettingsService::onWatcherFinished);
+    }
+    m_pollTimer->start(intervalMs);
+    refreshNow();
+}
+
+void SettingsService::stopPolling()
+{
+    if (m_pollTimer)
+    {
+        m_pollTimer->stop();
+    }
+}
+
+void SettingsService::refreshNow()
+{
+    if (!m_watcher)
+    {
+        m_watcher = new QFutureWatcher<SettingsDeviceList>(this);
+        connect(m_watcher, &QFutureWatcher<SettingsDeviceList>::finished,
+                this, &SettingsService::onWatcherFinished);
+    }
+    if (m_watcher->isRunning())
+    {
+        return;
+    }
+    m_watcher->setFuture(QtConcurrent::run([]()
+                                           {
+        DeviceDao dao;
+        return dao.listSettingsDevices(); }));
+}
+
+void SettingsService::onWatcherFinished()
+{
+    emit devicesRefreshed(m_watcher->result());
 }

@@ -21,7 +21,7 @@ namespace
 
     QString displayTextForOnlineStatus(const QString &onlineStatus, const QString &languageKey)
     {
-    const bool isEnglish = (languageKey == QStringLiteral("en_US"));
+        const bool isEnglish = (languageKey == QStringLiteral("en_US"));
         if (onlineStatus == QStringLiteral("online"))
         {
             return isEnglish ? QStringLiteral("Online") : QStringLiteral("在线");
@@ -48,7 +48,7 @@ namespace
 }
 
 SettingsWidget::SettingsWidget(QWidget *parent)
-    : QWidget(parent), ui(new Ui::SettingsWidget), m_refreshTimer(new QTimer(this))
+    : QWidget(parent), ui(new Ui::SettingsWidget)
 {
     ui->setupUi(this);
     refreshStaticTexts();
@@ -61,11 +61,9 @@ SettingsWidget::SettingsWidget(QWidget *parent)
     ui->tableWidget_devices->setEditTriggers(QAbstractItemView::NoEditTriggers);
     ui->tableWidget_devices->setSelectionBehavior(QAbstractItemView::SelectRows);
 
-    connect(m_refreshTimer, &QTimer::timeout, this, &SettingsWidget::reloadDevicesFromDatabase);
-    m_refreshTimer->start(kSettingsRefreshIntervalMs);
-
-    reloadDevicesFromDatabase();
-    adjustDeviceTableForWidth();
+    connect(&m_settingsService, &SettingsService::devicesRefreshed,
+            this, &SettingsWidget::onDevicesRefreshed);
+    m_settingsService.refreshNow();
 }
 
 SettingsWidget::~SettingsWidget()
@@ -162,34 +160,7 @@ void SettingsWidget::refreshStaticTexts()
 
 void SettingsWidget::reloadDevicesFromDatabase()
 {
-    const int currentRow = ui->tableWidget_devices->currentRow();
-    QString selectedDeviceId;
-    if (currentRow >= 0 && ui->tableWidget_devices->item(currentRow, 0))
-    {
-        selectedDeviceId = ui->tableWidget_devices->item(currentRow, 0)->text();
-    }
-
-    ui->tableWidget_devices->setRowCount(0);
-    m_devices = m_settingsService.loadDevices();
-    for (const SettingsDeviceEntry &device : m_devices)
-    {
-        addDeviceRow(device);
-    }
-
-    if (!selectedDeviceId.isEmpty())
-    {
-        for (int row = 0; row < ui->tableWidget_devices->rowCount(); ++row)
-        {
-            QTableWidgetItem *idItem = ui->tableWidget_devices->item(row, 0);
-            if (idItem && idItem->text() == selectedDeviceId)
-            {
-                ui->tableWidget_devices->setCurrentCell(row, 0);
-                break;
-            }
-        }
-    }
-
-    adjustDeviceTableForWidth();
+    m_settingsService.refreshNow();
 }
 
 void SettingsWidget::adjustDeviceTableForWidth()
@@ -394,9 +365,7 @@ void SettingsWidget::on_btnTestConnection_clicked()
 
             QMessageBox::information(this,
                                      QStringLiteral("连通性测试"),
-                                     QStringLiteral("设备：") + deviceName + QStringLiteral("\n")
-                                         + QStringLiteral("IP地址：") + deviceIp + QStringLiteral("\n")
-                                         + QStringLiteral("延迟：") + QString::number(latencyMs) + QStringLiteral("ms"));
+                                     QStringLiteral("设备：") + deviceName + QStringLiteral("\n") + QStringLiteral("IP地址：") + deviceIp + QStringLiteral("\n") + QStringLiteral("延迟：") + QString::number(latencyMs) + QStringLiteral("ms"));
             return;
         }
     }
@@ -420,8 +389,14 @@ void SettingsWidget::on_btnTestConnection_clicked()
 void SettingsWidget::showEvent(QShowEvent *event)
 {
     QWidget::showEvent(event);
-    reloadDevicesFromDatabase();
+    m_settingsService.startPolling(kSettingsRefreshIntervalMs);
     adjustDeviceTableForWidth();
+}
+
+void SettingsWidget::hideEvent(QHideEvent *event)
+{
+    QWidget::hideEvent(event);
+    m_settingsService.stopPolling();
 }
 
 void SettingsWidget::changeEvent(QEvent *event)
@@ -439,5 +414,38 @@ void SettingsWidget::changeEvent(QEvent *event)
 void SettingsWidget::resizeEvent(QResizeEvent *event)
 {
     QWidget::resizeEvent(event);
+
+    adjustDeviceTableForWidth();
+}
+
+void SettingsWidget::onDevicesRefreshed(SettingsDeviceList devices)
+{
+    const int currentRow = ui->tableWidget_devices->currentRow();
+    QString selectedDeviceId;
+    if (currentRow >= 0 && ui->tableWidget_devices->item(currentRow, 0))
+    {
+        selectedDeviceId = ui->tableWidget_devices->item(currentRow, 0)->text();
+    }
+
+    ui->tableWidget_devices->setRowCount(0);
+    m_devices = devices;
+    for (const SettingsDeviceEntry &device : m_devices)
+    {
+        addDeviceRow(device);
+    }
+
+    if (!selectedDeviceId.isEmpty())
+    {
+        for (int row = 0; row < ui->tableWidget_devices->rowCount(); ++row)
+        {
+            QTableWidgetItem *idItem = ui->tableWidget_devices->item(row, 0);
+            if (idItem && idItem->text() == selectedDeviceId)
+            {
+                ui->tableWidget_devices->setCurrentCell(row, 0);
+                break;
+            }
+        }
+    }
+
     adjustDeviceTableForWidth();
 }

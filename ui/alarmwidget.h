@@ -3,7 +3,6 @@
 #include <QJsonObject>
 #include <QDateTime>
 #include <QShowEvent>
-#include <QTimer>
 #include <QWidget>
 
 #include "services/alarmservice.h"
@@ -27,22 +26,21 @@ public slots:
 
 protected:
     void showEvent(QShowEvent *event) override;
+    void hideEvent(QHideEvent *event) override;
 
 private slots:
     void on_btnSaveThresholds_clicked();
     void on_btnClearLogs_clicked();
+    void onAlarmRuntimeDataRefreshed(AlarmStatusSummary status, AlarmLogList logs);
 
 private:
     Ui::AlarmWidget *ui;
     AlarmService m_alarmService;
-    QTimer *m_refreshTimer = nullptr;
     QString m_languageKey = QStringLiteral("zh_CN");
 
     void playAlarmAlertTone();
     void loadThresholds();
     void loadAlarmStatus();
-    void loadAlarmLogs();
-    void refreshRuntimeData();
     void appendAlarmLogRow(int row, const AlarmLogEntry &entry);
 
 private:

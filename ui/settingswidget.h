@@ -2,7 +2,6 @@
 
 #include <QShowEvent>
 #include <QResizeEvent>
-#include <QTimer>
 #include <QWidget>
 #include <QEvent>
 
@@ -34,12 +33,12 @@ private slots:
     void on_btnAddDevice_clicked();
     void on_btnDeleteDevice_clicked();
     void on_btnTestConnection_clicked();
+    void onDevicesRefreshed(SettingsDeviceList devices);
 
 private:
     Ui::SettingsWidget *ui;
     SettingsService m_settingsService;
     SettingsDeviceList m_devices;
-    QTimer *m_refreshTimer = nullptr;
     QString m_languageKey = QStringLiteral("zh_CN");
 
     void loadSystemSettings();
@@ -50,6 +49,7 @@ private:
 
 protected:
     void showEvent(QShowEvent *event) override;
+    void hideEvent(QHideEvent *event) override;
     void changeEvent(QEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
 };

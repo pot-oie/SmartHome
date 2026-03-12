@@ -1,6 +1,9 @@
 #pragma once
 
+#include <optional>
 #include <QDateTime>
+#include <QJsonObject>
+#include <QList>
 #include <QString>
 #include <QtGlobal>
 #include <QVector>
@@ -155,6 +158,15 @@ struct SettingsDeviceEntry
 };
 
 using SettingsDeviceList = QVector<SettingsDeviceEntry>;
+
+struct HomeEnvironmentRefreshResult
+{
+    bool success = false;
+    QString errorText;
+    std::optional<EnvRealtimeSnapshot> snapshot;
+    QList<QJsonObject> triggeredAlarms;
+    DeviceStatusSummary deviceStatus;
+};
 
 enum class LoginCheckResult
 {

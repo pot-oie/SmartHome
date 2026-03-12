@@ -1,6 +1,5 @@
 #pragma once
 
-#include <QFutureWatcher>
 #include <QWidget>
 #include <QShowEvent>
 
@@ -35,8 +34,8 @@ private slots:
     void on_btnExport_clicked();
     void on_tabWidget_currentChanged(int index);
     void deleteSelectedOperationLog();
-    void onOperationLogsLoaded();
-    void onEnvironmentSeriesLoaded();
+    void onOperationLogsLoaded(OperationLogList logs);
+    void onEnvironmentSeriesLoaded(EnvironmentSeries series);
 
 private:
     void renderOperationLogs(const OperationLogList &logs);
@@ -51,10 +50,6 @@ private:
     OperationLogList m_currentLogs;
     QCustomPlot *customPlot = nullptr;
     QPushButton *m_btnDeleteLog = nullptr;
-    QFutureWatcher<OperationLogList> *m_logWatcher = nullptr;
-    QFutureWatcher<EnvironmentSeries> *m_envSeriesWatcher = nullptr;
-    int m_logRequestId = 0;
-    int m_envSeriesRequestId = 0;
     bool m_showLogLoadedMessage = false;
     QString m_languageKey = QStringLiteral("zh_CN");
 };

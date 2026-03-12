@@ -1,17 +1,88 @@
 #include "environmentservice.h"
 
-#include <QRandomGenerator>
+#include "database/dao/EnvRecordDao.h"
+#include "services/alarmservice.h"
+#include "services/settingsservice.h"
 
-EnvironmentSnapshot EnvironmentService::generateInitialSnapshot() const
+#include <QtConcurrent>
+
+EnvironmentService::EnvironmentService(QObject *parent)
+    : QObject(parent)
 {
-    return {26.5, 45.0};
 }
 
-EnvironmentSnapshot EnvironmentService::generateNextSnapshot() const
+void EnvironmentService::startPolling(int intervalMs)
 {
-    const double temperature = 20.0 + QRandomGenerator::global()->bounded(12.0);
-    const double humidity = 30.0 + QRandomGenerator::global()->bounded(40.0);
-    return {temperature, humidity};
+    if (!m_pollTimer)
+    {
+        m_pollTimer = new QTimer(this);
+        m_watcher = new QFutureWatcher<HomeEnvironmentRefreshResult>(this);
+        m_pollTimer->setSingleShot(false);
+        connect(m_pollTimer, &QTimer::timeout, this, &EnvironmentService::refreshNow);
+        connect(m_watcher, &QFutureWatcher<HomeEnvironmentRefreshResult>::finished,
+                this, &EnvironmentService::onWatcherFinished);
+    }
+    m_pollTimer->start(intervalMs);
+    refreshNow();
+}
+
+void EnvironmentService::stopPolling()
+{
+    if (m_pollTimer)
+    {
+        m_pollTimer->stop();
+    }
+}
+
+void EnvironmentService::refreshNow()
+{
+    if (!m_watcher)
+    {
+        m_watcher = new QFutureWatcher<HomeEnvironmentRefreshResult>(this);
+        connect(m_watcher, &QFutureWatcher<HomeEnvironmentRefreshResult>::finished,
+                this, &EnvironmentService::onWatcherFinished);
+    }
+    if (m_watcher->isRunning())
+    {
+        return;
+    }
+    m_watcher->setFuture(QtConcurrent::run(&EnvironmentService::doLoad));
+}
+
+HomeEnvironmentRefreshResult EnvironmentService::doLoad()
+{
+    HomeEnvironmentRefreshResult result;
+
+    EnvRecordDao envRecordDao;
+    const std::optional<EnvRealtimeSnapshot> snapshot = envRecordDao.getLatestRealtimeSnapshot();
+    if (!snapshot.has_value())
+    {
+        result.success = envRecordDao.lastErrorText().trimmed().isEmpty();
+        result.errorText = envRecordDao.lastErrorText();
+        return result;
+    }
+
+    result.snapshot = snapshot;
+
+    AlarmService alarmService;
+    QString errorText;
+    result.triggeredAlarms = alarmService.evaluateEnvironmentSnapshot(snapshot.value(), &errorText);
+    if (!errorText.isEmpty())
+    {
+        result.errorText = errorText;
+        return result;
+    }
+
+    SettingsService settingsService;
+    result.deviceStatus = settingsService.loadDeviceStatusSummary();
+
+    result.success = true;
+    return result;
+}
+
+void EnvironmentService::onWatcherFinished()
+{
+    emit snapshotRefreshed(m_watcher->result());
 }
 
 QString EnvironmentService::temperatureColor(double temperature) const

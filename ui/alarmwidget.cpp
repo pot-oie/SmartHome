@@ -22,37 +22,35 @@
 #ifdef Q_OS_WIN
 namespace
 {
-std::atomic_bool g_alarmTonePlaying{false};
+    std::atomic_bool g_alarmTonePlaying{false};
 }
 #endif
 
 namespace
 {
-QString localizedAlarmStatusText(const QString &text, bool isEnglish)
-{
-    if (!isEnglish)
+    QString localizedAlarmStatusText(const QString &text, bool isEnglish)
     {
-        return text;
-    }
+        if (!isEnglish)
+        {
+            return text;
+        }
 
-    if (text.trimmed().isEmpty())
-    {
-        return QStringLiteral("System normal, no alarms");
-    }
+        if (text.trimmed().isEmpty())
+        {
+            return QStringLiteral("System normal, no alarms");
+        }
 
-    static const QHash<QString, QString> map = {
-        {QStringLiteral("系统正常，无报警"), QStringLiteral("System normal, no alarms")},
-        {QStringLiteral("系统正常，无报警信息"), QStringLiteral("System normal, no alarms")},
-        {QStringLiteral("系统正常，无报警记录"), QStringLiteral("System normal, no alarms")},
-        {QStringLiteral("系统运行正常，无报警"), QStringLiteral("System running normally, no alarms")}};
-    return map.value(text, text);
-}
+        static const QHash<QString, QString> map = {
+            {QStringLiteral("系统正常，无报警"), QStringLiteral("System normal, no alarms")},
+            {QStringLiteral("系统正常，无报警信息"), QStringLiteral("System normal, no alarms")},
+            {QStringLiteral("系统正常，无报警记录"), QStringLiteral("System normal, no alarms")},
+            {QStringLiteral("系统运行正常，无报警"), QStringLiteral("System running normally, no alarms")}};
+        return map.value(text, text);
+    }
 }
 
 AlarmWidget::AlarmWidget(QWidget *parent)
-    : QWidget(parent)
-    , ui(new Ui::AlarmWidget)
-    , m_refreshTimer(new QTimer(this))
+    : QWidget(parent), ui(new Ui::AlarmWidget)
 {
     ui->setupUi(this);
 
@@ -68,10 +66,10 @@ AlarmWidget::AlarmWidget(QWidget *parent)
     ui->tableWidget_alarmLogs->setSelectionBehavior(QAbstractItemView::SelectRows);
     ui->tableWidget_alarmLogs->verticalHeader()->setVisible(false);
 
-    refreshData();
+    loadThresholds();
     applyLanguage(QStringLiteral("zh_CN"));
-    connect(m_refreshTimer, &QTimer::timeout, this, &AlarmWidget::refreshRuntimeData);
-    m_refreshTimer->start(5000);
+    connect(&m_alarmService, &AlarmService::runtimeDataRefreshed,
+            this, &AlarmWidget::onAlarmRuntimeDataRefreshed);
 }
 
 AlarmWidget::~AlarmWidget()
@@ -111,7 +109,14 @@ void AlarmWidget::applyLanguage(const QString &languageKey)
 void AlarmWidget::showEvent(QShowEvent *event)
 {
     QWidget::showEvent(event);
-    refreshData();
+    loadThresholds();
+    m_alarmService.startPolling(5000);
+}
+
+void AlarmWidget::hideEvent(QHideEvent *event)
+{
+    QWidget::hideEvent(event);
+    m_alarmService.stopPolling();
 }
 
 void AlarmWidget::playAlarmAlertTone()
@@ -129,16 +134,13 @@ void AlarmWidget::playAlarmAlertTone()
                         Beep((i % 2 == 0) ? 1600 : 1200, 250);
                         std::this_thread::sleep_for(std::chrono::milliseconds(120));
                     }
-                    g_alarmTonePlaying = false;
-                })
+                    g_alarmTonePlaying = false; })
         .detach();
 #else
     for (int i = 0; i < 8; ++i)
     {
         QTimer::singleShot(i * 375, this, []()
-                           {
-                               QApplication::beep();
-                           });
+                           { QApplication::beep(); });
     }
 #endif
 }
@@ -146,13 +148,7 @@ void AlarmWidget::playAlarmAlertTone()
 void AlarmWidget::refreshData()
 {
     loadThresholds();
-    refreshRuntimeData();
-}
-
-void AlarmWidget::refreshRuntimeData()
-{
-    loadAlarmStatus();
-    loadAlarmLogs();
+    m_alarmService.refreshNow();
 }
 
 void AlarmWidget::loadThresholds()
@@ -174,9 +170,7 @@ void AlarmWidget::loadAlarmStatus()
 {
     QString errorText;
     const AlarmStatusSummary status = m_alarmService.loadAlarmStatus(&errorText);
-    const bool hasActiveAlarm = status.activeCount > 0
-                                || status.level == QStringLiteral("warning")
-                                || status.level == QStringLiteral("critical");
+    const bool hasActiveAlarm = status.activeCount > 0 || status.level == QStringLiteral("warning") || status.level == QStringLiteral("critical");
 
     ui->label_alarmIndicator->setText(QStringLiteral("●"));
     ui->label_alarmIndicator->setStyleSheet(
@@ -192,25 +186,6 @@ void AlarmWidget::loadAlarmStatus()
     if (!errorText.isEmpty())
     {
         qWarning() << "加载报警状态失败:" << errorText;
-    }
-}
-
-void AlarmWidget::loadAlarmLogs()
-{
-    ui->tableWidget_alarmLogs->setRowCount(0);
-
-    QString errorText;
-    const AlarmLogList logs = m_alarmService.loadAlarmLogs(100, &errorText);
-    for (const AlarmLogEntry &entry : logs)
-    {
-        const int row = ui->tableWidget_alarmLogs->rowCount();
-        ui->tableWidget_alarmLogs->insertRow(row);
-        appendAlarmLogRow(row, entry);
-    }
-
-    if (!errorText.isEmpty())
-    {
-        qWarning() << "加载报警历史失败:" << errorText;
     }
 }
 
@@ -298,8 +273,7 @@ void AlarmWidget::on_btnSaveThresholds_clicked()
     {
         QMessageBox::critical(this,
                               QStringLiteral("保存失败"),
-                              QStringLiteral("报警阈值保存失败：\n")
-                                  + (errorText.isEmpty() ? QStringLiteral("未知错误") : errorText));
+                              QStringLiteral("报警阈值保存失败：\n") + (errorText.isEmpty() ? QStringLiteral("未知错误") : errorText));
         return;
     }
 
@@ -321,13 +295,7 @@ void AlarmWidget::on_btnSaveThresholds_clicked()
 
     QMessageBox::information(this,
                              QStringLiteral("保存成功"),
-                             QStringLiteral("报警阈值已同步到数据库。\n\n")
-                                 + QStringLiteral("温度范围：%1°C - %2°C\n")
-                                       .arg(threshold.tempMin, 0, 'f', 2)
-                                       .arg(threshold.tempMax, 0, 'f', 2)
-                                 + QStringLiteral("湿度范围：%1%% - %2%%")
-                                       .arg(threshold.humidityMin, 0, 'f', 2)
-                                       .arg(threshold.humidityMax, 0, 'f', 2));
+                             QStringLiteral("报警阈值已同步到数据库。\n\n") + QStringLiteral("温度范围：%1°C - %2°C\n").arg(threshold.tempMin, 0, 'f', 2).arg(threshold.tempMax, 0, 'f', 2) + QStringLiteral("湿度范围：%1%% - %2%%").arg(threshold.humidityMin, 0, 'f', 2).arg(threshold.humidityMax, 0, 'f', 2));
 }
 
 void AlarmWidget::on_btnClearLogs_clicked()
@@ -347,11 +315,29 @@ void AlarmWidget::on_btnClearLogs_clicked()
     {
         QMessageBox::critical(this,
                               QStringLiteral("清空失败"),
-                              QStringLiteral("报警记录清空失败：\n")
-                                  + (errorText.isEmpty() ? QStringLiteral("未知错误") : errorText));
+                              QStringLiteral("报警记录清空失败：\n") + (errorText.isEmpty() ? QStringLiteral("未知错误") : errorText));
         return;
     }
 
     refreshData();
     QMessageBox::information(this, QStringLiteral("成功"), QStringLiteral("报警记录已从数据库清空。"));
+}
+
+void AlarmWidget::onAlarmRuntimeDataRefreshed(AlarmStatusSummary status, AlarmLogList logs)
+{
+    const bool hasActiveAlarm = status.activeCount > 0 || status.level == QStringLiteral("warning") || status.level == QStringLiteral("critical");
+    ui->label_alarmIndicator->setText(QStringLiteral("●"));
+    ui->label_alarmIndicator->setStyleSheet(
+        hasActiveAlarm ? QStringLiteral("color: #d32f2f;") : QStringLiteral("color: #2e7d32;"));
+    const bool isEnglish = (m_languageKey == QStringLiteral("en_US"));
+    ui->label_alarmText->setText(localizedAlarmStatusText(
+        status.text.isEmpty() ? QStringLiteral("系统正常，无报警") : status.text, isEnglish));
+
+    ui->tableWidget_alarmLogs->setUpdatesEnabled(false);
+    ui->tableWidget_alarmLogs->setRowCount(logs.size());
+    for (int i = 0; i < logs.size(); ++i)
+    {
+        appendAlarmLogRow(i, logs[i]);
+    }
+    ui->tableWidget_alarmLogs->setUpdatesEnabled(true);
 }

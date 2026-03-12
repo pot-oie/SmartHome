@@ -65,6 +65,7 @@ HEADERS += \
     ui/scenewidget.h \
     ui/settingswidget.h \
     ui/quickcontrolmanagedialog.h \
+    # QObject-based services participate in moc generation via qmake. \
     services/historyservice.h \
     services/environmentservice.h \
     services/sceneservice.h \

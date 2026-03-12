@@ -91,9 +91,9 @@ namespace
         const QColor text = palette.color(QPalette::WindowText);
         const QColor muted = dark ? blendColor(text, window, 0.30) : blendColor(text, window, 0.48);
         return QStringLiteral(
-            "QPushButton { border: none; background: transparent; color: %1; font-size: 10pt; font-weight: 400; padding: 0 2px 0 0; text-align: left; }"
-            "QPushButton:hover { color: %2; }"
-            "QPushButton:pressed { color: %2; }")
+                   "QPushButton { border: none; background: transparent; color: %1; font-size: 10pt; font-weight: 400; padding: 0 2px 0 0; text-align: left; }"
+                   "QPushButton:hover { color: %2; }"
+                   "QPushButton:pressed { color: %2; }")
             .arg(colorCss(text), colorCss(muted));
     }
 
@@ -107,9 +107,9 @@ namespace
         const QColor pressedBg = dark ? blendColor(window, QColor("#FFFFFF"), 0.18) : QColor("#D0D0D0");
         const QColor normalText = dark ? blendColor(text, window, 0.12) : QColor("#444444");
         return QStringLiteral(
-            "QToolButton { border: none; border-radius: 6px; background: transparent; color: %1; }"
-            "QToolButton:hover { background: %2; color: %3; }"
-            "QToolButton:pressed { background: %4; color: %3; }")
+                   "QToolButton { border: none; border-radius: 6px; background: transparent; color: %1; }"
+                   "QToolButton:hover { background: %2; color: %3; }"
+                   "QToolButton:pressed { background: %4; color: %3; }")
             .arg(colorCss(normalText), colorCss(hoverBg), colorCss(blue), colorCss(pressedBg));
     }
 
@@ -125,35 +125,27 @@ namespace
 
     bool isSwitchOnlySecurityDevice(const DeviceDefinition &device)
     {
-        return device.id == QStringLiteral("lock_door")
-               || device.id == QStringLiteral("camera_01")
-               || device.name == QStringLiteral("前门智能锁")
-               || device.name == QStringLiteral("客厅摄像头");
+        return device.id == QStringLiteral("lock_door") || device.id == QStringLiteral("camera_01") || device.name == QStringLiteral("前门智能锁") || device.name == QStringLiteral("客厅摄像头");
     }
 
     bool isVolumeOnlyTvDevice(const DeviceDefinition &device)
     {
-        return device.id == QStringLiteral("tv_living")
-               || device.name == QStringLiteral("客厅电视");
+        return device.id == QStringLiteral("tv_living") || device.name == QStringLiteral("客厅电视");
     }
 
     bool isLimitedCurtainDevice(const DeviceDefinition &device)
     {
-        return device.id == QStringLiteral("curtain_bedroom")
-               || device.name == QStringLiteral("卧室窗帘");
+        return device.id == QStringLiteral("curtain_bedroom") || device.name == QStringLiteral("卧室窗帘");
     }
 
     bool shouldHideExtraSettings(const DeviceDefinition &device)
     {
-        return isSwitchOnlySecurityDevice(device)
-               || isVolumeOnlyTvDevice(device)
-               || isLimitedCurtainDevice(device);
+        return isSwitchOnlySecurityDevice(device) || isVolumeOnlyTvDevice(device) || isLimitedCurtainDevice(device);
     }
 
     bool isSensorDevice(const DeviceDefinition &device)
     {
-        return device.type.contains(QStringLiteral("传感"))
-               || device.name.contains(QStringLiteral("传感器"));
+        return device.type.contains(QStringLiteral("传感")) || device.name.contains(QStringLiteral("传感器"));
     }
 
     QString statusTextForDevice(const DeviceDefinition &device, bool isEnglish)
@@ -225,7 +217,7 @@ namespace
         if (device.isOn)
         {
             return QStringLiteral("QPushButton { background: %1; color: %2; border: 1px solid %3; border-radius: 16px; padding: 6px 14px; font-size: 9pt; font-weight: 600; } QPushButton:hover { background: %4; } QPushButton:pressed { background: %5; }")
-            .arg(colorCss(ghostBg), colorCss(text), colorCss(ghostBorder), colorCss(ghostHover), colorCss(ghostPressed));
+                .arg(colorCss(ghostBg), colorCss(text), colorCss(ghostBorder), colorCss(ghostHover), colorCss(ghostPressed));
         }
 
         const QColor accentText = dark ? blendColor(accent, QColor("#FFFFFF"), 0.22) : blendColor(accent, QColor("#000000"), 0.05);
@@ -279,10 +271,7 @@ namespace
         {
             return isEnglish ? QStringLiteral("%1 °C").arg(value) : QStringLiteral("%1度").arg(value);
         }
-        if (device.type.contains(QStringLiteral("照明"))
-            || device.type.contains(QStringLiteral("窗帘"))
-            || device.type.contains(QStringLiteral("影音"))
-            || device.name.contains(QStringLiteral("电视")))
+        if (device.type.contains(QStringLiteral("照明")) || device.type.contains(QStringLiteral("窗帘")) || device.type.contains(QStringLiteral("影音")) || device.name.contains(QStringLiteral("电视")))
         {
             return QStringLiteral("%1%").arg(value);
         }
@@ -414,15 +403,15 @@ namespace
 }
 
 DeviceControlWidget::DeviceControlWidget(QWidget *parent)
-    : QWidget(parent), ui(new Ui::DeviceControlWidget), m_refreshTimer(new QTimer(this))
+    : QWidget(parent), ui(new Ui::DeviceControlWidget)
 {
     ui->setupUi(this);
     applyLanguage(QStringLiteral("zh_CN"));
-    reloadDevices(true);
+    m_categories = m_deviceService.categories();
     initDeviceList();
 
-    m_refreshTimer->setInterval(5000);
-    connect(m_refreshTimer, &QTimer::timeout, this, &DeviceControlWidget::refreshDevices);
+    connect(&m_deviceService, &DeviceService::devicesRefreshed,
+            this, &DeviceControlWidget::onDevicesRefreshed);
 }
 
 DeviceControlWidget::~DeviceControlWidget()
@@ -472,15 +461,6 @@ void DeviceControlWidget::initDeviceList()
     updateDeviceListUI(0);
 }
 
-void DeviceControlWidget::reloadDevices(bool reloadCategories)
-{
-    if (reloadCategories || m_categories.isEmpty())
-    {
-        m_categories = m_deviceService.categories();
-    }
-    m_allDevices = m_deviceService.loadDevices();
-}
-
 void DeviceControlWidget::updateDeviceListUI(int category)
 {
     int preservedScrollValue = 0;
@@ -509,40 +489,38 @@ void DeviceControlWidget::updateDeviceListUI(int category)
     std::optional<EnvRealtimeSnapshot> envSnapshot;
     bool envSnapshotFetched = false;
 
-    auto refreshCurrentCategory = [this]() {
-        reloadDevices(false);
-        updateDeviceListUI(ui->listCategory->currentRow());
+    auto refreshCurrentCategory = [this]()
+    {
+        m_deviceService.refreshNow();
     };
 
-    auto deferAutoRefresh = [this]() {
-        if (!m_refreshTimer)
-        {
-            return;
-        }
-
-        m_refreshTimer->stop();
+    auto deferAutoRefresh = [this]()
+    {
+        m_deviceService.stopPolling();
         const int seq = this->property("interactionSeq").toInt() + 1;
         this->setProperty("interactionSeq", seq);
-        QTimer::singleShot(1400, this, [this, seq]() {
+        QTimer::singleShot(1400, this, [this, seq]()
+                           {
             if (this->property("interactionSeq").toInt() != seq)
             {
                 return;
             }
 
-            if (isVisible() && m_refreshTimer && !m_refreshTimer->isActive())
+            if (isVisible())
             {
-                m_refreshTimer->start();
-            }
-        });
+                m_deviceService.startPolling(5000);
+            } });
     };
 
-    auto createSwitchButton = [this, &refreshCurrentCategory, palette, isEnglish](const DeviceDefinition &device) {
+    auto createSwitchButton = [this, &refreshCurrentCategory, palette, isEnglish](const DeviceDefinition &device)
+    {
         QPushButton *switchBtn = new QPushButton(actionTextForDevice(device, isEnglish));
         switchBtn->setCursor(Qt::PointingHandCursor);
         switchBtn->setFixedWidth(116);
         switchBtn->setMinimumHeight(34);
         switchBtn->setStyleSheet(actionStyleForDevice(device, palette));
-        connect(switchBtn, &QPushButton::clicked, this, [this, device, refreshCurrentCategory]() {
+        connect(switchBtn, &QPushButton::clicked, this, [this, device, refreshCurrentCategory]()
+                {
             const bool newState = !device.isOn;
             QString errorMessage;
             QString warningMessage;
@@ -558,8 +536,7 @@ void DeviceControlWidget::updateDeviceListUI(int category)
             if (!warningMessage.trimmed().isEmpty())
             {
                 QMessageBox::warning(this, kWarning, warningMessage);
-            }
-        });
+            } });
         return switchBtn;
     };
 
@@ -568,7 +545,8 @@ void DeviceControlWidget::updateDeviceListUI(int category)
                                                                      const QString &labelText,
                                                                      int minValue,
                                                                      int maxValue,
-                                                                     const auto &valueFormatter) {
+                                                                     const auto &valueFormatter)
+    {
         QWidget *section = new QWidget();
         section->setAttribute(Qt::WA_StyledBackground, true);
         section->setStyleSheet(transparentWidgetStyle());
@@ -597,10 +575,10 @@ void DeviceControlWidget::updateDeviceListUI(int category)
         slider->setRange(minValue, maxValue);
         slider->setValue(device.value);
         slider->setStyleSheet(sliderStyle(palette));
-        connect(slider, &QSlider::valueChanged, this, [valueLabel, valueFormatter](int value) {
-            valueLabel->setText(valueFormatter(value));
-        });
-        connect(slider, &QSlider::sliderReleased, this, [this, slider, device, refreshCurrentCategory]() {
+        connect(slider, &QSlider::valueChanged, this, [valueLabel, valueFormatter](int value)
+                { valueLabel->setText(valueFormatter(value)); });
+        connect(slider, &QSlider::sliderReleased, this, [this, slider, device, refreshCurrentCategory]()
+                {
             QString errorMessage;
             QString warningMessage;
             if (!m_deviceService.updateDeviceValue(device, slider->value(), &errorMessage, &warningMessage))
@@ -615,8 +593,7 @@ void DeviceControlWidget::updateDeviceListUI(int category)
             if (!warningMessage.trimmed().isEmpty())
             {
                 QMessageBox::warning(this, kWarning, warningMessage);
-            }
-        });
+            } });
         sectionLayout->addWidget(slider);
 
         targetLayout->addWidget(section);
@@ -699,9 +676,7 @@ void DeviceControlWidget::updateDeviceListUI(int category)
                 envSnapshotFetched = true;
             }
 
-            const bool useHomeSnapshot = envSnapshot.has_value()
-                                         && (device.id.contains(QStringLiteral("living"), Qt::CaseInsensitive)
-                                             || device.name.contains(QStringLiteral("客厅")));
+            const bool useHomeSnapshot = envSnapshot.has_value() && (device.id.contains(QStringLiteral("living"), Qt::CaseInsensitive) || device.name.contains(QStringLiteral("客厅")));
             if (useHomeSnapshot)
             {
                 const int displayTemp = qRound(envSnapshot->temperature);
@@ -710,8 +685,7 @@ void DeviceControlWidget::updateDeviceListUI(int category)
                                   : QStringLiteral("%1°C").arg(displayTemp);
             }
 
-            QLabel *readingLabel = new QLabel((isEnglish ? QStringLiteral("Current reading: ") : QStringLiteral("当前读数："))
-                                              + readingText);
+            QLabel *readingLabel = new QLabel((isEnglish ? QStringLiteral("Current reading: ") : QStringLiteral("当前读数：")) + readingText);
             readingLabel->setStyleSheet(metricTextStyle(palette));
             cardLayout->addWidget(readingLabel);
             mainLayout->addWidget(deviceCard);
@@ -730,15 +704,13 @@ void DeviceControlWidget::updateDeviceListUI(int category)
 
         if (isVolumeOnlyDevice)
         {
-            addSliderControl(bodyLayout, device, isEnglish ? QStringLiteral("Volume") : QStringLiteral("音量"), 0, 100, [](int value) {
-                return QString::number(value) + QStringLiteral("%");
-            });
+            addSliderControl(bodyLayout, device, isEnglish ? QStringLiteral("Volume") : QStringLiteral("音量"), 0, 100, [](int value)
+                             { return QString::number(value) + QStringLiteral("%"); });
         }
         else if (isLimitedCurtain)
         {
-            addSliderControl(bodyLayout, device, isEnglish ? QStringLiteral("Open Level") : QStringLiteral("开合度"), 0, 100, [](int value) {
-                return QString::number(value) + QStringLiteral("%");
-            });
+            addSliderControl(bodyLayout, device, isEnglish ? QStringLiteral("Open Level") : QStringLiteral("开合度"), 0, 100, [](int value)
+                             { return QString::number(value) + QStringLiteral("%"); });
         }
         else
         {
@@ -750,7 +722,8 @@ void DeviceControlWidget::updateDeviceListUI(int category)
                                  parameterLabelForDevice(device, isEnglish),
                                  range.first,
                                  range.second,
-                                 [device, isEnglish](int value) {
+                                 [device, isEnglish](int value)
+                                 {
                                      return localizedValueText(device, value, isEnglish);
                                  });
             }
@@ -836,7 +809,8 @@ void DeviceControlWidget::updateDeviceListUI(int category)
                 timerEditor->setProperty("timerMinutes", timerInit);
                 timerValueButton->setText(isEnglish ? QStringLiteral("%1 min").arg(timerInit) : QStringLiteral("%1 分钟").arg(timerInit));
 
-                auto persistTimerMinutes = [this, device, deferAutoRefresh](int minutes) {
+                auto persistTimerMinutes = [this, device, deferAutoRefresh](int minutes)
+                {
                     deferAutoRefresh();
                     QString errorMessage;
                     QString warningMessage;
@@ -856,7 +830,8 @@ void DeviceControlWidget::updateDeviceListUI(int category)
                         QMessageBox::warning(this, kWarning, warningMessage);
                     }
                 };
-                auto updateTimerValue = [timerEditor, timerValueButton, isEnglish, persistTimerMinutes](int delta) {
+                auto updateTimerValue = [timerEditor, timerValueButton, isEnglish, persistTimerMinutes](int delta)
+                {
                     const int current = timerEditor->property("timerMinutes").toInt();
                     const int next = qBound(0, current + delta, 120);
                     if (next == current)
@@ -868,14 +843,13 @@ void DeviceControlWidget::updateDeviceListUI(int category)
                     persistTimerMinutes(next);
                 };
 
-                connect(upButton, &QToolButton::clicked, this, [updateTimerValue]() {
-                    updateTimerValue(1);
-                });
-                connect(downButton, &QToolButton::clicked, this, [updateTimerValue]() {
-                    updateTimerValue(-1);
-                });
+                connect(upButton, &QToolButton::clicked, this, [updateTimerValue]()
+                        { updateTimerValue(1); });
+                connect(downButton, &QToolButton::clicked, this, [updateTimerValue]()
+                        { updateTimerValue(-1); });
 
-                connect(timerValueButton, &QPushButton::clicked, this, [this, timerEditor, timerValueButton, isEnglish, persistTimerMinutes]() {
+                connect(timerValueButton, &QPushButton::clicked, this, [this, timerEditor, timerValueButton, isEnglish, persistTimerMinutes]()
+                        {
                     const int current = timerEditor->property("timerMinutes").toInt();
                     bool ok = false;
                     const int value = QInputDialog::getInt(this,
@@ -893,13 +867,13 @@ void DeviceControlWidget::updateDeviceListUI(int category)
 
                     timerEditor->setProperty("timerMinutes", value);
                     timerValueButton->setText(isEnglish ? QStringLiteral("%1 min").arg(value) : QStringLiteral("%1 分钟").arg(value));
-                    persistTimerMinutes(value);
-                });
+                    persistTimerMinutes(value); });
 
                 timerLayout->addWidget(timerValueButton, 1);
                 timerLayout->addWidget(arrowColumn, 0, Qt::AlignRight | Qt::AlignVCenter);
 
-                connect(modeBox, qOverload<int>(&QComboBox::currentIndexChanged), this, [this, device, modeBox, deferAutoRefresh]() {
+                connect(modeBox, qOverload<int>(&QComboBox::currentIndexChanged), this, [this, device, modeBox, deferAutoRefresh]()
+                        {
                     deferAutoRefresh();
                     QString errorMessage;
                     QString warningMessage;
@@ -918,10 +892,10 @@ void DeviceControlWidget::updateDeviceListUI(int category)
                     if (!warningMessage.trimmed().isEmpty())
                     {
                         QMessageBox::warning(this, kWarning, warningMessage);
-                    }
-                });
+                    } });
 
-                connect(fanBox, qOverload<int>(&QComboBox::currentIndexChanged), this, [this, device, fanBox, deferAutoRefresh]() {
+                connect(fanBox, qOverload<int>(&QComboBox::currentIndexChanged), this, [this, device, fanBox, deferAutoRefresh]()
+                        {
                     deferAutoRefresh();
                     QString errorMessage;
                     QString warningMessage;
@@ -940,8 +914,7 @@ void DeviceControlWidget::updateDeviceListUI(int category)
                     if (!warningMessage.trimmed().isEmpty())
                     {
                         QMessageBox::warning(this, kWarning, warningMessage);
-                    }
-                });
+                    } });
 
                 extraLayout->addWidget(modeLabel);
                 extraLayout->addWidget(modeBox);
@@ -973,7 +946,8 @@ void DeviceControlWidget::updateDeviceListUI(int category)
                                       : QStringList{QStringLiteral("亮色"), QStringLiteral("暖色"), QStringLiteral("混合")});
                 modeBox->setCurrentIndex(indexForLightMode(extraParams));
 
-                connect(modeBox, qOverload<int>(&QComboBox::currentIndexChanged), this, [this, device, modeBox, deferAutoRefresh]() {
+                connect(modeBox, qOverload<int>(&QComboBox::currentIndexChanged), this, [this, device, modeBox, deferAutoRefresh]()
+                        {
                     deferAutoRefresh();
                     QString errorMessage;
                     QString warningMessage;
@@ -993,8 +967,7 @@ void DeviceControlWidget::updateDeviceListUI(int category)
                     if (!warningMessage.trimmed().isEmpty())
                     {
                         QMessageBox::warning(this, kWarning, warningMessage);
-                    }
-                });
+                    } });
 
                 modeLayout->addWidget(modeLabel);
                 modeLayout->addWidget(modeBox);
@@ -1021,25 +994,18 @@ void DeviceControlWidget::updateDeviceListUI(int category)
     if (ui->scrollArea->verticalScrollBar())
     {
         QScrollBar *scrollBar = ui->scrollArea->verticalScrollBar();
-        QTimer::singleShot(0, this, [scrollBar, preservedScrollValue]() {
+        QTimer::singleShot(0, this, [scrollBar, preservedScrollValue]()
+                           {
             if (scrollBar)
             {
                 scrollBar->setValue(preservedScrollValue);
-            }
-        });
+            } });
     }
 }
 
 void DeviceControlWidget::refreshDevices()
 {
-    if (!isVisible())
-    {
-        reloadDevices(false);
-        return;
-    }
-
-    reloadDevices(false);
-    updateDeviceListUI(ui->listCategory->currentRow());
+    m_deviceService.refreshNow();
 }
 
 void DeviceControlWidget::scheduleThemeRefresh()
@@ -1050,15 +1016,15 @@ void DeviceControlWidget::scheduleThemeRefresh()
     }
 
     m_themeRefreshScheduled = true;
-    QMetaObject::invokeMethod(this, [this]() {
+    QMetaObject::invokeMethod(this, [this]()
+                              {
         m_themeRefreshScheduled = false;
         if (!ui || !ui->listCategory)
         {
             return;
         }
 
-        updateDeviceListUI(qMax(0, ui->listCategory->currentRow()));
-    }, Qt::QueuedConnection);
+        updateDeviceListUI(qMax(0, ui->listCategory->currentRow())); }, Qt::QueuedConnection);
 }
 
 void DeviceControlWidget::changeEvent(QEvent *event)
@@ -1070,9 +1036,7 @@ void DeviceControlWidget::changeEvent(QEvent *event)
         return;
     }
 
-    if (event->type() == QEvent::PaletteChange
-        || event->type() == QEvent::ApplicationPaletteChange
-        || event->type() == QEvent::StyleChange)
+    if (event->type() == QEvent::PaletteChange || event->type() == QEvent::ApplicationPaletteChange || event->type() == QEvent::StyleChange)
     {
         if (ui->listCategory->count() > 0)
         {
@@ -1084,20 +1048,13 @@ void DeviceControlWidget::changeEvent(QEvent *event)
 void DeviceControlWidget::showEvent(QShowEvent *event)
 {
     QWidget::showEvent(event);
-    refreshDevices();
-    if (m_refreshTimer && !m_refreshTimer->isActive())
-    {
-        m_refreshTimer->start();
-    }
+    m_deviceService.startPolling(5000);
 }
 
 void DeviceControlWidget::hideEvent(QHideEvent *event)
 {
     QWidget::hideEvent(event);
-    if (m_refreshTimer && m_refreshTimer->isActive())
-    {
-        m_refreshTimer->stop();
-    }
+    m_deviceService.stopPolling();
 }
 
 void DeviceControlWidget::on_listCategory_currentRowChanged(int currentRow)
@@ -1113,4 +1070,10 @@ void DeviceControlWidget::onDeviceSwitchToggled(bool checked)
 void DeviceControlWidget::onDeviceSliderValueChanged(int value)
 {
     Q_UNUSED(value);
+}
+
+void DeviceControlWidget::onDevicesRefreshed(DeviceList devices)
+{
+    m_allDevices = devices;
+    updateDeviceListUI(ui->listCategory->currentRow());
 }

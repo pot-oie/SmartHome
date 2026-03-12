@@ -3,6 +3,7 @@
 #include "database/dao/DeviceDao.h"
 #include "historyservice.h"
 
+#include <QtConcurrent>
 #include <QDebug>
 
 namespace
@@ -374,4 +375,57 @@ QJsonObject DeviceService::buildSetParamCommand(const DeviceDefinition &device, 
                        {QStringLiteral("operation"), QStringLiteral("set_param")},
                        {QStringLiteral("param_value"), value},
                        {QStringLiteral("device_name"), device.name}};
+}
+
+// ── 异步轮询（构造/startPolling/stopPolling/refreshNow/onWatcherFinished） ──────
+
+DeviceService::DeviceService(QObject *parent)
+    : QObject(parent)
+{
+}
+
+void DeviceService::startPolling(int intervalMs)
+{
+    if (!m_pollTimer)
+    {
+        m_pollTimer = new QTimer(this);
+        m_watcher = new QFutureWatcher<DeviceList>(this);
+        m_pollTimer->setSingleShot(false);
+        connect(m_pollTimer, &QTimer::timeout, this, &DeviceService::refreshNow);
+        connect(m_watcher, &QFutureWatcher<DeviceList>::finished,
+                this, &DeviceService::onWatcherFinished);
+    }
+    m_pollTimer->start(intervalMs);
+    refreshNow();
+}
+
+void DeviceService::stopPolling()
+{
+    if (m_pollTimer)
+    {
+        m_pollTimer->stop();
+    }
+}
+
+void DeviceService::refreshNow()
+{
+    if (!m_watcher)
+    {
+        m_watcher = new QFutureWatcher<DeviceList>(this);
+        connect(m_watcher, &QFutureWatcher<DeviceList>::finished,
+                this, &DeviceService::onWatcherFinished);
+    }
+    if (m_watcher->isRunning())
+    {
+        return;
+    }
+    m_watcher->setFuture(QtConcurrent::run([]()
+                                           {
+        DeviceDao dao;
+        return dao.listDeviceDefinitions(); }));
+}
+
+void DeviceService::onWatcherFinished()
+{
+    emit devicesRefreshed(m_watcher->result());
 }

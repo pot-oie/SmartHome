@@ -6,25 +6,26 @@
 #include "database/databasemanager.h"
 #include "services/usercontext.h"
 
+#include <QtConcurrent>
 #include <QList>
 
 namespace
 {
-QString formatNumber(double value)
-{
-    return QString::number(value, 'f', 2);
-}
+    QString formatNumber(double value)
+    {
+        return QString::number(value, 'f', 2);
+    }
 
-QJsonObject toAlarmJson(const AlarmLogEntry &entry)
-{
-    QJsonObject object;
-    object.insert(QStringLiteral("type"), entry.type);
-    object.insert(QStringLiteral("message"), entry.detail);
-    object.insert(QStringLiteral("triggerValue"), entry.triggerValue);
-    object.insert(QStringLiteral("severity"), entry.severity);
-    object.insert(QStringLiteral("timestamp"), entry.timestamp.toString(Qt::ISODate));
-    return object;
-}
+    QJsonObject toAlarmJson(const AlarmLogEntry &entry)
+    {
+        QJsonObject object;
+        object.insert(QStringLiteral("type"), entry.type);
+        object.insert(QStringLiteral("message"), entry.detail);
+        object.insert(QStringLiteral("triggerValue"), entry.triggerValue);
+        object.insert(QStringLiteral("severity"), entry.severity);
+        object.insert(QStringLiteral("timestamp"), entry.timestamp.toString(Qt::ISODate));
+        return object;
+    }
 }
 
 AlarmThreshold AlarmService::defaultThreshold() const
@@ -433,4 +434,58 @@ AlarmLogEntry AlarmService::fromAlarmData(const QJsonObject &alarmData) const
     entry.triggerValue = alarmData.value("triggerValue").toString();
     entry.severity = alarmData.value("severity").toString(QStringLiteral("warning"));
     return entry;
+}
+
+// ── 异步轮询（构造/startPolling/stopPolling/refreshNow/onWatcherFinished） ──────
+
+AlarmService::AlarmService(QObject *parent)
+    : QObject(parent)
+{
+}
+
+void AlarmService::startPolling(int intervalMs)
+{
+    if (!m_pollTimer)
+    {
+        m_pollTimer = new QTimer(this);
+        m_watcher = new QFutureWatcher<AlarmRuntimePair>(this);
+        m_pollTimer->setSingleShot(false);
+        connect(m_pollTimer, &QTimer::timeout, this, &AlarmService::refreshNow);
+        connect(m_watcher, &QFutureWatcher<AlarmRuntimePair>::finished,
+                this, &AlarmService::onWatcherFinished);
+    }
+    m_pollTimer->start(intervalMs);
+    refreshNow();
+}
+
+void AlarmService::stopPolling()
+{
+    if (m_pollTimer)
+    {
+        m_pollTimer->stop();
+    }
+}
+
+void AlarmService::refreshNow()
+{
+    if (!m_watcher)
+    {
+        m_watcher = new QFutureWatcher<AlarmRuntimePair>(this);
+        connect(m_watcher, &QFutureWatcher<AlarmRuntimePair>::finished,
+                this, &AlarmService::onWatcherFinished);
+    }
+    if (m_watcher->isRunning())
+    {
+        return;
+    }
+    m_watcher->setFuture(QtConcurrent::run([]() -> AlarmService::AlarmRuntimePair
+                                           {
+        AlarmService temp;
+        return {temp.loadAlarmStatus(), temp.loadAlarmLogs(100)}; }));
+}
+
+void AlarmService::onWatcherFinished()
+{
+    const AlarmRuntimePair pair = m_watcher->result();
+    emit runtimeDataRefreshed(pair.first, pair.second);
 }

@@ -3,7 +3,6 @@
 
 #include "qcustomplot.h"
 
-#include <QtConcurrent>
 #include <QAbstractItemView>
 #include <QDateTime>
 #include <QDir>
@@ -48,7 +47,7 @@ namespace
 }
 
 HistoryWidget::HistoryWidget(QWidget *parent)
-    : QWidget(parent), ui(new Ui::HistoryWidget), m_logWatcher(new QFutureWatcher<OperationLogList>(this)), m_envSeriesWatcher(new QFutureWatcher<EnvironmentSeries>(this))
+    : QWidget(parent), ui(new Ui::HistoryWidget)
 {
     ui->setupUi(this);
 
@@ -101,10 +100,14 @@ HistoryWidget::HistoryWidget(QWidget *parent)
         ui->dateTimeEdit_end->setDateTime(normalizedDateTime);
     };
 
-    connect(ui->dateTimeEdit_start, &QDateTimeEdit::dateChanged, this, [normalizeStartDateTime](const QDate &) { normalizeStartDateTime(); });
-    connect(ui->dateTimeEdit_start, &QDateTimeEdit::timeChanged, this, [normalizeStartDateTime](const QTime &) { normalizeStartDateTime(); });
-    connect(ui->dateTimeEdit_end, &QDateTimeEdit::dateChanged, this, [normalizeEndDateTime](const QDate &) { normalizeEndDateTime(); });
-    connect(ui->dateTimeEdit_end, &QDateTimeEdit::timeChanged, this, [normalizeEndDateTime](const QTime &) { normalizeEndDateTime(); });
+    connect(ui->dateTimeEdit_start, &QDateTimeEdit::dateChanged, this, [normalizeStartDateTime](const QDate &)
+            { normalizeStartDateTime(); });
+    connect(ui->dateTimeEdit_start, &QDateTimeEdit::timeChanged, this, [normalizeStartDateTime](const QTime &)
+            { normalizeStartDateTime(); });
+    connect(ui->dateTimeEdit_end, &QDateTimeEdit::dateChanged, this, [normalizeEndDateTime](const QDate &)
+            { normalizeEndDateTime(); });
+    connect(ui->dateTimeEdit_end, &QDateTimeEdit::timeChanged, this, [normalizeEndDateTime](const QTime &)
+            { normalizeEndDateTime(); });
 
     m_btnDeleteLog = new QPushButton(QStringLiteral("删除选中日志"), this);
     if (QLayout *filterLayout = ui->groupBox_filter->layout())
@@ -113,8 +116,10 @@ HistoryWidget::HistoryWidget(QWidget *parent)
     }
 
     connect(m_btnDeleteLog, &QPushButton::clicked, this, &HistoryWidget::deleteSelectedOperationLog);
-    connect(m_logWatcher, &QFutureWatcher<OperationLogList>::finished, this, &HistoryWidget::onOperationLogsLoaded);
-    connect(m_envSeriesWatcher, &QFutureWatcher<EnvironmentSeries>::finished, this, &HistoryWidget::onEnvironmentSeriesLoaded);
+    connect(&m_historyService, &HistoryService::operationLogsReady,
+            this, &HistoryWidget::onOperationLogsLoaded);
+    connect(&m_historyService, &HistoryService::environmentSeriesReady,
+            this, &HistoryWidget::onEnvironmentSeriesLoaded);
 
     queryOperationLogs();
     applyLanguage(QStringLiteral("zh_CN"));
@@ -170,31 +175,30 @@ void HistoryWidget::refreshData()
 
 void HistoryWidget::renderOperationLogs(const OperationLogList &logs)
 {
+    ui->tableWidget_logs->setUpdatesEnabled(false);
+    ui->tableWidget_logs->setSortingEnabled(false);
     ui->tableWidget_logs->setRowCount(0);
-    for (const OperationLogEntry &entry : logs)
-    {
-        const int row = ui->tableWidget_logs->rowCount();
-        ui->tableWidget_logs->insertRow(row);
+    ui->tableWidget_logs->setRowCount(logs.size());
 
+    for (int i = 0; i < logs.size(); ++i)
+    {
+        const OperationLogEntry &entry = logs.at(i);
         QTableWidgetItem *timeItem = new QTableWidgetItem(entry.timestamp.toString("yyyy-MM-dd hh:mm:ss"));
         timeItem->setData(Qt::UserRole, entry.recordId);
-        ui->tableWidget_logs->setItem(row, 0, timeItem);
+        ui->tableWidget_logs->setItem(i, 0, timeItem);
         const bool isEnglish = (m_languageKey == QStringLiteral("en_US"));
-        ui->tableWidget_logs->setItem(row, 1, new QTableWidgetItem(localizedText(entry.user, isEnglish)));
-        ui->tableWidget_logs->setItem(row, 2, new QTableWidgetItem(localizedText(entry.operation, isEnglish)));
-        ui->tableWidget_logs->setItem(row, 3, new QTableWidgetItem(localizedText(entry.device, isEnglish)));
-        ui->tableWidget_logs->setItem(row, 4, new QTableWidgetItem(isEnglish ? entry.detail : entry.detail));
-        ui->tableWidget_logs->setItem(row, 5, new QTableWidgetItem(localizedText(entry.result, isEnglish)));
+        ui->tableWidget_logs->setItem(i, 1, new QTableWidgetItem(localizedText(entry.user, isEnglish)));
+        ui->tableWidget_logs->setItem(i, 2, new QTableWidgetItem(localizedText(entry.operation, isEnglish)));
+        ui->tableWidget_logs->setItem(i, 3, new QTableWidgetItem(localizedText(entry.device, isEnglish)));
+        ui->tableWidget_logs->setItem(i, 4, new QTableWidgetItem(isEnglish ? entry.detail : entry.detail));
+        ui->tableWidget_logs->setItem(i, 5, new QTableWidgetItem(localizedText(entry.result, isEnglish)));
     }
+
+    ui->tableWidget_logs->setUpdatesEnabled(true);
 }
 
 void HistoryWidget::queryOperationLogs()
 {
-    if (m_logWatcher->isRunning())
-    {
-        return;
-    }
-
     const QDate startDate = ui->dateTimeEdit_start->date();
     const QDate endDate = ui->dateTimeEdit_end->date();
     const QDateTime startTime(startDate, QTime(0, 0, 0));
@@ -202,11 +206,7 @@ void HistoryWidget::queryOperationLogs()
     const QString deviceType = ui->comboBox_deviceType->currentText();
 
     ui->tableWidget_logs->setRowCount(0);
-    m_logWatcher->setProperty("requestId", ++m_logRequestId);
-    m_logWatcher->setFuture(QtConcurrent::run([startTime, endTime, deviceType]()
-                                              {
-        HistoryService historyService;
-        return historyService.queryOperationLogs(startTime, endTime, deviceType); }));
+    m_historyService.asyncQueryOperationLogs(startTime, endTime, deviceType);
 }
 
 void HistoryWidget::renderEnvironmentSeries(const EnvironmentSeries &series)
@@ -260,28 +260,14 @@ void HistoryWidget::renderEnvironmentSeries(const EnvironmentSeries &series)
 
 void HistoryWidget::queryEnvironmentDataAndDrawChart()
 {
-    if (m_envSeriesWatcher->isRunning())
-    {
-        return;
-    }
-
     ui->label_chartPlaceholder->setText(QStringLiteral("正在加载环境历史数据..."));
     ui->label_chartPlaceholder->show();
-    m_envSeriesWatcher->setProperty("requestId", ++m_envSeriesRequestId);
-    m_envSeriesWatcher->setFuture(QtConcurrent::run([]()
-                                                    {
-        HistoryService historyService;
-        return historyService.queryEnvironmentSeries(24); }));
+    m_historyService.asyncQueryEnvironmentSeries(24);
 }
 
-void HistoryWidget::onOperationLogsLoaded()
+void HistoryWidget::onOperationLogsLoaded(OperationLogList logs)
 {
-    if (m_logWatcher->property("requestId").toInt() != m_logRequestId)
-    {
-        return;
-    }
-
-    m_currentLogs = m_logWatcher->result();
+    m_currentLogs = logs;
     renderOperationLogs(m_currentLogs);
     if (m_showLogLoadedMessage)
     {
@@ -290,14 +276,9 @@ void HistoryWidget::onOperationLogsLoaded()
     }
 }
 
-void HistoryWidget::onEnvironmentSeriesLoaded()
+void HistoryWidget::onEnvironmentSeriesLoaded(EnvironmentSeries series)
 {
-    if (m_envSeriesWatcher->property("requestId").toInt() != m_envSeriesRequestId)
-    {
-        return;
-    }
-
-    renderEnvironmentSeries(m_envSeriesWatcher->result());
+    renderEnvironmentSeries(series);
 }
 
 void HistoryWidget::on_btnSearch_clicked()

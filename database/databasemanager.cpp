@@ -309,6 +309,8 @@ bool DatabaseManager::ensureOpen(const char *operationName)
 
 bool DatabaseManager::prepareAndBind(QSqlQuery &sqlQuery, const QString &sql, const QVariantList &params)
 {
+    sqlQuery.setForwardOnly(true);
+
     if (!sqlQuery.prepare(sql))
     {
         setLastError(sqlQuery.lastError().text());
