@@ -10,7 +10,7 @@ class HistoryDao
 {
 public:
     OperationLogList queryOperationLogs(const QDateTime &startTime, const QDateTime &endTime, const QString &deviceType = QString());
-    EnvironmentSeries queryEnvironmentSeries(int hours);
+    EnvironmentSeries queryEnvironmentSeries(const QDateTime &startTime, const QDateTime &endTime);
     bool insertOperationLog(const QString &moduleName,
                             const QString &operationType,
                             const QString &operationContent,

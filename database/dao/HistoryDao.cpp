@@ -115,10 +115,10 @@ OperationLogList HistoryDao::queryOperationLogs(const QDateTime &startTime, cons
     return logs;
 }
 
-EnvironmentSeries HistoryDao::queryEnvironmentSeries(int hours)
+EnvironmentSeries HistoryDao::queryEnvironmentSeries(const QDateTime &startTime, const QDateTime &endTime)
 {
     EnvironmentSeries series;
-    if (hours <= 0)
+    if (!startTime.isValid() || !endTime.isValid() || startTime >= endTime)
     {
         return series;
     }
@@ -131,13 +131,12 @@ EnvironmentSeries HistoryDao::queryEnvironmentSeries(int hours)
         return series;
     }
 
-    const QDateTime startTime = QDateTime::currentDateTime().addSecs(-hours * 3600);
     static const QString sql =
         "SELECT created_at, temperature, humidity "
-        "FROM env_records WHERE created_at >= ? "
+        "FROM env_records WHERE created_at >= ? AND created_at < ? "
         "ORDER BY created_at ASC, id ASC";
 
-    QSqlQuery query = databaseManager.query(sql, {startTime});
+    QSqlQuery query = databaseManager.query(sql, {startTime, endTime});
     if (!query.isActive())
     {
         setLastError(databaseManager.lastErrorText());
