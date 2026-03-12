@@ -3,10 +3,19 @@
  <class>AlarmWidget</class>
  <widget class="QWidget" name="AlarmWidget">
   <layout class="QVBoxLayout" name="verticalLayout">
+    <property name="spacing">
+     <number>14</number>
+    </property>
    <item>
     <widget class="QGroupBox" name="groupBox_thresholds">
      <property name="title"><string>报警阈值设置</string></property>
      <layout class="QGridLayout" name="gridLayout_thresholds">
+        <property name="horizontalSpacing">
+         <number>14</number>
+        </property>
+        <property name="verticalSpacing">
+         <number>12</number>
+        </property>
       <item row="0" column="0">
        <widget class="QLabel" name="label_tempMin">
         <property name="text"><string>温度下限 (°C):</string></property>
@@ -14,6 +23,18 @@
       </item>
       <item row="0" column="1">
        <widget class="QDoubleSpinBox" name="doubleSpinBox_tempMin">
+          <property name="minimumSize">
+            <size>
+             <width>180</width>
+             <height>34</height>
+            </size>
+          </property>
+          <property name="decimals">
+            <number>1</number>
+          </property>
+          <property name="singleStep">
+            <double>0.500000000000000</double>
+          </property>
         <property name="minimum"><double>-20.000000000000000</double></property>
         <property name="maximum"><double>50.000000000000000</double></property>
         <property name="value"><double>15.000000000000000</double></property>
@@ -26,6 +47,18 @@
       </item>
       <item row="0" column="3">
        <widget class="QDoubleSpinBox" name="doubleSpinBox_tempMax">
+                <property name="minimumSize">
+                 <size>
+                    <width>180</width>
+                    <height>34</height>
+                 </size>
+                </property>
+                <property name="decimals">
+                 <number>1</number>
+                </property>
+                <property name="singleStep">
+                 <double>0.500000000000000</double>
+                </property>
         <property name="minimum"><double>-20.000000000000000</double></property>
         <property name="maximum"><double>50.000000000000000</double></property>
         <property name="value"><double>35.000000000000000</double></property>
@@ -38,6 +71,18 @@
       </item>
       <item row="1" column="1">
        <widget class="QDoubleSpinBox" name="doubleSpinBox_humidityMin">
+                <property name="minimumSize">
+                 <size>
+                    <width>180</width>
+                    <height>34</height>
+                 </size>
+                </property>
+                <property name="decimals">
+                 <number>1</number>
+                </property>
+                <property name="singleStep">
+                 <double>1.000000000000000</double>
+                </property>
         <property name="maximum"><double>100.000000000000000</double></property>
         <property name="value"><double>30.000000000000000</double></property>
        </widget>
@@ -49,15 +94,39 @@
       </item>
       <item row="1" column="3">
        <widget class="QDoubleSpinBox" name="doubleSpinBox_humidityMax">
+        <property name="minimumSize">
+         <size>
+          <width>180</width>
+          <height>34</height>
+         </size>
+        </property>
+        <property name="decimals">
+         <number>1</number>
+        </property>
+        <property name="singleStep">
+         <double>1.000000000000000</double>
+        </property>
         <property name="maximum"><double>100.000000000000000</double></property>
         <property name="value"><double>80.000000000000000</double></property>
        </widget>
       </item>
       <item row="2" column="0" colspan="4">
-       <widget class="QPushButton" name="btnSaveThresholds">
-        <property name="text"><string>保存报警阈值设置</string></property>
-        <property name="minimumSize"><size><width>0</width><height>35</height></size></property>
-       </widget>
+       <layout class="QHBoxLayout" name="horizontalLayout_thresholdAction">
+        <item>
+         <spacer name="horizontalSpacer_thresholdAction">
+          <property name="orientation"><enum>Qt::Horizontal</enum></property>
+          <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btnSaveThresholds">
+          <property name="text"><string>保存报警阈值设置</string></property>
+          <property name="minimumSize"><size><width>0</width><height>36</height></size></property>
+          <property name="maximumSize"><size><width>220</width><height>40</height></size></property>
+          <property name="font"><font><pointsize>10</pointsize><weight>63</weight><bold>true</bold></font></property>
+         </widget>
+        </item>
+       </layout>
       </item>
      </layout>
     </widget>
@@ -95,7 +164,23 @@
      <layout class="QVBoxLayout" name="verticalLayout_history">
       <item>
        <widget class="QTableWidget" name="tableWidget_alarmLogs">
+                 <property name="sizePolicy">
+                    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                 </property>
         <property name="alternatingRowColors"><bool>true</bool></property>
+                 <property name="showGrid"><bool>true</bool></property>
+                 <property name="editTriggers">
+                    <set>QAbstractItemView::NoEditTriggers</set>
+                 </property>
+                 <property name="selectionMode">
+                    <enum>QAbstractItemView::SingleSelection</enum>
+                 </property>
+                 <property name="selectionBehavior">
+                    <enum>QAbstractItemView::SelectRows</enum>
+                 </property>
         <property name="columnCount"><number>4</number></property>
         <column><property name="text"><string>时间</string></property></column>
         <column><property name="text"><string>类型</string></property></column>
@@ -116,12 +201,43 @@
         <item row="0" column="3">
          <property name="text"><string>已处理</string></property>
         </item>
+                <attribute name="horizontalHeaderDefaultSectionSize">
+                 <number>150</number>
+                </attribute>
+                <attribute name="horizontalHeaderStretchLastSection">
+                 <bool>true</bool>
+                </attribute>
+                <attribute name="verticalHeaderVisible">
+                 <bool>false</bool>
+                </attribute>
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="btnClearLogs">
-        <property name="text"><string>清空报警历史</string></property>
-       </widget>
+       <layout class="QHBoxLayout" name="horizontalLayout_clearLogs">
+        <item>
+         <spacer name="horizontalSpacer_clearLogs">
+          <property name="orientation"><enum>Qt::Horizontal</enum></property>
+          <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btnClearLogs">
+          <property name="text"><string>清空报警历史</string></property>
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>34</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>180</width>
+            <height>38</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
      </layout>
     </widget>

@@ -3,11 +3,29 @@
  <class>HistoryWidget</class>
  <widget class="QWidget" name="HistoryWidget">
   <layout class="QVBoxLayout" name="verticalLayout">
+     <property name="spacing">
+        <number>14</number>
+     </property>
    <item>
     <widget class="QGroupBox" name="groupBox_filter">
      <property name="title"><string>查询条件</string></property>
-     <property name="maximumSize"><size><width>16777215</width><height>100</height></size></property>
-     <layout class="QHBoxLayout" name="horizontalLayout">
+     <property name="maximumSize"><size><width>16777215</width><height>84</height></size></property>
+         <layout class="QHBoxLayout" name="horizontalLayout">
+            <property name="leftMargin">
+         <number>14</number>
+            </property>
+            <property name="topMargin">
+         <number>8</number>
+            </property>
+            <property name="rightMargin">
+         <number>14</number>
+            </property>
+            <property name="bottomMargin">
+         <number>8</number>
+            </property>
+            <property name="spacing">
+         <number>14</number>
+            </property>
       <item>
        <widget class="QLabel" name="label_startTime">
         <property name="text"><string>开始时间:</string></property>
@@ -15,6 +33,21 @@
       </item>
       <item>
        <widget class="QDateTimeEdit" name="dateTimeEdit_start">
+        <property name="minimumSize">
+         <size>
+          <width>190</width>
+               <height>32</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>220</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="displayFormat">
+         <string>yyyy-MM-dd</string>
+        </property>
         <property name="calendarPopup"><bool>true</bool></property>
        </widget>
       </item>
@@ -25,6 +58,21 @@
       </item>
       <item>
        <widget class="QDateTimeEdit" name="dateTimeEdit_end">
+        <property name="minimumSize">
+         <size>
+          <width>190</width>
+               <height>32</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>220</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="displayFormat">
+         <string>yyyy-MM-dd</string>
+        </property>
         <property name="calendarPopup"><bool>true</bool></property>
        </widget>
       </item>
@@ -35,6 +83,18 @@
       </item>
       <item>
        <widget class="QComboBox" name="comboBox_deviceType">
+        <property name="minimumSize">
+         <size>
+          <width>140</width>
+               <height>32</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>180</width>
+          <height>16777215</height>
+         </size>
+        </property>
         <item><property name="text"><string>全部</string></property></item>
         <item><property name="text"><string>灯光</string></property></item>
         <item><property name="text"><string>空调</string></property></item>
@@ -42,12 +102,47 @@
        </widget>
       </item>
       <item>
+       <spacer name="horizontalSpacer_filterTail">
+        <property name="orientation"><enum>Qt::Horizontal</enum></property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
        <widget class="QPushButton" name="btnSearch">
+        <property name="minimumSize">
+         <size>
+          <width>118</width>
+               <height>32</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>140</width>
+          <height>16777215</height>
+         </size>
+        </property>
         <property name="text"><string>查询记录</string></property>
        </widget>
       </item>
       <item>
        <widget class="QPushButton" name="btnExport">
+        <property name="minimumSize">
+         <size>
+          <width>118</width>
+               <height>32</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>140</width>
+          <height>16777215</height>
+         </size>
+        </property>
         <property name="text"><string>导出Excel</string></property>
        </widget>
       </item>
@@ -62,12 +157,30 @@
       <layout class="QVBoxLayout" name="verticalLayout_logs">
        <item>
         <widget class="QTableWidget" name="tableWidget_logs">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
          <property name="alternatingRowColors"><bool>true</bool></property>
-         <property name="columnCount"><number>5</number></property>
+            <property name="showGrid"><bool>true</bool></property>
+            <property name="sortingEnabled"><bool>false</bool></property>
+            <property name="editTriggers">
+             <set>QAbstractItemView::NoEditTriggers</set>
+            </property>
+            <property name="selectionMode">
+             <enum>QAbstractItemView::SingleSelection</enum>
+            </property>
+            <property name="selectionBehavior">
+             <enum>QAbstractItemView::SelectRows</enum>
+            </property>
+            <property name="columnCount"><number>6</number></property>
          <column><property name="text"><string>时间</string></property></column>
          <column><property name="text"><string>用户</string></property></column>
-         <column><property name="text"><string>设备名称</string></property></column>
          <column><property name="text"><string>操作类型</string></property></column>
+            <column><property name="text"><string>设备</string></property></column>
+            <column><property name="text"><string>详情</string></property></column>
          <column><property name="text"><string>操作结果</string></property></column>
          <row>
           <property name="text"><string>1</string></property>
@@ -79,14 +192,26 @@
           <property name="text"><string>管理员</string></property>
          </item>
          <item row="0" column="2">
-          <property name="text"><string>客厅主灯</string></property>
-         </item>
-         <item row="0" column="3">
           <property name="text"><string>开启</string></property>
          </item>
+         <item row="0" column="3">
+          <property name="text"><string>客厅主灯</string></property>
+         </item>
          <item row="0" column="4">
+          <property name="text"><string>亮度调节为 80%</string></property>
+         </item>
+         <item row="0" column="5">
           <property name="text"><string>成功</string></property>
          </item>
+         <attribute name="horizontalHeaderDefaultSectionSize">
+          <number>140</number>
+         </attribute>
+         <attribute name="horizontalHeaderStretchLastSection">
+          <bool>true</bool>
+         </attribute>
+         <attribute name="verticalHeaderVisible">
+          <bool>false</bool>
+         </attribute>
         </widget>
        </item>
       </layout>
