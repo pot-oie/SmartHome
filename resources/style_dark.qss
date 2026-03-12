@@ -29,7 +29,9 @@ QGroupBox::title {
 
 QListWidget#navBar {
     background-color: #12161d;
-    border: none;
+    border: 1px solid #313947;
+    border-radius: 8px;
+    outline: none;
     padding: 12px 0;
 }
 
@@ -144,6 +146,18 @@ QLineEdit, QComboBox, QTextEdit, QPlainTextEdit {
 
 QComboBox {
     min-height: 30px;
+}
+
+QComboBox::drop-down {
+    border: none;
+    width: 30px;
+}
+
+QComboBox::down-arrow {
+    image: url(:/icons/dropdown_arrow_light.svg);
+    width: 12px;
+    height: 8px;
+    margin-right: 10px;
 }
 
 QComboBox:hover {
@@ -436,6 +450,7 @@ QGroupBox#groupBox_filter QPushButton {
     border-radius: 10px;
 }
 
+QDateEdit::drop-down,
 QDateTimeEdit::drop-down {
     subcontrol-origin: padding;
     subcontrol-position: center right;
@@ -444,13 +459,12 @@ QDateTimeEdit::drop-down {
     padding-right: 8px;
 }
 
+QDateEdit::down-arrow,
 QDateTimeEdit::down-arrow {
-    image: none;
-    width: 0;
-    height: 0;
-    border-left: 5px solid transparent;
-    border-right: 5px solid transparent;
-    border-top: 6px solid #A9C4DF;
+    image: url(:/icons/dropdown_arrow_light.svg);
+    width: 12px;
+    height: 8px;
+    margin-right: 8px;
 }
 
 QCalendarWidget {
@@ -475,6 +489,15 @@ QCalendarWidget QToolButton {
     padding: 4px 8px;
     border-radius: 8px;
     font-weight: 600;
+}
+
+QCalendarWidget QToolButton::menu-indicator {
+    image: url(:/icons/dropdown_arrow_light.svg);
+    width: 12px;
+    height: 8px;
+    subcontrol-origin: padding;
+    subcontrol-position: center right;
+    right: 6px;
 }
 
 QCalendarWidget QToolButton:hover {

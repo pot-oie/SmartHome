@@ -148,15 +148,17 @@ namespace
         const QColor border = dark ? blendColor(window, QColor("#FFFFFF"), 0.24) : QColor("#BFD4EA");
         const QColor hoverBorder = dark ? blendColor(accent, QColor("#FFFFFF"), 0.18) : blendColor(accent, QColor("#000000"), 0.12);
         const QColor viewBg = dark ? blendColor(window, QColor("#FFFFFF"), 0.08) : QColor("#FFFFFF");
-        const QColor downArrow = dark ? blendColor(text, QColor("#FFFFFF"), 0.06) : QColor("#4C6278");
+        const QString downArrowIcon = dark
+                                          ? QStringLiteral(":/icons/dropdown_arrow_light.svg")
+                                          : QStringLiteral(":/icons/dropdown_arrow_dark.svg");
         return QStringLiteral(
                    "QComboBox { background: %1; color: %2; border: 1px solid %3; border-radius: 11px; padding: 5px 30px 5px 12px; min-height: 30px; font-size: 9pt; font-weight: 600; }"
                    "QComboBox:hover { border-color: %4; }"
                    "QComboBox:focus { border-color: %4; }"
                    "QComboBox::drop-down { border: none; width: 24px; }"
-                   "QComboBox::down-arrow { image: none; width: 0px; height: 0px; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid %5; margin-right: 8px; }"
+                   "QComboBox::down-arrow { image: url(%5); width: 12px; height: 8px; margin-right: 8px; }"
                    "QComboBox QAbstractItemView { background: %6; color: %2; border: 1px solid %3; selection-background-color: %4; selection-color: #FFFFFF; outline: none; }")
-            .arg(colorCss(bg), colorCss(text), colorCss(border), colorCss(hoverBorder), colorCss(downArrow), colorCss(viewBg));
+            .arg(colorCss(bg), colorCss(text), colorCss(border), colorCss(hoverBorder), downArrowIcon, colorCss(viewBg));
     }
 
     QPixmap themedDeviceIconPixmap(const QString &iconPath, const QPalette &palette)
