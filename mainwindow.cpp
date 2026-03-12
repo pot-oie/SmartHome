@@ -13,7 +13,9 @@
 #include <QListWidgetItem>
 #include <QPainter>
 #include <QPixmap>
+#include <QStyleOptionViewItem>
 #include <QStyle>
+#include <QTimer>
 
 namespace
 {
@@ -48,6 +50,57 @@ namespace
     }
 }
 
+NavBarItemDelegate::NavBarItemDelegate(QObject *parent)
+    : QStyledItemDelegate(parent)
+{
+}
+
+void NavBarItemDelegate::paint(QPainter *painter,
+                               const QStyleOptionViewItem &option,
+                               const QModelIndex &index) const
+{
+    QStyleOptionViewItem styleOption(option);
+    initStyleOption(&styleOption, index);
+
+    QStyle *style = styleOption.widget ? styleOption.widget->style() : QApplication::style();
+
+    QStyleOptionViewItem panelOption(styleOption);
+    panelOption.text.clear();
+    panelOption.icon = QIcon();
+    style->drawPrimitive(QStyle::PE_PanelItemViewItem, &panelOption, painter, panelOption.widget);
+
+    const QRect itemRect = styleOption.rect;
+    const bool darkTheme = styleOption.palette.color(QPalette::Base).lightness() < 128;
+    const QColor textColor = darkTheme ? QColor("#D8E7FF") : QColor("#223B56");
+    const QSize decorationSize = styleOption.decorationSize.isValid() ? styleOption.decorationSize : QSize(24, 24);
+    QFont textFont = styleOption.font;
+    textFont.setBold(styleOption.state.testFlag(QStyle::State_Selected));
+    QFontMetrics fontMetrics(textFont);
+    const int textLeft = itemRect.left() + 58;
+    const int textWidth = qMax(0, itemRect.right() - textLeft - 20);
+    const QString text = fontMetrics.elidedText(index.data(Qt::DisplayRole).toString(), Qt::ElideRight, textWidth);
+    const int contentCenterY = itemRect.center().y();
+    const int baselineY = contentCenterY + (fontMetrics.ascent() - fontMetrics.descent()) / 2;
+    const int iconSize = qMin(qMin(decorationSize.width(), decorationSize.height()), qMax(20, itemRect.height() - 28));
+    const int iconLeft = itemRect.left() + 28;
+    QRect iconRect(iconLeft, contentCenterY - iconSize / 2, iconSize, iconSize);
+
+    painter->save();
+    painter->setRenderHint(QPainter::Antialiasing, true);
+    painter->setRenderHint(QPainter::SmoothPixmapTransform, true);
+
+    const QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
+    if (!icon.isNull())
+    {
+        icon.paint(painter, iconRect, Qt::AlignCenter, QIcon::Normal, QIcon::Off);
+    }
+
+    painter->setFont(textFont);
+    painter->setPen(textColor);
+    painter->drawText(QPoint(textLeft, baselineY), text);
+    painter->restore();
+}
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow)
 {
@@ -68,6 +121,11 @@ void MainWindow::initUI()
     ui->navBar->setIconSize(QSize(32, 32));
     ui->navBar->setSpacing(2);
     ui->navBar->setFocusPolicy(Qt::NoFocus);
+    ui->navBar->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    ui->navBar->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    ui->navBar->setUniformItemSizes(false);
+    ui->navBar->setSelectionRectVisible(false);
+    ui->navBar->setItemDelegate(new NavBarItemDelegate(ui->navBar));
 
     auto addNavItem = [this](const QString &icon, const QString &text)
     {
@@ -122,10 +180,19 @@ void MainWindow::initUI()
     connect(m_homeWidget, &HomeWidget::alarmTriggered, m_alarmWidget, &AlarmWidget::triggerAlarm);
 
     refreshNavIcons(false);
+    updateNavBarLayout();
+    QTimer::singleShot(0, this, [this]()
+                       { updateNavBarLayout(); });
     connect(m_sceneWidget, &SceneWidget::sceneExecuted, m_homeWidget, &HomeWidget::refreshQuickControls);
     connect(m_sceneWidget, &SceneWidget::sceneExecuted, m_homeWidget, &HomeWidget::refreshDeviceStatus);
     connect(m_sceneWidget, &SceneWidget::sceneExecuted, m_deviceControlWidget, &DeviceControlWidget::refreshDevices);
     connect(m_sceneWidget, &SceneWidget::sceneExecuted, m_historyWidget, &HistoryWidget::refreshData);
+}
+
+void MainWindow::resizeEvent(QResizeEvent *event)
+{
+    QMainWindow::resizeEvent(event);
+    updateNavBarLayout();
 }
 
 void MainWindow::onNavBarItemClicked(int index)
@@ -197,6 +264,7 @@ void MainWindow::applyTheme(const QString &themeName)
         }
 
         refreshNavIcons(themeName == QStringLiteral("dark"));
+        updateNavBarLayout();
 
         if (m_homeWidget)
         {
@@ -233,6 +301,47 @@ void MainWindow::refreshNavIcons(bool darkTheme)
     }
 }
 
+void MainWindow::updateNavBarLayout()
+{
+    if (!ui || !ui->navBar)
+    {
+        return;
+    }
+
+    const int itemCount = ui->navBar->count();
+    if (itemCount <= 0)
+    {
+        return;
+    }
+
+    const int spacing = 10;
+    ui->navBar->setSpacing(spacing);
+
+    const int viewportHeight = ui->navBar->viewport()->height();
+    if (viewportHeight <= 0)
+    {
+        return;
+    }
+
+    const int targetTotalHeight = qMax((viewportHeight * 84) / 100, itemCount * 68);
+    const int itemHeight = qMax(64, (targetTotalHeight - spacing * (itemCount - 1)) / itemCount);
+    const int iconEdge = qBound(22, itemHeight / 3, 30);
+
+    ui->navBar->setIconSize(QSize(iconEdge, iconEdge));
+
+    const int itemWidth = qMax(150, ui->navBar->viewport()->width() - 4);
+    for (int i = 0; i < itemCount; ++i)
+    {
+        QListWidgetItem *item = ui->navBar->item(i);
+        if (!item)
+        {
+            continue;
+        }
+
+        item->setSizeHint(QSize(itemWidth, itemHeight));
+    }
+}
+
 void MainWindow::applyLanguage(const QString &languageKey)
 {
     m_languageKey = languageKey;
@@ -265,6 +374,8 @@ void MainWindow::applyLanguage(const QString &languageKey)
     {
         ui->navBar->item(i)->setText(navTexts.at(i));
     }
+
+    updateNavBarLayout();
 
     if (m_settingsWidget)
     {

@@ -30,6 +30,7 @@ QGroupBox::title {
 QListWidget#navBar {
     background-color: #12161d;
     border: none;
+    padding: 12px 0;
 }
 
 QListWidget#navBar::item {

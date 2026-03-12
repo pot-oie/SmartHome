@@ -13,7 +13,7 @@ QListWidget#navBar {
     border: 1px solid #DCE6F2;
     border-radius: 8px;
     outline: none;
-    padding: 8px 0;
+    padding: 12px 0;
 }
 
 QListWidget#navBar::item {
