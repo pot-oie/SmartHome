@@ -6,6 +6,7 @@
 #include <QApplication>
 #include <QColor>
 #include <QMetaObject>
+#include <QGridLayout>
 #include <QHBoxLayout>
 #include <QIcon>
 #include <QHash>
@@ -85,6 +86,39 @@ namespace
     {
         return QStringLiteral("font-size: 10pt; font-weight: 600; color: %1;")
             .arg(colorCss(palette.color(QPalette::WindowText)));
+    }
+
+    QString sensorValueStyle(const QPalette &palette)
+    {
+        const bool dark = isDarkTheme(palette);
+        const QColor text = palette.color(QPalette::WindowText);
+        const QColor window = palette.color(QPalette::Window);
+        const QColor valueColor = dark ? blendColor(text, QColor("#FFFFFF"), 0.12)
+                                       : QColor("#2A4D7A");
+        return QStringLiteral("font-size: 11pt; font-weight: 700; color: %1;")
+            .arg(colorCss(valueColor));
+    }
+
+    QString sensorMetricCellStyle(const QPalette &palette)
+    {
+        const bool dark = isDarkTheme(palette);
+        const QColor window = palette.color(QPalette::Window);
+        const QColor bg = dark ? blendColor(window, QColor("#FFFFFF"), 0.08)
+                               : QColor("#F4F8FD");
+        const QColor border = dark ? blendColor(window, QColor("#FFFFFF"), 0.18)
+                                   : QColor("#D7E4F2");
+        return QStringLiteral("background: %1; border: 1px solid %2; border-radius: 8px;")
+            .arg(colorCss(bg), colorCss(border));
+    }
+
+    QString sensorMetricValueStyle(const QPalette &palette)
+    {
+        const bool dark = isDarkTheme(palette);
+        const QColor text = palette.color(QPalette::WindowText);
+        const QColor valueColor = dark ? blendColor(text, QColor("#FFFFFF"), 0.18)
+                                       : QColor("#1F3F64");
+        return QStringLiteral("font-size: 10pt; font-weight: 700; color: %1;")
+            .arg(colorCss(valueColor));
     }
 
     QString timerValueButtonStyle(const QPalette &palette)
@@ -358,6 +392,43 @@ namespace
             {QStringLiteral("影音设备"), QStringLiteral("Media")},
             {QStringLiteral("传感设备"), QStringLiteral("Sensors")}};
         return map.value(category, category);
+    }
+
+    QString localizedDeviceName(const DeviceDefinition &device, bool isEnglish)
+    {
+        if (!isEnglish)
+        {
+            return device.name;
+        }
+
+        static const QHash<QString, QString> idMap = {
+            {QStringLiteral("light_living"), QStringLiteral("Living Room Light")},
+            {QStringLiteral("light_bedroom"), QStringLiteral("Bedroom Light")},
+            {QStringLiteral("ac_living"), QStringLiteral("Living Room AC")},
+            {QStringLiteral("curtain_living"), QStringLiteral("Living Room Curtain")},
+            {QStringLiteral("lock_door"), QStringLiteral("Front Door Lock")},
+            {QStringLiteral("camera_01"), QStringLiteral("Living Room Camera")},
+            {QStringLiteral("tv_living"), QStringLiteral("Living Room TV")},
+            {QStringLiteral("sensor_env"), QStringLiteral("Living Room Sensor")},
+            {QStringLiteral("curtain_bedroom"), QStringLiteral("Bedroom Curtain")}};
+
+        const QString byId = idMap.value(device.id);
+        if (!byId.isEmpty())
+        {
+            return byId;
+        }
+
+        static const QHash<QString, QString> nameMap = {
+            {QStringLiteral("客厅主灯"), QStringLiteral("Living Room Light")},
+            {QStringLiteral("卧室灯"), QStringLiteral("Bedroom Light")},
+            {QStringLiteral("客厅空调"), QStringLiteral("Living Room AC")},
+            {QStringLiteral("客厅窗帘"), QStringLiteral("Living Room Curtain")},
+            {QStringLiteral("前门智能锁"), QStringLiteral("Front Door Lock")},
+            {QStringLiteral("客厅摄像头"), QStringLiteral("Living Room Camera")},
+            {QStringLiteral("客厅电视"), QStringLiteral("Living Room TV")},
+            {QStringLiteral("客厅环境传感器"), QStringLiteral("Living Room Sensor")},
+            {QStringLiteral("卧室窗帘"), QStringLiteral("Bedroom Curtain")}};
+        return nameMap.value(device.name, device.name);
     }
 
     QString categoryIconPath(const QString &category)
@@ -776,7 +847,7 @@ void DeviceControlWidget::updateDeviceListUI(int category)
         infoLayout->setContentsMargins(0, 0, 0, 0);
         infoLayout->setSpacing(6);
 
-        QLabel *nameLabel = new QLabel(device.name);
+        QLabel *nameLabel = new QLabel(localizedDeviceName(device, isEnglish));
         nameLabel->setStyleSheet(titleTextStyle(palette));
         infoLayout->addWidget(nameLabel);
 
@@ -836,9 +907,76 @@ void DeviceControlWidget::updateDeviceListUI(int category)
                                   : QStringLiteral("%1°C").arg(displayTemp);
             }
 
-            QLabel *readingLabel = new QLabel((isEnglish ? QStringLiteral("Current reading: ") : QStringLiteral("当前读数：")) + readingText);
-            readingLabel->setStyleSheet(metricTextStyle(palette));
-            cardLayout->addWidget(readingLabel);
+            QWidget *readingPanel = new QWidget();
+            readingPanel->setAttribute(Qt::WA_StyledBackground, true);
+            readingPanel->setStyleSheet(panelStyle(palette));
+            QVBoxLayout *readingLayout = new QVBoxLayout(readingPanel);
+            readingLayout->setContentsMargins(12, 8, 12, 10);
+            readingLayout->setSpacing(8);
+
+            QHBoxLayout *panelHeaderLayout = new QHBoxLayout();
+            panelHeaderLayout->setContentsMargins(0, 0, 0, 0);
+            panelHeaderLayout->setSpacing(8);
+
+            QLabel *readingTag = new QLabel(isEnglish ? QStringLiteral("Live Data") : QStringLiteral("实时数据"));
+            readingTag->setStyleSheet(optionTagStyle(palette));
+            readingTag->setMinimumWidth(64);
+            panelHeaderLayout->addWidget(readingTag, 0, Qt::AlignVCenter);
+
+            QLabel *readingHint = new QLabel(isEnglish ? QStringLiteral("Sensor metrics") : QStringLiteral("传感器指标"));
+            readingHint->setStyleSheet(mutedTextStyle(palette, 9, 500));
+            panelHeaderLayout->addWidget(readingHint, 0, Qt::AlignVCenter);
+            panelHeaderLayout->addStretch();
+            readingLayout->addLayout(panelHeaderLayout);
+
+            QGridLayout *metricsLayout = new QGridLayout();
+            metricsLayout->setContentsMargins(0, 0, 0, 0);
+            metricsLayout->setHorizontalSpacing(8);
+            metricsLayout->setVerticalSpacing(8);
+
+            auto addMetricCell = [&](int row, int col, const QString &metricName, const QString &metricValue)
+            {
+                QWidget *metricCell = new QWidget();
+                metricCell->setAttribute(Qt::WA_StyledBackground, true);
+                metricCell->setStyleSheet(sensorMetricCellStyle(palette));
+
+                QVBoxLayout *metricLayout = new QVBoxLayout(metricCell);
+                metricLayout->setContentsMargins(10, 7, 10, 7);
+                metricLayout->setSpacing(2);
+
+                QLabel *nameLabel = new QLabel(metricName);
+                nameLabel->setStyleSheet(mutedTextStyle(palette, 9, 600));
+
+                QLabel *valueLabel = new QLabel(metricValue);
+                valueLabel->setStyleSheet(sensorMetricValueStyle(palette));
+
+                metricLayout->addWidget(nameLabel);
+                metricLayout->addWidget(valueLabel);
+                metricsLayout->addWidget(metricCell, row, col);
+            };
+
+            if (useHomeSnapshot)
+            {
+                const QString temperatureText = isEnglish
+                                                    ? QStringLiteral("%1 °C").arg(QString::number(envSnapshot->temperature, 'f', 1))
+                                                    : QStringLiteral("%1°C").arg(QString::number(envSnapshot->temperature, 'f', 1));
+                const QString humidityText = QStringLiteral("%1%").arg(QString::number(envSnapshot->humidity, 'f', 1));
+
+                addMetricCell(0, 0, isEnglish ? QStringLiteral("Temperature") : QStringLiteral("温度"), temperatureText);
+                addMetricCell(0, 1, isEnglish ? QStringLiteral("Humidity") : QStringLiteral("湿度"), humidityText);
+            }
+            else
+            {
+                addMetricCell(0, 0, isEnglish ? QStringLiteral("Current reading") : QStringLiteral("当前读数"), readingText);
+
+                QLabel *readingValueLabel = new QLabel((isEnglish ? QStringLiteral("Primary reading: ") : QStringLiteral("主读数：")) + readingText);
+                readingValueLabel->setStyleSheet(sensorValueStyle(palette));
+                readingLayout->addWidget(readingValueLabel, 0, Qt::AlignLeft);
+            }
+
+            readingLayout->addLayout(metricsLayout);
+
+            cardLayout->addWidget(readingPanel);
             mainLayout->addWidget(deviceCard);
             continue;
         }

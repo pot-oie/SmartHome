@@ -155,7 +155,7 @@ HomeWidget::HomeWidget(QWidget *parent)
     ui->label_title->setStyleSheet(QStringLiteral("font-size: 18pt; font-weight: 700;"));
     ui->label_temperature->setStyleSheet(QStringLiteral("font-size: 24pt; font-weight: 700;"));
     ui->label_humidity->setStyleSheet(QStringLiteral("font-size: 24pt; font-weight: 700;"));
-    ui->label_deviceCount->setStyleSheet(QStringLiteral("font-size: 16pt; font-weight: 600;"));
+    ui->label_deviceCount->setStyleSheet(QStringLiteral("font-size: 22pt; font-weight: 700;"));
     ensureQuickControlEditButton();
     applyLanguage(QStringLiteral("zh_CN"));
 

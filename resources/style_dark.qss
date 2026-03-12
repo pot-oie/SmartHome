@@ -1,7 +1,6 @@
 /* Dark theme */
 * {
     font-family: "Microsoft YaHei UI", "Segoe UI", Arial;
-    font-size: 10pt;
     color: #e6e6e6;
 }
 
@@ -35,12 +34,8 @@ QListWidget#navBar {
 
 QListWidget#navBar::item {
     color: #cfd6e4;
-    padding: 0 20px;
-    min-height: 75px;
     border-left: 4px solid transparent;
     outline: none;
-    font-size: 15pt;
-    font-weight: 800;
 }
 
 QListWidget#listCategory::item,

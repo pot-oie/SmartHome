@@ -22,8 +22,8 @@ namespace
     QIcon tintedIcon(const QString &path, const QColor &color)
     {
         const QIcon baseIcon(path);
-        const QSize canvasSize(32, 32);
-        const int drawSize = 28;
+        const QSize canvasSize(24, 24);
+        const int drawSize = 20;
         const QPixmap src = baseIcon.pixmap(QSize(drawSize, drawSize));
 
         if (src.isNull())
@@ -38,7 +38,7 @@ namespace
 
         int x = (canvasSize.width() - drawSize) / 2;
 
-        int yOffset = 1.4;
+        int yOffset = 0.8;
         int y = (canvasSize.height() - drawSize) / 2 + yOffset;
 
         // 带着偏移量绘制原始图标
@@ -70,7 +70,17 @@ void NavBarItemDelegate::paint(QPainter *painter,
     style->drawPrimitive(QStyle::PE_PanelItemViewItem, &panelOption, painter, panelOption.widget);
 
     const QRect itemRect = styleOption.rect;
-    const bool darkTheme = styleOption.palette.color(QPalette::Base).lightness() < 128;
+
+    bool darkTheme = false;
+    if (styleOption.widget && styleOption.widget->property("isDarkTheme").isValid())
+    {
+        darkTheme = styleOption.widget->property("isDarkTheme").toBool();
+    }
+    else
+    {
+        darkTheme = styleOption.palette.color(QPalette::Base).lightness() < 128;
+    }
+
     const QColor textColor = darkTheme ? QColor("#D8E7FF") : QColor("#223B56");
     const QSize decorationSize = styleOption.decorationSize.isValid() ? styleOption.decorationSize : QSize(24, 24);
     QFont textFont = styleOption.font;
@@ -82,7 +92,7 @@ void NavBarItemDelegate::paint(QPainter *painter,
     const int contentCenterY = itemRect.center().y();
     const int baselineY = contentCenterY + (fontMetrics.ascent() - fontMetrics.descent()) / 2;
     const int iconSize = qMin(qMin(decorationSize.width(), decorationSize.height()), qMax(20, itemRect.height() - 28));
-    const int iconLeft = itemRect.left() + 28;
+    const int iconLeft = itemRect.left() + 25;
     QRect iconRect(iconLeft, contentCenterY - iconSize / 2, iconSize, iconSize);
 
     painter->save();
@@ -118,7 +128,7 @@ void MainWindow::initUI()
     setWindowTitle(QStringLiteral("智能家居监控平台"));
     resize(1024, 768);
 
-    ui->navBar->setIconSize(QSize(32, 32));
+    ui->navBar->setIconSize(QSize(24, 24));
     ui->navBar->setSpacing(2);
     ui->navBar->setFocusPolicy(Qt::NoFocus);
     ui->navBar->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -248,6 +258,9 @@ void MainWindow::applyTheme(const QString &themeName)
     {
         qApp->setStyleSheet(styleSheet);
 
+        bool isDark = (themeName == QStringLiteral("dark"));
+        ui->navBar->setProperty("isDarkTheme", isDark);
+
         // 仅重抛光主窗口及其子树，避免全局遍历导致主题切换卡顿。
         QWidgetList widgets;
         widgets << this;
@@ -314,21 +327,6 @@ void MainWindow::updateNavBarLayout()
         return;
     }
 
-    const int spacing = 10;
-    ui->navBar->setSpacing(spacing);
-
-    const int viewportHeight = ui->navBar->viewport()->height();
-    if (viewportHeight <= 0)
-    {
-        return;
-    }
-
-    const int targetTotalHeight = qMax((viewportHeight * 84) / 100, itemCount * 68);
-    const int itemHeight = qMax(64, (targetTotalHeight - spacing * (itemCount - 1)) / itemCount);
-    const int iconEdge = qBound(22, itemHeight / 3, 30);
-
-    ui->navBar->setIconSize(QSize(iconEdge, iconEdge));
-
     const int itemWidth = qMax(150, ui->navBar->viewport()->width() - 4);
     for (int i = 0; i < itemCount; ++i)
     {
@@ -338,7 +336,7 @@ void MainWindow::updateNavBarLayout()
             continue;
         }
 
-        item->setSizeHint(QSize(itemWidth, itemHeight));
+        item->setSizeHint(QSize(itemWidth, 80));
     }
 }
 
