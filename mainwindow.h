@@ -1,5 +1,7 @@
 #pragma once
 #include <QMainWindow>
+#include <QDateTime>
+#include <QJsonObject>
 #include <QResizeEvent>
 #include <QStyledItemDelegate>
 #include <QTranslator>
@@ -43,6 +45,7 @@ private slots:
     void onNavBarItemClicked(int index);
     void onThemeChanged(const QString &themeName);
     void onLanguageChanged(const QString &languageKey);
+    void onAlarmAlert(const QJsonObject &alarmData);
 
 private:
     void initUI();
@@ -51,6 +54,7 @@ private:
     QString loadStyleSheet(const QString &resourcePath) const;
     void refreshNavIcons(bool darkTheme);
     void updateNavBarLayout();
+    void playAlarmAlertTone();
     Ui::MainWindow *ui;
     HomeWidget *m_homeWidget = nullptr;
     DeviceControlWidget *m_deviceControlWidget = nullptr;
@@ -60,4 +64,6 @@ private:
     SettingsWidget *m_settingsWidget = nullptr;
     QTranslator m_translator;
     QString m_languageKey = QStringLiteral("zh_CN");
+    QDateTime m_lastAlarmDialogAt;
+    QString m_lastAlarmDialogKey;
 };

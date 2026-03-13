@@ -24,6 +24,9 @@ public slots:
     void refreshData();
     void triggerAlarm(const QJsonObject &alarmData);
 
+signals:
+    void alarmAlert(const QJsonObject &alarmData);
+
 protected:
     void showEvent(QShowEvent *event) override;
     void hideEvent(QHideEvent *event) override;
@@ -37,16 +40,13 @@ private:
     Ui::AlarmWidget *ui;
     AlarmService m_alarmService;
     QString m_languageKey = QStringLiteral("zh_CN");
-    bool m_activeAlarmLatched = false;
-    QString m_activeAlarmFingerprint;
 
-    void playAlarmAlertTone();
-    void showAlarmPopup(const QString &type, const QString &detail);
     void loadThresholds();
     void loadAlarmStatus();
     void appendAlarmLogRow(int row, const AlarmLogEntry &entry);
 
 private:
-    QDateTime m_lastAlarmDialogAt;
-    QString m_lastAlarmDialogKey;
+    bool m_hadActiveAlarm = false;
+    QDateTime m_lastAlertAt;
+    QString m_lastAlertKey;
 };

@@ -2,7 +2,6 @@
 #include "ui_alarmwidget.h"
 
 #include <QAbstractItemView>
-#include <QApplication>
 #include <QBrush>
 #include <QColor>
 #include <QDebug>
@@ -10,21 +9,6 @@
 #include <QMessageBox>
 #include <QTableWidgetItem>
 #include <QTimer>
-
-#include <atomic>
-#include <chrono>
-
-#ifdef Q_OS_WIN
-#include <thread>
-#include <windows.h>
-#endif
-
-#ifdef Q_OS_WIN
-namespace
-{
-    std::atomic_bool g_alarmTonePlaying{false};
-}
-#endif
 
 namespace
 {
@@ -125,32 +109,6 @@ void AlarmWidget::hideEvent(QHideEvent *event)
     QWidget::hideEvent(event);
 }
 
-void AlarmWidget::playAlarmAlertTone()
-{
-#ifdef Q_OS_WIN
-    if (g_alarmTonePlaying.exchange(true))
-    {
-        return;
-    }
-
-    std::thread([]()
-                {
-                    for (int i = 0; i < 8; ++i)
-                    {
-                        Beep((i % 2 == 0) ? 1600 : 1200, 250);
-                        std::this_thread::sleep_for(std::chrono::milliseconds(120));
-                    }
-                    g_alarmTonePlaying = false; })
-        .detach();
-#else
-    for (int i = 0; i < 8; ++i)
-    {
-        QTimer::singleShot(i * 375, this, []()
-                           { QApplication::beep(); });
-    }
-#endif
-}
-
 void AlarmWidget::refreshData()
 {
     loadThresholds();
@@ -229,35 +187,7 @@ void AlarmWidget::triggerAlarm(const QJsonObject &alarmData)
     ui->tableWidget_alarmLogs->insertRow(0);
     appendAlarmLogRow(0, entry);
     loadAlarmStatus();
-    playAlarmAlertTone();
-    showAlarmPopup(entry.type, entry.detail);
-}
-
-void AlarmWidget::showAlarmPopup(const QString &type, const QString &detail)
-{
-    const bool isEnglish = (m_languageKey == QStringLiteral("en_US"));
-
-    QWidget *dialogParent = QApplication::activeWindow();
-    if (!dialogParent)
-    {
-        dialogParent = window() ? window() : this;
-    }
-    QMessageBox dialog(QMessageBox::Critical,
-                       isEnglish ? QStringLiteral("System Alarm") : QStringLiteral("系统报警"),
-                       (isEnglish
-                            ? QStringLiteral("Abnormal condition detected!\n\nType: %1\nDetails: %2")
-                            : QStringLiteral("检测到异常情况！\n\n报警类型: %1\n详细信息: %2"))
-                           .arg(type)
-                           .arg(detail),
-                       QMessageBox::Ok,
-                       dialogParent);
-    dialog.setWindowModality(Qt::ApplicationModal);
-    dialog.setWindowFlag(Qt::WindowStaysOnTopHint, true);
-    QTimer::singleShot(0, &dialog, [&dialog]()
-                       {
-                           dialog.raise();
-                           dialog.activateWindow(); });
-    dialog.exec();
+    emit alarmAlert(alarmData);
 }
 
 void AlarmWidget::on_btnSaveThresholds_clicked()
@@ -365,41 +295,44 @@ void AlarmWidget::onAlarmRuntimeDataRefreshed(AlarmStatusSummary status, AlarmLo
     }
     ui->tableWidget_alarmLogs->setUpdatesEnabled(true);
 
-    if (!hasActiveAlarm)
+    if (!hasActiveAlarm || logs.isEmpty())
     {
-        m_activeAlarmLatched = false;
-        m_activeAlarmFingerprint.clear();
+        m_hadActiveAlarm = false;
         return;
     }
 
-    QString popupType;
-    QString popupDetail;
-    if (!logs.isEmpty())
+    const AlarmLogEntry &latest = logs.first();
+    const QString alertKey = latest.type + QStringLiteral("|") + latest.triggerValue + QStringLiteral("|") + latest.detail;
+    const QDateTime now = QDateTime::currentDateTime();
+
+    bool shouldNotify = false;
+    if (!m_hadActiveAlarm)
     {
-        popupType = logs.first().type.trimmed();
-        popupDetail = logs.first().detail.trimmed();
+        shouldNotify = true;
     }
-    if (popupType.isEmpty())
+    else if (m_lastAlertKey != alertKey)
     {
-        popupType = m_languageKey == QStringLiteral("en_US") ? QStringLiteral("System Alarm") : QStringLiteral("系统报警");
+        shouldNotify = true;
     }
-    if (popupDetail.isEmpty())
+    else if (!m_lastAlertAt.isValid() || m_lastAlertAt.msecsTo(now) >= 15000)
     {
-        popupDetail = status.text.trimmed().isEmpty()
-                          ? (m_languageKey == QStringLiteral("en_US") ? QStringLiteral("Abnormal condition detected") : QStringLiteral("检测到异常情况"))
-                          : status.text.trimmed();
+        shouldNotify = true;
     }
 
-    const QString currentFingerprint = popupType + QStringLiteral("|") + popupDetail;
-    const bool shouldNotify = !m_activeAlarmLatched || currentFingerprint != m_activeAlarmFingerprint;
-    m_activeAlarmLatched = true;
-    m_activeAlarmFingerprint = currentFingerprint;
-
+    m_hadActiveAlarm = true;
     if (!shouldNotify)
     {
         return;
     }
 
-    playAlarmAlertTone();
-    showAlarmPopup(popupType, popupDetail);
+    m_lastAlertAt = now;
+    m_lastAlertKey = alertKey;
+
+    QJsonObject alarmData;
+    alarmData.insert(QStringLiteral("type"), latest.type);
+    alarmData.insert(QStringLiteral("message"), latest.detail);
+    alarmData.insert(QStringLiteral("triggerValue"), latest.triggerValue);
+    alarmData.insert(QStringLiteral("severity"), latest.severity);
+    alarmData.insert(QStringLiteral("timestamp"), latest.timestamp.toString(Qt::ISODate));
+    emit alarmAlert(alarmData);
 }

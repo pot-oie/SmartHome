@@ -10,7 +10,9 @@
 #include <QApplication>
 #include <QColor>
 #include <QFile>
+#include <QJsonValue>
 #include <QListWidgetItem>
+#include <QMessageBox>
 #include <QPainter>
 #include <QPixmap>
 #include <QStyleOptionViewItem>
@@ -19,8 +21,20 @@
 #include <QGuiApplication>
 #include <QScreen>
 
+#include <atomic>
+#include <chrono>
+
+#ifdef Q_OS_WIN
+#include <thread>
+#include <windows.h>
+#endif
+
 namespace
 {
+#ifdef Q_OS_WIN
+    std::atomic_bool g_alarmTonePlaying{false};
+#endif
+
     qreal iconDevicePixelRatio()
     {
         QScreen *screen = QGuiApplication::primaryScreen();
@@ -207,6 +221,7 @@ void MainWindow::initUI()
     connect(m_settingsWidget, &SettingsWidget::devicesChanged, m_deviceControlWidget, &DeviceControlWidget::refreshDevices);
     connect(m_settingsWidget, &SettingsWidget::devicesChanged, m_historyWidget, &HistoryWidget::refreshData);
     connect(m_homeWidget, &HomeWidget::alarmTriggered, m_alarmWidget, &AlarmWidget::triggerAlarm);
+    connect(m_alarmWidget, &AlarmWidget::alarmAlert, this, &MainWindow::onAlarmAlert);
 
     refreshNavIcons(false);
     updateNavBarLayout();
@@ -259,6 +274,70 @@ void MainWindow::onThemeChanged(const QString &themeName)
 void MainWindow::onLanguageChanged(const QString &languageKey)
 {
     applyLanguage(languageKey);
+}
+
+void MainWindow::playAlarmAlertTone()
+{
+#ifdef Q_OS_WIN
+    if (g_alarmTonePlaying.exchange(true))
+    {
+        return;
+    }
+
+    std::thread([]()
+                {
+                    for (int i = 0; i < 8; ++i)
+                    {
+                        Beep((i % 2 == 0) ? 1600 : 1200, 250);
+                        std::this_thread::sleep_for(std::chrono::milliseconds(120));
+                    }
+                    g_alarmTonePlaying = false; })
+        .detach();
+#else
+    for (int i = 0; i < 8; ++i)
+    {
+        QTimer::singleShot(i * 375, this, []()
+                           { QApplication::beep(); });
+    }
+#endif
+}
+
+void MainWindow::onAlarmAlert(const QJsonObject &alarmData)
+{
+    const QString alarmType = alarmData.value(QStringLiteral("type")).toString(QStringLiteral("未知报警"));
+    const QString alarmDetail = alarmData.value(QStringLiteral("message")).toString(QStringLiteral("无详细信息"));
+    const QString triggerValue = alarmData.value(QStringLiteral("triggerValue")).toString();
+    const QString dialogKey = alarmType + QStringLiteral("|") + triggerValue + QStringLiteral("|") + alarmDetail;
+
+    const QDateTime now = QDateTime::currentDateTime();
+    if (m_lastAlarmDialogAt.isValid() &&
+        m_lastAlarmDialogAt.msecsTo(now) < 1500 &&
+        m_lastAlarmDialogKey == dialogKey)
+    {
+        return;
+    }
+
+    m_lastAlarmDialogAt = now;
+    m_lastAlarmDialogKey = dialogKey;
+    playAlarmAlertTone();
+
+    const bool isEnglish = (m_languageKey == QStringLiteral("en_US"));
+    QMessageBox dialog(QMessageBox::Critical,
+                       isEnglish ? QStringLiteral("System Alarm") : QStringLiteral("系统报警"),
+                       (isEnglish
+                            ? QStringLiteral("Abnormal condition detected!\n\nType: %1\nDetails: %2")
+                            : QStringLiteral("检测到异常情况！\n\n报警类型: %1\n详细信息: %2"))
+                           .arg(alarmType)
+                           .arg(alarmDetail),
+                       QMessageBox::Ok,
+                       this);
+    dialog.setWindowModality(Qt::ApplicationModal);
+    dialog.setWindowFlag(Qt::WindowStaysOnTopHint, true);
+    QTimer::singleShot(0, &dialog, [&dialog]()
+                       {
+                           dialog.raise();
+                           dialog.activateWindow(); });
+    dialog.exec();
 }
 
 void MainWindow::applyTheme(const QString &themeName)
