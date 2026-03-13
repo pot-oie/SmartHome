@@ -69,4 +69,5 @@ private:
     void applyTemperatureColor(double temperature);
     void updateDeviceStatusLabel(const DeviceStatusSummary &summary);
     void loadQuickControls();
+    void loadRecentAlarms();
 };

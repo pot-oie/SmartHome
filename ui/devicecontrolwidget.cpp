@@ -92,7 +92,6 @@ namespace
     {
         const bool dark = isDarkTheme(palette);
         const QColor text = palette.color(QPalette::WindowText);
-        const QColor window = palette.color(QPalette::Window);
         const QColor valueColor = dark ? blendColor(text, QColor("#FFFFFF"), 0.12)
                                        : QColor("#2A4D7A");
         return QStringLiteral("font-size: 11pt; font-weight: 700; color: %1;")
@@ -677,6 +676,11 @@ void DeviceControlWidget::initDeviceList()
 
 void DeviceControlWidget::updateDeviceListUI(int category)
 {
+    if (!ui || !ui->label_categoryTitle || !ui->scrollArea)
+    {
+        return;
+    }
+
     const int normalizedCategory = qMax(0, category);
     const DeviceList filteredDevices = m_deviceService.filterDevices(m_allDevices, normalizedCategory, m_categories);
     const QPalette palette = this->palette();

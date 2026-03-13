@@ -16,35 +16,54 @@
 #include <QStyleOptionViewItem>
 #include <QStyle>
 #include <QTimer>
+#include <QGuiApplication>
+#include <QScreen>
 
 namespace
 {
+    qreal iconDevicePixelRatio()
+    {
+        QScreen *screen = QGuiApplication::primaryScreen();
+        if (!screen)
+        {
+            return 1.0;
+        }
+        return qMax<qreal>(1.0, screen->devicePixelRatio());
+    }
+
     QIcon tintedIcon(const QString &path, const QColor &color)
     {
         const QIcon baseIcon(path);
         const QSize canvasSize(24, 24);
         const int drawSize = 20;
-        const QPixmap src = baseIcon.pixmap(QSize(drawSize, drawSize));
+        const qreal dpr = iconDevicePixelRatio();
+        const QSize srcPixelSize(qMax(1, qRound(drawSize * dpr)),
+                                 qMax(1, qRound(drawSize * dpr)));
+        const QPixmap src = baseIcon.pixmap(srcPixelSize);
 
         if (src.isNull())
         {
             return baseIcon;
         }
 
-        QPixmap tinted(canvasSize);
+        const QSize canvasPixelSize(qMax(1, qRound(canvasSize.width() * dpr)),
+                                    qMax(1, qRound(canvasSize.height() * dpr)));
+        QPixmap tinted(canvasPixelSize);
+        tinted.setDevicePixelRatio(dpr);
         tinted.fill(Qt::transparent);
         QPainter painter(&tinted);
         painter.setRenderHint(QPainter::Antialiasing); // 开启抗锯齿让缩小后的 SVG 更平滑
+        painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
 
-        int x = (canvasSize.width() - drawSize) / 2;
+        const qreal x = (canvasSize.width() - drawSize) / 2.0;
 
         int yOffset = 0.8;
-        int y = (canvasSize.height() - drawSize) / 2 + yOffset;
+        const qreal y = (canvasSize.height() - drawSize) / 2.0 + yOffset;
 
         // 带着偏移量绘制原始图标
-        painter.drawPixmap(x, y, src);
+        painter.drawPixmap(QRectF(x, y, drawSize, drawSize), src, QRectF(0, 0, src.width(), src.height()));
         painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
-        painter.fillRect(tinted.rect(), color);
+        painter.fillRect(QRectF(QPointF(0, 0), QSizeF(canvasSize)), color);
         painter.end();
         return QIcon(tinted);
     }
