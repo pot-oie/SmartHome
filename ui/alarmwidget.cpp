@@ -74,8 +74,7 @@ AlarmWidget::AlarmWidget(QWidget *parent)
                 for (const QJsonObject &alarmData : alarms)
                 {
                     triggerAlarm(alarmData);
-                }
-            });
+                } });
     connect(&m_alarmService, &AlarmService::runtimeDataRefreshed,
             this, &AlarmWidget::onAlarmRuntimeDataRefreshed);
     m_alarmService.startPolling(300);
@@ -257,8 +256,7 @@ void AlarmWidget::showAlarmPopup(const QString &type, const QString &detail)
     QTimer::singleShot(0, &dialog, [&dialog]()
                        {
                            dialog.raise();
-                           dialog.activateWindow();
-                       });
+                           dialog.activateWindow(); });
     dialog.exec();
 }
 
