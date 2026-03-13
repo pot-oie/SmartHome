@@ -96,6 +96,11 @@ QGroupBox#groupBox_devices {
     background-color: #1f232a;
 }
 
+QWidget#quickControlContainer {
+    background-color: #252a33;
+    border-radius: 10px;
+}
+
 QPushButton:hover {
     background-color: #3f7dc2;
 }

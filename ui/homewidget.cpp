@@ -1,6 +1,7 @@
 #include "homewidget.h"
 #include "quickcontrolmanagedialog.h"
 #include "ui_homewidget.h"
+#include "services/alarmservice.h"
 
 #include <QDebug>
 #include <QColor>
@@ -216,6 +217,7 @@ void HomeWidget::applyLanguage(const QString &languageKey)
     m_languageKey = languageKey;
     refreshStaticTexts();
     refreshDeviceStatus();
+    loadRecentAlarms();
 }
 
 void HomeWidget::initConnections()
@@ -459,6 +461,57 @@ void HomeWidget::onEnvironmentSnapshotLoaded(HomeEnvironmentRefreshResult result
     {
         emit alarmTriggered(alarmData);
     }
+
+    loadRecentAlarms();
+}
+
+void HomeWidget::loadRecentAlarms()
+{
+    if (!ui || !ui->textEdit_alarmLog)
+    {
+        return;
+    }
+
+    const bool isEnglish = (m_languageKey == QStringLiteral("en_US"));
+
+    AlarmService alarmService;
+    QString errorText;
+    const AlarmLogList logs = alarmService.loadAlarmLogs(4, &errorText);
+
+    if (!errorText.trimmed().isEmpty())
+    {
+        qWarning() << "读取最近报警失败:" << errorText;
+    }
+
+    if (logs.isEmpty())
+    {
+        ui->textEdit_alarmLog->setHtml(isEnglish
+                                           ? QStringLiteral("<!DOCTYPE HTML><html><body><p style=\"color:green;\">System running normally, no alarms.</p></body></html>")
+                                           : QStringLiteral("<!DOCTYPE HTML><html><body><p style=\"color:green;\">系统运行正常，暂无报警信息</p></body></html>"));
+        return;
+    }
+
+    const AlarmLogEntry &latest = logs.first();
+    const int historyCount = qMin(3, static_cast<int>(logs.size()) - 1);
+
+    QString html;
+    html += QStringLiteral("<!DOCTYPE HTML><html><body style=\"margin:0;\">");
+    html += QStringLiteral("<p style=\"margin:0 0 6px 0;color:#d32f2f;font-weight:700;\">%1 %2 | %3</p>")
+                .arg(isEnglish ? QStringLiteral("[Latest]") : QStringLiteral("[最新]"),
+                     latest.type.toHtmlEscaped(),
+                     latest.detail.toHtmlEscaped());
+
+    for (int i = 1; i <= historyCount; ++i)
+    {
+        const AlarmLogEntry &entry = logs[i];
+        html += QStringLiteral("<p style=\"margin:0 0 4px 0;color:#616161;\">[%1] %2 | %3</p>")
+                    .arg(entry.timestamp.toString(QStringLiteral("MM-dd HH:mm")),
+                         entry.type.toHtmlEscaped(),
+                         entry.detail.toHtmlEscaped());
+    }
+
+    html += QStringLiteral("</body></html>");
+    ui->textEdit_alarmLog->setHtml(html);
 }
 
 void HomeWidget::applyTemperatureColor(double temperature)
@@ -470,6 +523,7 @@ void HomeWidget::applyTemperatureColor(double temperature)
 void HomeWidget::refreshDeviceStatus()
 {
     m_environmentService.refreshNow();
+    loadRecentAlarms();
 }
 
 void HomeWidget::updateDeviceStatusLabel(const DeviceStatusSummary &summary)
@@ -491,12 +545,7 @@ void HomeWidget::refreshStaticTexts()
     ui->groupBox_devices->setTitle(isEnglish ? QStringLiteral("Device Status") : QStringLiteral("设备状态"));
     ui->groupBox_quickControl->setTitle(isEnglish ? QStringLiteral("Quick Controls") : QStringLiteral("快捷控制"));
     ui->groupBox_alarm->setTitle(isEnglish ? QStringLiteral("Recent Alarms") : QStringLiteral("最近报警"));
-    if (ui->textEdit_alarmLog->toPlainText().trimmed().isEmpty() || ui->textEdit_alarmLog->toPlainText().contains(QStringLiteral("暂无报警")) || ui->textEdit_alarmLog->toPlainText().contains(QStringLiteral("No alarms")))
-    {
-        ui->textEdit_alarmLog->setHtml(isEnglish
-                                           ? QStringLiteral("<!DOCTYPE HTML><html><body><p style=\"color:green;\">System running normally, no alarms.</p></body></html>")
-                                           : QStringLiteral("<!DOCTYPE HTML><html><body><p style=\"color:green;\">系统运行正常，暂无报警信息</p></body></html>"));
-    }
+    loadRecentAlarms();
     ensureQuickControlEditButton();
 }
 
