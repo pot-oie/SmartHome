@@ -304,7 +304,8 @@ std::optional<AlarmLogEntry> AlarmDao::createEnvironmentAlarm(const QString &ala
     }
 
     static const QString checkSql =
-        "SELECT id, created_at "
+        "SELECT id, created_at, alarm_type, alarm_content, severity, trigger_metric, "
+        "trigger_value_decimal, trigger_display_text, trigger_unit "
         "FROM alarm_records "
         "WHERE alarm_code = ? AND source_location = ? AND is_active = 1 "
         "ORDER BY created_at DESC LIMIT 1";
@@ -322,36 +323,49 @@ std::optional<AlarmLogEntry> AlarmDao::createEnvironmentAlarm(const QString &ala
                                      ? QVariant::fromValue(sourceDeviceId)
                                      : QVariant(QMetaType::fromType<qint64>());
 
-    if (checkQuery.next())
+    const auto insertAlarmRecord = [&]() -> std::optional<AlarmLogEntry>
     {
-        static const QString updateSql =
-            "UPDATE alarm_records "
-            "SET alarm_type = ?, alarm_content = ?, severity = ?, source_device_id = ?, "
-            "trigger_metric = ?, trigger_value_decimal = ?, trigger_display_text = ?, trigger_unit = ?, "
-            "handled_status = 'pending', alarm_source = 'qt_client' "
-            "WHERE id = ?";
+        static const QString insertSql =
+            "INSERT INTO alarm_records ("
+            "alarm_code, alarm_type, alarm_content, severity, source_device_id, source_location, "
+            "trigger_metric, trigger_value_decimal, trigger_display_text, trigger_unit, "
+            "handled_status, is_active, alarm_source, created_at"
+            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 1, 'qt_client', CURRENT_TIMESTAMP)";
 
         const bool ok = databaseManager.exec(
-            updateSql,
-            {alarmType,
+            insertSql,
+            {alarmCode,
+             alarmType,
              alarmContent,
              severity,
              deviceValue,
+             sourceLocation,
              triggerMetric,
              triggerValue,
              triggerDisplayText,
-             triggerUnit,
-             checkQuery.value("id").toLongLong()});
+             triggerUnit});
         if (!ok)
         {
             setLastError(databaseManager.lastErrorText());
-            qWarning().noquote() << LOG_PREFIX << "Update active env alarm failed:" << m_lastErrorText;
+            qWarning().noquote() << LOG_PREFIX << "Insert env alarm failed:" << m_lastErrorText;
             return std::nullopt;
         }
 
+        QSqlQuery idQuery = databaseManager.query(QStringLiteral("SELECT LAST_INSERT_ID() AS new_id"));
+        qint64 recordId = 0;
+        if (idQuery.isActive() && idQuery.next())
+        {
+            recordId = idQuery.value("new_id").toLongLong();
+        }
+
+        if (created)
+        {
+            *created = true;
+        }
+
         AlarmLogEntry entry;
-        entry.recordId = checkQuery.value("id").toLongLong();
-        entry.timestamp = checkQuery.value("created_at").toDateTime();
+        entry.recordId = recordId;
+        entry.timestamp = QDateTime::currentDateTime();
         entry.type = alarmType;
         entry.triggerValue = finalTriggerText;
         entry.detail = alarmContent;
@@ -360,57 +374,55 @@ std::optional<AlarmLogEntry> AlarmDao::createEnvironmentAlarm(const QString &ala
         entry.isActive = true;
         clearLastError();
         return entry;
-    }
+    };
 
-    static const QString insertSql =
-        "INSERT INTO alarm_records ("
-        "alarm_code, alarm_type, alarm_content, severity, source_device_id, source_location, "
-        "trigger_metric, trigger_value_decimal, trigger_display_text, trigger_unit, "
-        "handled_status, is_active, alarm_source, created_at"
-        ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 1, 'qt_client', CURRENT_TIMESTAMP)";
-
-    const bool ok = databaseManager.exec(
-        insertSql,
-        {alarmCode,
-         alarmType,
-         alarmContent,
-         severity,
-         deviceValue,
-         sourceLocation,
-         triggerMetric,
-         triggerValue,
-         triggerDisplayText,
-         triggerUnit});
-    if (!ok)
+    if (checkQuery.next())
     {
-        setLastError(databaseManager.lastErrorText());
-        qWarning().noquote() << LOG_PREFIX << "Insert env alarm failed:" << m_lastErrorText;
-        return std::nullopt;
+        const QString existingType = checkQuery.value("alarm_type").toString().trimmed();
+        const QString existingContent = checkQuery.value("alarm_content").toString().trimmed();
+        const QString existingSeverity = checkQuery.value("severity").toString().trimmed();
+        const QString existingMetric = checkQuery.value("trigger_metric").toString().trimmed();
+        const QString existingDisplayText = checkQuery.value("trigger_display_text").toString().trimmed();
+        const QString existingUnit = checkQuery.value("trigger_unit").toString().trimmed();
+        const double existingValue = checkQuery.value("trigger_value_decimal").toDouble();
+        const bool unchanged = existingType == alarmType
+                               && existingContent == alarmContent
+                               && existingSeverity == severity
+                               && existingMetric == triggerMetric
+                               && qFuzzyCompare(existingValue + 1.0, triggerValue + 1.0)
+                               && existingDisplayText == triggerDisplayText
+                               && existingUnit == triggerUnit;
+
+        if (unchanged)
+        {
+            AlarmLogEntry entry;
+            entry.recordId = checkQuery.value("id").toLongLong();
+            entry.timestamp = checkQuery.value("created_at").toDateTime();
+            entry.type = alarmType;
+            entry.triggerValue = finalTriggerText;
+            entry.detail = alarmContent;
+            entry.severity = severity;
+            entry.handledStatus = QStringLiteral("pending");
+            entry.isActive = true;
+            clearLastError();
+            return entry;
+        }
+
+        static const QString archiveSql =
+            "UPDATE alarm_records "
+            "SET is_active = 0, handled_status = 'superseded', cleared_at = CURRENT_TIMESTAMP "
+            "WHERE id = ?";
+        if (!databaseManager.exec(archiveSql, {checkQuery.value("id").toLongLong()}))
+        {
+            setLastError(databaseManager.lastErrorText());
+            qWarning().noquote() << LOG_PREFIX << "Archive active env alarm failed:" << m_lastErrorText;
+            return std::nullopt;
+        }
+
+        return insertAlarmRecord();
     }
 
-    QSqlQuery idQuery = databaseManager.query(QStringLiteral("SELECT LAST_INSERT_ID() AS new_id"));
-    qint64 recordId = 0;
-    if (idQuery.isActive() && idQuery.next())
-    {
-        recordId = idQuery.value("new_id").toLongLong();
-    }
-
-    if (created)
-    {
-        *created = true;
-    }
-
-    AlarmLogEntry entry;
-    entry.recordId = recordId;
-    entry.timestamp = QDateTime::currentDateTime();
-    entry.type = alarmType;
-    entry.triggerValue = finalTriggerText;
-    entry.detail = alarmContent;
-    entry.severity = severity;
-    entry.handledStatus = QStringLiteral("pending");
-    entry.isActive = true;
-    clearLastError();
-    return entry;
+    return insertAlarmRecord();
 }
 
 bool AlarmDao::clearEnvironmentAlarm(const QString &alarmCode, const QString &sourceLocation)

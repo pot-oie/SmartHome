@@ -57,6 +57,64 @@ namespace
                    ? QStringLiteral("Loading environment history data...")
                    : QStringLiteral("正在加载环境历史数据...");
     }
+    constexpr double kSecondsPerHour = 3600.0;
+    constexpr double kSecondsPerDay = 24.0 * kSecondsPerHour;
+
+    QSharedPointer<QCPAxisTickerDateTime> ensureDateTicker(QCustomPlot *plot)
+    {
+        if (!plot)
+        {
+            return {};
+        }
+
+        QSharedPointer<QCPAxisTickerDateTime> ticker =
+            qSharedPointerDynamicCast<QCPAxisTickerDateTime>(plot->xAxis->ticker());
+        if (ticker.isNull())
+        {
+            ticker.reset(new QCPAxisTickerDateTime);
+            plot->xAxis->setTicker(ticker);
+        }
+        return ticker;
+    }
+
+    void updateTimeAxisStyle(QCustomPlot *plot, double lower, double upper)
+    {
+        const QSharedPointer<QCPAxisTickerDateTime> ticker = ensureDateTicker(plot);
+        if (ticker.isNull())
+        {
+            return;
+        }
+
+        const double spanSeconds = qMax(upper - lower, 1.0);
+        ticker->setTickCount(6);
+
+        if (spanSeconds <= 12.0 * kSecondsPerHour)
+        {
+            ticker->setDateTimeFormat(QStringLiteral("hh:mm"));
+        }
+        else if (spanSeconds <= 3.0 * kSecondsPerDay)
+        {
+            ticker->setDateTimeFormat(QStringLiteral("MM-dd\nhh:mm"));
+        }
+        else if (spanSeconds <= 14.0 * kSecondsPerDay)
+        {
+            ticker->setDateTimeFormat(QStringLiteral("MM-dd hh:mm"));
+        }
+        else
+        {
+            ticker->setDateTimeFormat(QStringLiteral("MM-dd"));
+        }
+    }
+
+    double chartTimePadding(double spanSeconds)
+    {
+        if (spanSeconds <= 0.0)
+        {
+            return 30.0 * 60.0;
+        }
+
+        return qBound(5.0 * 60.0, spanSeconds * 0.08, 6.0 * kSecondsPerHour);
+    }
 }
 
 HistoryWidget::HistoryWidget(QWidget *parent)
@@ -257,6 +315,7 @@ void HistoryWidget::renderEnvironmentSeries(const EnvironmentSeries &series)
         customPlot->graph(1)->setName(isEnglish ? QStringLiteral("Humidity (%)") : QStringLiteral("湿度 (%)"));
 
         QSharedPointer<QCPAxisTickerDateTime> dateTicker(new QCPAxisTickerDateTime);
+        dateTicker->setTickCount(6);
         dateTicker->setDateTimeFormat(QStringLiteral("MM-dd hh:mm"));
         customPlot->xAxis->setTicker(dateTicker);
         customPlot->xAxis->setLabel(isEnglish ? QStringLiteral("Time") : QStringLiteral("时间"));
@@ -299,6 +358,9 @@ void HistoryWidget::renderEnvironmentSeries(const EnvironmentSeries &series)
     {
         customPlot->graph(0)->data()->clear();
         customPlot->graph(1)->data()->clear();
+        updateTimeAxisStyle(customPlot,
+                            visibleStartTime.toSecsSinceEpoch(),
+                            visibleEndTime.toSecsSinceEpoch());
         customPlot->xAxis->setRange(visibleStartTime.toSecsSinceEpoch(), visibleEndTime.toSecsSinceEpoch());
         customPlot->yAxis->setRange(0, 100);
         customPlot->replot();
@@ -309,7 +371,14 @@ void HistoryWidget::renderEnvironmentSeries(const EnvironmentSeries &series)
 
     customPlot->graph(0)->setData(timeData, tempData);
     customPlot->graph(1)->setData(timeData, humData);
-    customPlot->xAxis->setRange(visibleStartTime.toSecsSinceEpoch(), visibleEndTime.toSecsSinceEpoch());
+
+    const double dataStart = timeData.first();
+    const double dataEnd = timeData.last();
+    const double xPadding = chartTimePadding(dataEnd - dataStart);
+    const double xLower = dataStart - xPadding;
+    const double xUpper = dataEnd + xPadding;
+    updateTimeAxisStyle(customPlot, xLower, xUpper);
+    customPlot->xAxis->setRange(xLower, xUpper);
 
     double lowerBound = minValue - 5.0;
     double upperBound = maxValue + 5.0;

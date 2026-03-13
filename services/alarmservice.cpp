@@ -6,14 +6,30 @@
 #include "database/databasemanager.h"
 #include "services/usercontext.h"
 
+#include <QDebug>
 #include <QtConcurrent>
 #include <QList>
 
 namespace
 {
+    constexpr qint64 kRuntimeRefreshIntervalMs = 2500;
+
     QString formatNumber(double value)
     {
         return QString::number(value, 'f', 2);
+    }
+
+    QString snapshotSignature(const EnvRealtimeSnapshot &snapshot)
+    {
+        return QStringLiteral("%1|%2|%3|%4|%5|%6|%7|%8")
+            .arg(snapshot.recordId)
+            .arg(snapshot.updatedAt.toString(Qt::ISODate))
+            .arg(formatNumber(snapshot.temperature))
+            .arg(formatNumber(snapshot.humidity))
+            .arg(formatNumber(snapshot.pm25))
+            .arg(formatNumber(snapshot.co2))
+            .arg(snapshot.statusLevel)
+            .arg(snapshot.locationCode);
     }
 
     QJsonObject toAlarmJson(const AlarmLogEntry &entry)
@@ -448,13 +464,13 @@ void AlarmService::startPolling(int intervalMs)
     if (!m_pollTimer)
     {
         m_pollTimer = new QTimer(this);
-        m_watcher = new QFutureWatcher<AlarmRuntimePair>(this);
+        m_watcher = new QFutureWatcher<AlarmRuntimeSnapshot>(this);
         m_pollTimer->setSingleShot(false);
-        connect(m_pollTimer, &QTimer::timeout, this, &AlarmService::refreshNow);
-        connect(m_watcher, &QFutureWatcher<AlarmRuntimePair>::finished,
+        connect(m_pollTimer, &QTimer::timeout, this, &AlarmService::pollNow);
+        connect(m_watcher, &QFutureWatcher<AlarmRuntimeSnapshot>::finished,
                 this, &AlarmService::onWatcherFinished);
     }
-    m_pollTimer->start(intervalMs);
+    m_pollTimer->start(qMax(100, intervalMs));
     refreshNow();
 }
 
@@ -468,24 +484,107 @@ void AlarmService::stopPolling()
 
 void AlarmService::refreshNow()
 {
+    m_forceRuntimeRefresh = true;
+    pollNow();
+}
+
+void AlarmService::pollNow()
+{
     if (!m_watcher)
     {
-        m_watcher = new QFutureWatcher<AlarmRuntimePair>(this);
-        connect(m_watcher, &QFutureWatcher<AlarmRuntimePair>::finished,
+        m_watcher = new QFutureWatcher<AlarmRuntimeSnapshot>(this);
+        connect(m_watcher, &QFutureWatcher<AlarmRuntimeSnapshot>::finished,
                 this, &AlarmService::onWatcherFinished);
     }
     if (m_watcher->isRunning())
     {
         return;
     }
-    m_watcher->setFuture(QtConcurrent::run([]() -> AlarmService::AlarmRuntimePair
+    const QString lastSnapshotSignature = m_lastSnapshotSignature;
+    const qint64 lastRuntimeRefreshAtMs = m_lastRuntimeRefreshAtMs;
+    const bool forceRuntimeRefresh = m_forceRuntimeRefresh;
+    m_forceRuntimeRefresh = false;
+
+    m_watcher->setFuture(QtConcurrent::run([lastSnapshotSignature, lastRuntimeRefreshAtMs, forceRuntimeRefresh]() -> AlarmService::AlarmRuntimeSnapshot
                                            {
-        AlarmService temp;
-        return {temp.loadAlarmStatus(), temp.loadAlarmLogs(100)}; }));
+                                               AlarmService temp;
+                                               AlarmRuntimeSnapshot runtime;
+                                               EnvRecordDao envRecordDao;
+
+                                               bool needRuntimeRefresh = forceRuntimeRefresh;
+                                               const std::optional<EnvRealtimeSnapshot> latestSnapshot = envRecordDao.getLatestRealtimeSnapshot();
+                                               if (latestSnapshot.has_value())
+                                               {
+                                                   runtime.hasSnapshot = true;
+                                                   runtime.snapshotSignature = snapshotSignature(latestSnapshot.value());
+                                                   const bool snapshotChanged = (runtime.snapshotSignature != lastSnapshotSignature);
+                                                   needRuntimeRefresh = needRuntimeRefresh || snapshotChanged;
+
+                                                   if (snapshotChanged)
+                                                   {
+                                                       runtime.triggeredAlarms = temp.evaluateEnvironmentSnapshot(latestSnapshot.value(), &runtime.errorText);
+                                                       if (!runtime.errorText.trimmed().isEmpty())
+                                                       {
+                                                           return runtime;
+                                                       }
+                                                   }
+                                               }
+                                               else if (!envRecordDao.lastErrorText().trimmed().isEmpty())
+                                               {
+                                                   runtime.errorText = envRecordDao.lastErrorText();
+                                                   return runtime;
+                                               }
+
+                                               const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
+                                               if (!needRuntimeRefresh)
+                                               {
+                                                   needRuntimeRefresh = (lastRuntimeRefreshAtMs <= 0) || ((nowMs - lastRuntimeRefreshAtMs) >= kRuntimeRefreshIntervalMs);
+                                               }
+
+                                               if (needRuntimeRefresh)
+                                               {
+                                                   runtime.status = temp.loadAlarmStatus(&runtime.errorText);
+                                                   if (!runtime.errorText.trimmed().isEmpty())
+                                                   {
+                                                       return runtime;
+                                                   }
+
+                                                   runtime.logs = temp.loadAlarmLogs(100, &runtime.errorText);
+                                                   if (!runtime.errorText.trimmed().isEmpty())
+                                                   {
+                                                       return runtime;
+                                                   }
+
+                                                   runtime.runtimeLoaded = true;
+                                               }
+
+                                               return runtime;
+                                           }));
 }
 
 void AlarmService::onWatcherFinished()
 {
-    const AlarmRuntimePair pair = m_watcher->result();
-    emit runtimeDataRefreshed(pair.first, pair.second);
+    const AlarmRuntimeSnapshot snapshot = m_watcher->result();
+    if (snapshot.hasSnapshot)
+    {
+        m_lastSnapshotSignature = snapshot.snapshotSignature;
+    }
+
+    if (!snapshot.errorText.trimmed().isEmpty())
+    {
+        m_forceRuntimeRefresh = true;
+        qWarning() << "报警轮询评估失败:" << snapshot.errorText;
+        return;
+    }
+
+    if (!snapshot.triggeredAlarms.isEmpty())
+    {
+        emit alarmsTriggered(snapshot.triggeredAlarms);
+    }
+
+    if (snapshot.runtimeLoaded)
+    {
+        m_lastRuntimeRefreshAtMs = QDateTime::currentMSecsSinceEpoch();
+        emit runtimeDataRefreshed(snapshot.status, snapshot.logs);
+    }
 }

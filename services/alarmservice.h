@@ -27,20 +27,35 @@ public:
     QList<QJsonObject> evaluateLatestEnvironment(QString *errorText = nullptr) const;
     AlarmLogEntry fromAlarmData(const QJsonObject &alarmData) const;
 
-    // 异步轮询：由页面 showEvent/hideEvent 驱动
-    void startPolling(int intervalMs = 5000);
+    // 异步轮询：高频感知环境变化，按需刷新报警状态
+    void startPolling(int intervalMs = 300);
     void stopPolling();
     void refreshNow();
 
 signals:
+    void alarmsTriggered(QList<QJsonObject> alarms);
     void runtimeDataRefreshed(AlarmStatusSummary status, AlarmLogList logs);
 
 private slots:
     void onWatcherFinished();
 
 private:
-    using AlarmRuntimePair = QPair<AlarmStatusSummary, AlarmLogList>;
+    void pollNow();
+
+    struct AlarmRuntimeSnapshot
+    {
+        QString snapshotSignature;
+        bool hasSnapshot = false;
+        bool runtimeLoaded = false;
+        QList<QJsonObject> triggeredAlarms;
+        AlarmStatusSummary status;
+        AlarmLogList logs;
+        QString errorText;
+    };
 
     QTimer *m_pollTimer = nullptr;
-    QFutureWatcher<AlarmRuntimePair> *m_watcher = nullptr;
+    QFutureWatcher<AlarmRuntimeSnapshot> *m_watcher = nullptr;
+    QString m_lastSnapshotSignature;
+    qint64 m_lastRuntimeRefreshAtMs = 0;
+    bool m_forceRuntimeRefresh = true;
 };

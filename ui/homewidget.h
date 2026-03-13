@@ -6,6 +6,7 @@
 #include <QString>
 #include <QWidget>
 
+#include "services/alarmservice.h"
 #include "services/environmentservice.h"
 #include "services/quickcontrolservice.h"
 
@@ -49,6 +50,7 @@ private slots:
 private:
     Ui::HomeWidget *ui;
     QPushButton *m_editQuickControlButton = nullptr;
+    AlarmService m_alarmService;
     EnvironmentService m_environmentService;
     QuickControlService m_quickControlService;
     QString m_selectedSceneId;
@@ -56,6 +58,8 @@ private:
     bool m_themeRefreshScheduled = false;
     QTimer *m_quickControlResizeTimer = nullptr;
     int m_lastQuickControlColumns = -1;
+    bool m_hasLastTemperature = false;
+    double m_lastTemperature = 0.0;
 
     void initConnections();
     void refreshStaticTexts();

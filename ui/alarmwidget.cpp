@@ -68,8 +68,17 @@ AlarmWidget::AlarmWidget(QWidget *parent)
 
     loadThresholds();
     applyLanguage(QStringLiteral("zh_CN"));
+    connect(&m_alarmService, &AlarmService::alarmsTriggered,
+            this, [this](const QList<QJsonObject> &alarms)
+            {
+                for (const QJsonObject &alarmData : alarms)
+                {
+                    triggerAlarm(alarmData);
+                }
+            });
     connect(&m_alarmService, &AlarmService::runtimeDataRefreshed,
             this, &AlarmWidget::onAlarmRuntimeDataRefreshed);
+    m_alarmService.startPolling(300);
 }
 
 AlarmWidget::~AlarmWidget()
@@ -109,14 +118,12 @@ void AlarmWidget::applyLanguage(const QString &languageKey)
 void AlarmWidget::showEvent(QShowEvent *event)
 {
     QWidget::showEvent(event);
-    loadThresholds();
-    m_alarmService.startPolling(5000);
+    refreshData();
 }
 
 void AlarmWidget::hideEvent(QHideEvent *event)
 {
     QWidget::hideEvent(event);
-    m_alarmService.stopPolling();
 }
 
 void AlarmWidget::playAlarmAlertTone()
@@ -225,21 +232,21 @@ void AlarmWidget::triggerAlarm(const QJsonObject &alarmData)
     loadAlarmStatus();
     playAlarmAlertTone();
 
-    if (!isVisible())
-    {
-        return;
-    }
-
     const QDateTime now = QDateTime::currentDateTime();
-    if (m_lastAlarmDialogAt.isValid() && m_lastAlarmDialogAt.msecsTo(now) < 12000)
+    const QString dialogKey = entry.type + QStringLiteral("|") + entry.triggerValue + QStringLiteral("|") + entry.detail;
+    if (m_lastAlarmDialogAt.isValid() &&
+        m_lastAlarmDialogAt.msecsTo(now) < 1500 &&
+        m_lastAlarmDialogKey == dialogKey)
     {
         return;
     }
     m_lastAlarmDialogAt = now;
+    m_lastAlarmDialogKey = dialogKey;
 
     const bool isEnglish = (m_languageKey == QStringLiteral("en_US"));
 
-    QMessageBox::critical(this,
+    QWidget *dialogParent = window();
+    QMessageBox::critical(dialogParent ? dialogParent : this,
                           isEnglish ? QStringLiteral("System Alarm") : QStringLiteral("系统报警"),
                           (isEnglish
                                ? QStringLiteral("Abnormal condition detected!\n\nType: %1\nDetails: %2")

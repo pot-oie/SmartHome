@@ -45,4 +45,5 @@ private:
 
 private:
     QDateTime m_lastAlarmDialogAt;
+    QString m_lastAlarmDialogKey;
 };

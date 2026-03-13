@@ -1,7 +1,6 @@
 #include "environmentservice.h"
 
 #include "database/dao/EnvRecordDao.h"
-#include "services/alarmservice.h"
 #include "services/settingsservice.h"
 
 #include <QtConcurrent>
@@ -63,15 +62,6 @@ HomeEnvironmentRefreshResult EnvironmentService::doLoad()
     }
 
     result.snapshot = snapshot;
-
-    AlarmService alarmService;
-    QString errorText;
-    result.triggeredAlarms = alarmService.evaluateEnvironmentSnapshot(snapshot.value(), &errorText);
-    if (!errorText.isEmpty())
-    {
-        result.errorText = errorText;
-        return result;
-    }
 
     SettingsService settingsService;
     result.deviceStatus = settingsService.loadDeviceStatusSummary();

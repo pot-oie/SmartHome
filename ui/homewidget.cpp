@@ -429,16 +429,34 @@ void HomeWidget::onEnvironmentSnapshotLoaded(HomeEnvironmentRefreshResult result
 
     if (result.snapshot.has_value())
     {
+        const double nextTemperature = result.snapshot->temperature;
+        const bool temperatureChanged = m_hasLastTemperature &&
+                                        !qFuzzyCompare(m_lastTemperature + 1.0, nextTemperature + 1.0);
         updateEnvironmentData(result.snapshot->temperature, result.snapshot->humidity);
+
+        if (temperatureChanged)
+        {
+            QString errorText;
+            const QList<QJsonObject> triggeredAlarms =
+                m_alarmService.evaluateEnvironmentSnapshot(result.snapshot.value(), &errorText);
+            if (!errorText.trimmed().isEmpty())
+            {
+                qWarning() << "首页温度变化后立即报警评估失败:" << errorText;
+            }
+            else
+            {
+                for (const QJsonObject &alarmData : triggeredAlarms)
+                {
+                    emit alarmTriggered(alarmData);
+                }
+            }
+        }
+
+        m_lastTemperature = nextTemperature;
+        m_hasLastTemperature = true;
     }
 
     updateDeviceStatusLabel(result.deviceStatus);
-    refreshQuickControls();
-
-    for (const QJsonObject &alarmData : result.triggeredAlarms)
-    {
-        emit alarmTriggered(alarmData);
-    }
 }
 
 void HomeWidget::applyTemperatureColor(double temperature)
@@ -521,7 +539,7 @@ void HomeWidget::changeEvent(QEvent *event)
 void HomeWidget::showEvent(QShowEvent *event)
 {
     QWidget::showEvent(event);
-    m_environmentService.startPolling(3000);
+    m_environmentService.startPolling(500);
     refreshQuickControls();
     refreshDeviceStatus();
 }
