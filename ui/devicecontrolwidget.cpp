@@ -585,7 +585,7 @@ namespace
             return QStringLiteral("bright");
         }
     }
-
+    // 签名
     QString buildDeviceRenderSignature(const DeviceList &devices)
     {
         QString signature;
@@ -682,13 +682,15 @@ void DeviceControlWidget::updateDeviceListUI(int category)
     }
 
     const int normalizedCategory = qMax(0, category);
+    // 分类签名
     const DeviceList filteredDevices = m_deviceService.filterDevices(m_allDevices, normalizedCategory, m_categories);
     const QPalette palette = this->palette();
     const bool isEnglish = (m_languageKey == QStringLiteral("en_US"));
+    // 签名
     const QString filteredSignature = buildDeviceRenderSignature(filteredDevices) +
                                       QStringLiteral("|lang=") + m_languageKey +
                                       QStringLiteral("|win=") + QString::number(palette.color(QPalette::Window).rgba(), 16);
-
+    // 签名
     if (normalizedCategory == m_lastRenderedCategory && filteredSignature == m_lastDeviceRenderSignature)
     {
         return;

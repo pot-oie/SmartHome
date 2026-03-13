@@ -618,7 +618,7 @@ void HomeWidget::hideEvent(QHideEvent *event)
     QWidget::hideEvent(event);
     m_environmentService.stopPolling();
 }
-
+//
 void HomeWidget::resizeEvent(QResizeEvent *event)
 {
     QWidget::resizeEvent(event);
