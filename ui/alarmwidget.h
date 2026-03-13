@@ -37,8 +37,11 @@ private:
     Ui::AlarmWidget *ui;
     AlarmService m_alarmService;
     QString m_languageKey = QStringLiteral("zh_CN");
+    bool m_activeAlarmLatched = false;
+    QString m_activeAlarmFingerprint;
 
     void playAlarmAlertTone();
+    void showAlarmPopup(const QString &type, const QString &detail);
     void loadThresholds();
     void loadAlarmStatus();
     void appendAlarmLogRow(int row, const AlarmLogEntry &entry);
